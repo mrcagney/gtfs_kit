@@ -1,53 +1,9 @@
 import pytest
-
 from pandas.util.testing import assert_frame_equal
 
-from .context import gtfs_kit, HAS_GEOPANDAS, DATA_DIR, cairns, cairns_shapeless
+from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import *
-
-if HAS_GEOPANDAS:
-    from geopandas import GeoDataFrame
-
-
-def test_build_geometry_by_shape():
-    feed = cairns.copy()
-    shape_ids = feed.shapes["shape_id"].unique()[:2]
-    d0 = build_geometry_by_shape(feed)
-    d1 = build_geometry_by_shape(feed, shape_ids=shape_ids)
-    for d in [d0, d1]:
-        # Should be a dictionary
-        assert isinstance(d, dict)
-        # The first key should be a valid shape ID
-        assert list(d.keys())[0] in feed.shapes["shape_id"].values
-        # The first value should be a Shapely linestring
-        assert isinstance(list(d.values())[0], sg.LineString)
-    # Lengths should be right
-    assert len(d0) == feed.shapes["shape_id"].nunique()
-    assert len(d1) == len(shape_ids)
-    # Should be empty if feed.shapes is None
-    feed2 = cairns_shapeless.copy()
-    assert build_geometry_by_shape(feed2) == {}
-
-
-def test_shapes_to_geojson():
-    feed = cairns.copy()
-    shape_ids = feed.shapes.loc[:2, "shape_id"]
-    collection = shapes_to_geojson(feed, shape_ids)
-    geometry_by_shape = build_geometry_by_shape(feed, shape_ids=shape_ids)
-    for f in collection["features"]:
-        shape = f["properties"]["shape_id"]
-        geom = sg.shape(f["geometry"])
-        assert geom.equals(geometry_by_shape[shape])
-
-
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_get_shapes_intersecting_geometry():
-    feed = cairns.copy()
-    path = DATA_DIR / "cairns_square_stop_750070.geojson"
-    polygon = sg.shape(json.load(path.open())["features"][0]["geometry"])
-    pshapes = get_shapes_intersecting_geometry(feed, polygon)
-    shape_ids = ["120N0005", "1200010", "1200001"]
-    assert set(pshapes["shape_id"].unique()) == set(shape_ids)
+from gtfs_kit import _geometrize_shapes, _ungeometrize_shapes
 
 
 def test_append_dist_to_shapes():
@@ -68,12 +24,11 @@ def test_append_dist_to_shapes():
         assert sdt == sorted(sdt)
 
 
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_geometrize_shapes():
+def test__geometrize_shapes():
     shapes = cairns.shapes.copy()
-    geo_shapes = geometrize_shapes(shapes, use_utm=True)
+    geo_shapes = _geometrize_shapes(shapes, use_utm=True)
     # Should be a GeoDataFrame
-    assert isinstance(geo_shapes, GeoDataFrame)
+    assert isinstance(geo_shapes, gpd.GeoDataFrame)
     # Should have the correct shape
     assert geo_shapes.shape[0] == shapes["shape_id"].nunique()
     assert geo_shapes.shape[1] == shapes.shape[1] - 2
@@ -88,15 +43,35 @@ def test_geometrize_shapes():
     )
     assert set(geo_shapes.columns) == expect_cols
 
-
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_ungeometrize_shapes():
+def test__ungeometrize_shapes():
     shapes = cairns.shapes.copy()
-    geo_shapes = geometrize_shapes(shapes)
-    shapes2 = ungeometrize_shapes(geo_shapes)
+    geo_shapes = _geometrize_shapes(shapes)
+    shapes2 = _ungeometrize_shapes(geo_shapes)
     # Test columns are correct
     expect_cols = set(list(shapes.columns)) - set(["shape_dist_traveled"])
     assert set(shapes2.columns) == expect_cols
     # Data frames should agree on certain columns
     cols = ["shape_id", "shape_pt_lon", "shape_pt_lat"]
     assert_frame_equal(shapes2[cols], shapes[cols])
+
+def test_geometrize_shapes():
+    geo_shapes_1 = geometrize_shapes(cairns)
+    geo_shapes_2 = _geometrize_shapes(cairns.shapes)
+    assert geo_shapes_1.equals(geo_shapes_2)
+    with pytest.raises(ValueError):
+        geometrize_shapes(cairns_shapeless)
+
+def test_shapes_to_geojson():
+    feed = cairns.copy()
+    shape_ids = feed.shapes.shape_id.unique()[:2]
+    collection = shapes_to_geojson(feed, shape_ids)
+    assert isinstance(collection, dict)
+    assert len(collection["features"]) == len(shape_ids)
+
+def test_get_shapes_intersecting_geometry():
+    feed = cairns.copy()
+    path = DATA_DIR / "cairns_square_stop_750070.geojson"
+    polygon = sg.shape(json.load(path.open())["features"][0]["geometry"])
+    pshapes = get_shapes_intersecting_geometry(feed, polygon)
+    shape_ids = ["120N0005", "1200010", "1200001"]
+    assert set(pshapes["shape_id"].unique()) == set(shape_ids)

@@ -4,25 +4,16 @@ import itertools
 import pandas as pd
 from pandas.util.testing import assert_frame_equal
 import shapely.geometry as sg
+import folium as fl
 
 from .context import (
     gtfs_kit,
     DATA_DIR,
-    HAS_GEOPANDAS,
-    HAS_FOLIUM,
-    sample,
     cairns,
     cairns_dates,
-    cairns_trip_stats,
 )
 from gtfs_kit import *
-
-if HAS_GEOPANDAS:
-    import geopandas as gpd
-
-if HAS_FOLIUM:
-    import folium as fl
-
+from gtfs_kit import _geometrize_stops, _ungeometrize_stops
 
 def test_compute_stop_stats_base():
     feed1 = cairns.copy()
@@ -160,23 +151,6 @@ def test_get_stops():
     assert frames[0].shape[0] <= frames[1].shape[0]
     assert frames[2].shape[0] <= frames[4].shape[0]
     assert frames[4].shape == frames[6].shape
-
-
-def test_build_geometry_by_stop():
-    feed = cairns.copy()
-    stop_ids = feed.stops["stop_id"][:2].values
-    d0 = build_geometry_by_stop(feed)
-    d1 = build_geometry_by_stop(feed, stop_ids=stop_ids)
-    for d in [d0, d1]:
-        # Should be a dictionary
-        assert isinstance(d, dict)
-        # The first key should be a valid shape ID
-        assert list(d.keys())[0] in feed.stops["stop_id"].values
-        # The first value should be a Shapely linestring
-        assert isinstance(list(d.values())[0], sg.Point)
-    # Lengths should be right
-    assert len(d0) == feed.stops["stop_id"].nunique()
-    assert len(d1) == len(stop_ids)
 
 
 def test_compute_stop_activity():
@@ -331,20 +305,9 @@ def test_build_stop_timetable():
     assert f.empty
 
 
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_get_stops_in_polygon():
-    feed = cairns.copy()
-    with (DATA_DIR / "cairns_square_stop_750070.geojson").open() as src:
-        polygon = sg.shape(json.load(src)["features"][0]["geometry"])
-    pstops = get_stops_in_polygon(feed, polygon)
-    stop_ids = ["750070"]
-    assert pstops["stop_id"].values == stop_ids
-
-
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_geometrize_stops():
+def test__geometrize_stops():
     stops = cairns.stops.copy()
-    geo_stops = geometrize_stops(stops, use_utm=True)
+    geo_stops = _geometrize_stops(stops, use_utm=True)
     # Should be a GeoDataFrame
     assert isinstance(geo_stops, gpd.GeoDataFrame)
     # Should have the correct shape
@@ -356,20 +319,36 @@ def test_geometrize_stops():
     )
     assert set(geo_stops.columns) == expect_cols
 
-
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
-def test_ungeometrize_stops():
+def test__ungeometrize_stops():
     stops = cairns.stops.copy()
-    geo_stops = geometrize_stops(stops)
-    stops2 = ungeometrize_stops(geo_stops)
+    geo_stops = _geometrize_stops(stops)
+    stops2 = _ungeometrize_stops(geo_stops)
     # Test columns are correct
     assert set(stops2.columns) == set(stops.columns)
     # Data frames should be equal after sorting columns
     cols = sorted(stops.columns)
     assert_frame_equal(stops2[cols], stops[cols])
 
+def test_geometrize_shapes():
+    g_1 = geometrize_stops(cairns)
+    g_2 = _geometrize_stops(cairns.stops)
+    assert g_1.equals(g_2)
 
-@pytest.mark.skipif(not HAS_FOLIUM, reason="Requires Folium")
+def test_stops_to_geojson():
+    feed = cairns.copy()
+    stop_ids = feed.stops.stop_id.unique()[:2]
+    collection = stops_to_geojson(feed, stop_ids)
+    assert isinstance(collection, dict)
+    assert len(collection["features"]) == len(stop_ids)
+
+def test_get_stops_in_polygon():
+    feed = cairns.copy()
+    with (DATA_DIR / "cairns_square_stop_750070.geojson").open() as src:
+        polygon = sg.shape(json.load(src)["features"][0]["geometry"])
+    pstops = get_stops_in_polygon(feed, polygon)
+    stop_ids = ["750070"]
+    assert pstops["stop_id"].values == stop_ids
+
 def test_map_stops():
     feed = cairns.copy()
     m = map_trips(feed, feed.stops.stop_id.iloc[:5])

@@ -92,14 +92,13 @@ class Feed(object):
         map_routes,
     )
     from .shapes import (
-        build_geometry_by_shape,
+        append_dist_to_shapes,
+        geometrize_shapes,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
-        append_dist_to_shapes,
     )
     from .stops import (
         get_stops,
-        build_geometry_by_stop,
         compute_stop_activity,
         compute_stop_stats,
         build_zero_stop_time_series,

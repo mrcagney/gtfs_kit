@@ -5,26 +5,13 @@ import importlib
 
 sys.path.insert(0, os.path.abspath(".."))
 
+import geopandas as gpd
 import pandas as pd
 import numpy as np
 
 import gtfs_kit
 import pytest
 
-
-# Check if GeoPandas is installed
-loader = importlib.util.find_spec("geopandas")
-if loader is None:
-    HAS_GEOPANDAS = False
-else:
-    HAS_GEOPANDAS = True
-
-# Check if Folium is installed
-loader = importlib.util.find_spec("folium")
-if loader is None:
-    HAS_FOLIUM = False
-else:
-    HAS_FOLIUM = True
 
 # Load/create test feeds
 DATA_DIR = Path("data")
