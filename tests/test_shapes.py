@@ -3,7 +3,7 @@ from pandas.util.testing import assert_frame_equal
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import *
-from gtfs_kit import _geometrize_shapes, _ungeometrize_shapes
+from gtfs_kit import geometrize_shapes_0, ungeometrize_shapes_0
 
 
 def test_append_dist_to_shapes():
@@ -24,9 +24,9 @@ def test_append_dist_to_shapes():
         assert sdt == sorted(sdt)
 
 
-def test__geometrize_shapes():
+def test_geometrize_shapes_0():
     shapes = cairns.shapes.copy()
-    geo_shapes = _geometrize_shapes(shapes, use_utm=True)
+    geo_shapes = geometrize_shapes_0(shapes, use_utm=True)
     # Should be a GeoDataFrame
     assert isinstance(geo_shapes, gpd.GeoDataFrame)
     # Should have the correct shape
@@ -43,10 +43,10 @@ def test__geometrize_shapes():
     )
     assert set(geo_shapes.columns) == expect_cols
 
-def test__ungeometrize_shapes():
+def test_ungeometrize_shapes_0():
     shapes = cairns.shapes.copy()
-    geo_shapes = _geometrize_shapes(shapes)
-    shapes2 = _ungeometrize_shapes(geo_shapes)
+    geo_shapes = geometrize_shapes_0(shapes)
+    shapes2 = ungeometrize_shapes_0(geo_shapes)
     # Test columns are correct
     expect_cols = set(list(shapes.columns)) - set(["shape_dist_traveled"])
     assert set(shapes2.columns) == expect_cols
@@ -55,11 +55,17 @@ def test__ungeometrize_shapes():
     assert_frame_equal(shapes2[cols], shapes[cols])
 
 def test_geometrize_shapes():
-    geo_shapes_1 = geometrize_shapes(cairns)
-    geo_shapes_2 = _geometrize_shapes(cairns.shapes)
-    assert geo_shapes_1.equals(geo_shapes_2)
+    g_1 = geometrize_shapes(cairns)
+    g_2 = geometrize_shapes_0(cairns.shapes)
+    assert g_1.equals(g_2)
     with pytest.raises(ValueError):
         geometrize_shapes(cairns_shapeless)
+
+
+def test_build_geometry_by_shape():
+    d = build_geometry_by_shape(cairns) 
+    assert isinstance(d, dict)
+    assert len(d) == cairns.shapes.shape_id.nunique()
 
 def test_shapes_to_geojson():
     feed = cairns.copy()

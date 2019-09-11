@@ -30,7 +30,7 @@ STOP_STYLE = {
 }
 
 
-def compute_stop_stats_base(
+def compute_stop_stats_0(
     stop_times_subset: pd.DataFrame,
     trip_subset: pd.DataFrame,
     headway_start_time: str = "07:00:00",
@@ -153,7 +153,7 @@ def compute_stop_stats_base(
     return result
 
 
-def compute_stop_time_series_base(
+def compute_stop_time_series_0(
     stop_times_subset: pd.DataFrame,
     trip_subset: pd.DataFrame,
     freq: str = "5Min",
@@ -207,7 +207,7 @@ def compute_stop_time_series_base(
       resampled at the end to the given frequency
     - Stop times with null departure times are ignored, so the aggregate
       of ``num_trips`` across the day could be less than the
-      ``num_trips`` column in :func:`compute_stop_stats_base`
+      ``num_trips`` column in :func:`compute_stop_stats_0`
     - All trip departure times are taken modulo 24 hours,
       so routes with trips that end past 23:59:59 will have all
       their stats wrap around to the early morning of the time series.
@@ -488,7 +488,7 @@ def compute_stop_stats(
             t = feed.trips
             trips = t[t["trip_id"].isin(ids)].copy()
             stats = (
-                compute_stop_stats_base(
+                compute_stop_stats_0(
                     stop_times_subset,
                     trips,
                     split_directions=split_directions,
@@ -518,7 +518,7 @@ def build_zero_stop_time_series(
 ) -> pd.DataFrame:
     """
     Return a stop time series with the same index and hierarchical columns
-    as output by :func:`compute_stop_time_series_base`,
+    as output by :func:`compute_stop_time_series_0`,
     but fill it full of zero values.
     """
     start = date_label
@@ -549,7 +549,7 @@ def compute_stop_time_series(
     """
     Compute time series for the stops on the given dates at the
     given frequency and return the result as a DataFrame of the same
-    form as output by :func:`.stop_times.compute_stop_time_series_base`.
+    form as output by :func:`.stop_times.compute_stop_time_series_0`.
     Optionally restrict to stops in the given list of stop IDs.
 
     Parameters
@@ -576,7 +576,7 @@ def compute_stop_time_series(
         The maximum allowable frequency is 1 minute.
 
         The columns are the same as in
-        :func:`compute_stop_time_series_base`.
+        :func:`compute_stop_time_series_0`.
 
         Exclude dates that lie outside of the Feed's date range.
         If all dates lie outside the Feed's date range, then return an
@@ -584,7 +584,7 @@ def compute_stop_time_series(
 
     Notes
     -----
-    - See the notes for :func:`compute_stop_time_series_base`
+    - See the notes for :func:`compute_stop_time_series_0`
     - Assume the following feed attributes are not ``None``:
 
         * ``feed.stop_times``
@@ -629,7 +629,7 @@ def compute_stop_time_series(
             # Compute stats
             t = feed.trips
             trips = t[t["trip_id"].isin(ids)].copy()
-            stats = compute_stop_time_series_base(
+            stats = compute_stop_time_series_0(
                 stop_times_subset,
                 trips,
                 split_directions=split_directions,
@@ -717,7 +717,7 @@ def build_stop_timetable(
     return f.sort_values(["date", "departure_time"])
 
 
-def _geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDataFrame:
+def geometrize_stops_0(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDataFrame:
     """
     Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame of Points
     and return the result, which will no longer have the columns ``'stop_lon'`` and
@@ -741,9 +741,9 @@ def _geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoD
     return g
 
 
-def _ungeometrize_stops(geo_stops: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_stops_0(geo_stops: gpd.GeoDataFrame) -> pd.DataFrame:
     """
-    The inverse of :func:`_geometrize_stops`.
+    The inverse of :func:`geometrize_stops_0`.
 
     If ``geo_stops`` is in UTM coordinates (has a UTM CRS property),
     then convert those UTM coordinates back to WGS84 coordinates,
@@ -771,7 +771,34 @@ def geometrize_stops(feed: "Feed", stop_ids:Optional[Iterable[str]]=None, *, use
     else:
         stops = feed.stops
 
-    return _geometrize_stops(stops, use_utm=use_utm)
+    return geometrize_stops_0(stops, use_utm=use_utm)
+
+
+def build_geometry_by_stop(feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
+    """
+    Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>. 
+    """
+    return dict(
+        geometrize_stops(feed, stop_ids=stop_ids, use_utm=True)
+        .filter(["stop_id", "geometry"])
+        .values
+    )
+    
+
+def stops_to_geojson(
+    feed: "Feed", stop_ids: Optional[Iterable[str]] = None
+) -> Dict:
+    """
+    Return a GeoJSON FeatureCollection of Point features
+    representing ``feed.stops``.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
+
+    If an iterable of stop IDs is given, then subset to those stops.
+    """
+    return hp.drop_feature_ids(
+        json.loads(geometrize_stops(feed, stop_ids=stop_ids).to_json())
+    )
 
 
 def get_stops_in_polygon(
@@ -798,23 +825,9 @@ def get_stops_in_polygon(
     if geometrized:
         result = f
     else:
-        result = _ungeometrize_stops(f)
+        result = ungeometrize_stops_0(f)
 
     return result
-
-
-def stops_to_geojson(
-    feed: "Feed", stop_ids: Optional[Iterable[str]] = None
-) -> Dict:
-    """
-    Return a GeoJSON FeatureCollection of Point features
-    representing ``feed.stops``.
-    The coordinates reference system is the default one for GeoJSON,
-    namely WGS84.
-
-    If an iterable of stop IDs is given, then subset to those stops.
-    """
-    return json.loads(geometrize_stops(feed, stop_ids=stop_ids).to_json())
 
 
 def map_stops(

@@ -13,9 +13,9 @@ from .context import (
     cairns_dates,
 )
 from gtfs_kit import *
-from gtfs_kit import _geometrize_stops, _ungeometrize_stops
+from gtfs_kit import geometrize_stops_0, ungeometrize_stops_0
 
-def test_compute_stop_stats_base():
+def test_compute_stop_stats_0():
     feed1 = cairns.copy()
     feed2 = cairns.copy()
     feed2.trips.direction_id = np.nan
@@ -26,14 +26,14 @@ def test_compute_stop_stats_base():
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_stop_stats_base(
+                compute_stop_stats_0(
                     feed.stop_times,
                     feed.trips,
                     split_directions=split_directions,
                 )
             continue
 
-        stops_stats = compute_stop_stats_base(
+        stops_stats = compute_stop_stats_0(
             feed.stop_times, feed.trips, split_directions=split_directions
         )
         # Should be a data frame
@@ -60,12 +60,12 @@ def test_compute_stop_stats_base():
         assert get_stops == expect_stops
 
     # Empty check
-    stats = compute_stop_stats_base(feed.stop_times, pd.DataFrame())
+    stats = compute_stop_stats_0(feed.stop_times, pd.DataFrame())
     assert stats.empty
 
 
 @pytest.mark.slow
-def test_compute_stop_time_series_base():
+def test_compute_stop_time_series_0():
     feed1 = cairns.copy()
     feed2 = cairns.copy()
     feed2.trips.direction_id = np.nan
@@ -76,17 +76,17 @@ def test_compute_stop_time_series_base():
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_stop_time_series_base(
+                compute_stop_time_series_0(
                     feed.stop_times,
                     feed.trips,
                     split_directions=split_directions,
                 )
             continue
 
-        ss = compute_stop_stats_base(
+        ss = compute_stop_stats_0(
             feed.stop_times, feed.trips, split_directions=split_directions
         )
-        sts = compute_stop_time_series_base(
+        sts = compute_stop_time_series_0(
             feed.stop_times,
             feed.trips,
             freq="1H",
@@ -116,7 +116,7 @@ def test_compute_stop_time_series_base():
                 assert get == expect
 
     # Empty check
-    stops_ts = compute_stop_time_series_base(
+    stops_ts = compute_stop_time_series_0(
         feed.stop_times,
         pd.DataFrame(),
         freq="1H",
@@ -305,9 +305,9 @@ def test_build_stop_timetable():
     assert f.empty
 
 
-def test__geometrize_stops():
+def test_geometrize_stops_0():
     stops = cairns.stops.copy()
-    geo_stops = _geometrize_stops(stops, use_utm=True)
+    geo_stops = geometrize_stops_0(stops, use_utm=True)
     # Should be a GeoDataFrame
     assert isinstance(geo_stops, gpd.GeoDataFrame)
     # Should have the correct shape
@@ -319,20 +319,25 @@ def test__geometrize_stops():
     )
     assert set(geo_stops.columns) == expect_cols
 
-def test__ungeometrize_stops():
+def test_ungeometrize_stops_0():
     stops = cairns.stops.copy()
-    geo_stops = _geometrize_stops(stops)
-    stops2 = _ungeometrize_stops(geo_stops)
+    geo_stops = geometrize_stops_0(stops)
+    stops2 = ungeometrize_stops_0(geo_stops)
     # Test columns are correct
     assert set(stops2.columns) == set(stops.columns)
     # Data frames should be equal after sorting columns
     cols = sorted(stops.columns)
     assert_frame_equal(stops2[cols], stops[cols])
 
-def test_geometrize_shapes():
+def test_geometrize_stops():
     g_1 = geometrize_stops(cairns)
-    g_2 = _geometrize_stops(cairns.stops)
+    g_2 = geometrize_stops_0(cairns.stops)
     assert g_1.equals(g_2)
+
+def test_build_geometry_by_stop():
+    d = build_geometry_by_stop(cairns) 
+    assert isinstance(d, dict)
+    assert len(d) == cairns.stops.stop_id.nunique()
 
 def test_stops_to_geojson():
     feed = cairns.copy()

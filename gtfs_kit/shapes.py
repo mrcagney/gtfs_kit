@@ -73,7 +73,7 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
     return feed
 
 
-def _geometrize_shapes(
+def geometrize_shapes_0(
     shapes: pd.DataFrame, *, use_utm: bool = False
 ) -> gpd.GeoDataFrame:
     """
@@ -104,9 +104,9 @@ def _geometrize_shapes(
     return g
 
 
-def _ungeometrize_shapes(geo_shapes: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_shapes_0(geo_shapes: gpd.GeoDataFrame) -> pd.DataFrame:
     """
-    The inverse of :func:`_geometrize_shapes`.
+    The inverse of :func:`geometrize_shapes_0`.
 
     If ``geo_shapes`` is in UTM coordinates (has a UTM CRS property),
     then convert those UTM coordinates back to WGS84 coordinates,
@@ -134,7 +134,7 @@ def _ungeometrize_shapes(geo_shapes: gpd.GeoDataFrame) -> pd.DataFrame:
     )
 
 
-def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> pd.DataFrame:
+def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> gpd.GeoDataFrame:
     """
     Given a Feed instance, convert its shapes DataFrame to a GeoDataFrame of
     LineStrings and return the result, which will no longer have the columns
@@ -146,15 +146,25 @@ def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *
     Raise a ValueError if ``feed.shapes`` is None.
     """
     if feed.shapes is None:
-        raise ValueError("This Feed's shapes attribute is None")
+        raise ValueError("This Feed has no shapes.")
 
     if shape_ids is not None:
         shapes = feed.shapes.loc[lambda x: x.shape_id.isin(shape_ids)]
     else:
         shapes = feed.shapes
 
-    return _geometrize_shapes(shapes, use_utm=use_utm)
+    return geometrize_shapes_0(shapes, use_utm=use_utm)
 
+
+def build_geometry_by_shape(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
+    """
+    Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>. 
+    """
+    return dict(
+        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=True)
+        .filter(["shape_id", "geometry"])
+        .values
+    )
 
 def shapes_to_geojson(
     feed: "Feed", shape_ids: Optional[Iterable[str]] = None
@@ -169,7 +179,9 @@ def shapes_to_geojson(
 
     Raise a ValueError if ``feed.shapes is None``
     """
-    return json.loads(geometrize_shapes(feed, shape_ids=shape_ids).to_json())
+    return hp.drop_feature_ids(
+        json.loads(geometrize_shapes(feed, shape_ids=shape_ids).to_json())
+    )
 
 
 def get_shapes_intersecting_geometry(
@@ -195,6 +207,6 @@ def get_shapes_intersecting_geometry(
     if geometrized:
         result = f
     else:
-        result = _ungeometrize_shapes(f)
+        result = ungeometrize_shapes_0(f)
 
     return result

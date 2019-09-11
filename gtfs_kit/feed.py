@@ -94,6 +94,7 @@ class Feed(object):
     from .shapes import (
         append_dist_to_shapes,
         geometrize_shapes,
+        build_geometry_by_shape,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
     )
@@ -104,6 +105,9 @@ class Feed(object):
         build_zero_stop_time_series,
         compute_stop_time_series,
         build_stop_timetable,
+        geometrize_stops,
+        build_geometry_by_stop,
+        stops_to_geojson,
         get_stops_in_polygon,
         map_stops,
     )
@@ -119,7 +123,8 @@ class Feed(object):
         compute_busiest_date,
         compute_trip_stats,
         locate_trips,
-        trip_to_geojson,
+        geometrize_trips,
+        trips_to_geojson,
         map_trips,
     )
     from .miscellany import (

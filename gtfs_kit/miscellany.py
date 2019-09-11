@@ -285,7 +285,7 @@ def convert_dist(feed: "Feed", new_dist_units: str) -> "Feed":
     return feed
 
 
-def compute_feed_stats_base(
+def compute_feed_stats_0(
     feed: "Feed", trip_stats_subset: DataFrame, *, split_route_types=False
 ) -> DataFrame:
     """
@@ -459,7 +459,7 @@ def compute_feed_stats(
             # Compute stats
             ts = trip_stats.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_feed_stats_base(
+                compute_feed_stats_0(
                     feed, ts, split_route_types=split_route_types
                 )
                 # Assign date
@@ -541,7 +541,7 @@ def compute_feed_time_series(
 
     Notes
     -----
-    - See the notes for :func:`.routes.compute_route_time_series_base`
+    - See the notes for :func:`.routes.compute_route_time_series_0`
     - If all dates lie outside the Feed's date range, then return an
       empty DataFrame
     - Assume the following feed attributes are not ``None``:

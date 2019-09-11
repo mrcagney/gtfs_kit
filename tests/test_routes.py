@@ -2,21 +2,20 @@ import pytest
 import pandas as pd
 import itertools
 
+import folium as fl
+
 from .context import (
     gtfs_kit,
-    HAS_FOLIUM,
     cairns,
     cairns_dates,
     cairns_trip_stats,
 )
 from gtfs_kit import *
 
-if HAS_FOLIUM:
-    import folium as fl
 
 
 @pytest.mark.slow
-def test_compute_route_stats_base():
+def test_compute_route_stats_0():
     feed = cairns.copy()
     ts1 = cairns_trip_stats.copy()
     ts2 = cairns_trip_stats.copy()
@@ -26,10 +25,10 @@ def test_compute_route_stats_base():
         if split_directions and ts.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_route_stats_base(ts, split_directions=split_directions)
+                compute_route_stats_0(ts, split_directions=split_directions)
             continue
 
-        rs = compute_route_stats_base(ts, split_directions=split_directions)
+        rs = compute_route_stats_0(ts, split_directions=split_directions)
 
         # Should be a data frame of the correct shape
         assert isinstance(rs, pd.core.frame.DataFrame)
@@ -70,14 +69,14 @@ def test_compute_route_stats_base():
         assert set(rs.columns) == expect_cols
 
     # Empty check
-    rs = compute_route_stats_base(
+    rs = compute_route_stats_0(
         pd.DataFrame(), split_directions=split_directions
     )
     assert rs.empty
 
 
 @pytest.mark.slow
-def test_compute_route_time_series_base():
+def test_compute_route_time_series_0():
     feed = cairns.copy()
     ts1 = cairns_trip_stats.copy()
     ts2 = cairns_trip_stats.copy()
@@ -86,11 +85,11 @@ def test_compute_route_time_series_base():
         if split_directions and ts.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_route_stats_base(ts, split_directions=split_directions)
+                compute_route_stats_0(ts, split_directions=split_directions)
             continue
 
-        rs = compute_route_stats_base(ts, split_directions=split_directions)
-        rts = compute_route_time_series_base(
+        rs = compute_route_stats_0(ts, split_directions=split_directions)
+        rts = compute_route_time_series_0(
             ts, split_directions=split_directions, freq="H"
         )
 
@@ -115,7 +114,7 @@ def test_compute_route_time_series_base():
                 assert abs((get - expect) / expect) < 0.001
 
     # Empty check
-    rts = compute_route_time_series_base(
+    rts = compute_route_time_series_0(
         pd.DataFrame(), split_directions=split_directions, freq="1H"
     )
     assert rts.empty
@@ -325,7 +324,6 @@ def test_route_to_geojson():
     assert len(g2["features"]) == n + k
 
 
-@pytest.mark.skipif(not HAS_FOLIUM, reason="Requires Folium")
 def test_map_routes():
     feed = cairns.copy()
     rids = feed.routes["route_id"].values[:2]

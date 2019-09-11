@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def compute_route_stats_base(
+def compute_route_stats_0(
     trip_stats_subset: DataFrame,
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
@@ -259,7 +259,7 @@ def compute_route_stats_base(
     return g
 
 
-def compute_route_time_series_base(
+def compute_route_time_series_0(
     trip_stats_subset: DataFrame,
     date_label: str = "20010101",
     freq: str = "5Min",
@@ -329,7 +329,7 @@ def compute_route_time_series_base(
       resampled at the end to the given frequency
     - Trips that lack start or end times are ignored, so the the
       aggregate ``num_trips`` across the day could be less than the
-      ``num_trips`` column of :func:`compute_route_stats_base`
+      ``num_trips`` column of :func:`compute_route_stats_0`
     - All trip departure times are taken modulo 24 hours.
       So routes with trips that end past 23:59:59 will have all
       their stats wrap around to the early morning of the time series,
@@ -526,7 +526,7 @@ def compute_route_stats(
         Columns are
 
         - ``'date'``
-        - the columns listed in :func:``compute_route_stats_base``
+        - the columns listed in :func:``compute_route_stats_0``
 
         Exclude dates with no active stops, which could yield the empty DataFrame.
 
@@ -537,7 +537,7 @@ def compute_route_stats(
       date d
     - Assume the following feed attributes are not ``None``:
 
-        * Those used in :func:`.helpers.compute_route_stats_base`
+        * Those used in :func:`.helpers.compute_route_stats_0`
 
     - Raise a ValueError if ``split_directions`` and no non-NaN
       direction ID values present
@@ -569,7 +569,7 @@ def compute_route_stats(
             # Compute stats
             t = trip_stats_subset.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_route_stats_base(
+                compute_route_stats_0(
                     t,
                     split_directions=split_directions,
                     headway_start_time=headway_start_time,
@@ -599,7 +599,7 @@ def build_zero_route_time_series(
 ) -> DataFrame:
     """
     Return a route time series with the same index and hierarchical columns
-    as output by :func:`compute_route_time_series_base`,
+    as output by :func:`compute_route_time_series_0`,
     but fill it full of zero values.
     """
     start = date_label
@@ -656,7 +656,7 @@ def compute_route_time_series(
     Returns
     -------
     DataFrame
-        Same format as output by :func:`compute_route_time_series_base`
+        Same format as output by :func:`compute_route_time_series_0`
         but with multiple dates
 
         Exclude dates that lie outside of the Feed's date range.
@@ -665,7 +665,7 @@ def compute_route_time_series(
 
     Notes
     -----
-    - See the notes for :func:`compute_route_time_series_base`
+    - See the notes for :func:`compute_route_time_series_0`
     - Assume the following feed attributes are not ``None``:
 
         * Those used in :func:`.trips.get_trips`
@@ -701,7 +701,7 @@ def compute_route_time_series(
         else:
             # Compute stats
             t = ts[ts["trip_id"].isin(ids)].copy()
-            stats = compute_route_time_series_base(
+            stats = compute_route_time_series_0(
                 t,
                 split_directions=split_directions,
                 freq=freq,
