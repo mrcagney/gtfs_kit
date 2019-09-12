@@ -72,9 +72,7 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
         if service in cali.index:
             weekday_str = hp.weekday_to_str(hp.datestr_to_date(date).weekday())
             if (
-                cali.at[service, "start_date"]
-                <= date
-                <= cali.at[service, "end_date"]
+                cali.at[service, "start_date"] <= date <= cali.at[service, "end_date"]
                 and cali.at[service, weekday_str] == 1
             ):
                 return True
@@ -278,11 +276,7 @@ def compute_trip_stats(
         .merge(feed.routes[["route_id", "route_short_name", "route_type"]])
         .merge(feed.stop_times)
         .sort_values(["trip_id", "stop_sequence"])
-        .assign(
-            departure_time=lambda x: x["departure_time"].map(
-                hp.timestr_to_seconds
-            )
-        )
+        .assign(departure_time=lambda x: x["departure_time"].map(hp.timestr_to_seconds))
     )
 
     # Compute all trips stats except distance,
@@ -315,14 +309,9 @@ def compute_trip_stats(
     h = g.apply(my_agg)
 
     # Compute distance
-    if (
-        hp.is_not_null(f, "shape_dist_traveled")
-        and not compute_dist_from_shapes
-    ):
+    if hp.is_not_null(f, "shape_dist_traveled") and not compute_dist_from_shapes:
         # Compute distances using shape_dist_traveled column
-        h["distance"] = g.apply(
-            lambda group: group["shape_dist_traveled"].max()
-        )
+        h["distance"] = g.apply(lambda group: group["shape_dist_traveled"].max())
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
@@ -452,9 +441,7 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     def compute_rel_dist(group):
         dists = sorted(group["shape_dist_traveled"].values)
         times = sorted(group["departure_time"].values)
-        ts = sample_times[
-            (sample_times >= times[0]) & (sample_times <= times[-1])
-        ]
+        ts = sample_times[(sample_times >= times[0]) & (sample_times <= times[-1])]
         ds = np.interp(ts, times, dists)
         return pd.DataFrame({"time": ts, "rel_dist": ds / dists[-1]})
 
@@ -495,7 +482,9 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     return h.groupby("shape_id").apply(get_lonlat)
 
 
-def geometrize_trips(feed: "Feed", trip_ids: Optional[Iterable[str]]=None, *, use_utm=False) -> gpd.GeoDataFrame:
+def geometrize_trips(
+    feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
+) -> gpd.GeoDataFrame:
     """
     """
     if feed.shapes is None:
@@ -506,17 +495,18 @@ def geometrize_trips(feed: "Feed", trip_ids: Optional[Iterable[str]]=None, *, us
     else:
         trips = feed.trips.copy()
 
-    cols = trips.columns.tolist()
+    return trips.merge(
+        feed.geometrize_shapes(shape_ids=trips.shape_id, use_utm=use_utm).filter(
+            ["shape_id", "geometry"]
+        )
+    ).pipe(gpd.GeoDataFrame, crs=cs.WGS84)
 
-    return (
-        feed.geometrize_shapes(shape_ids=trips.shape_id, use_utm=use_utm)
-        .filter(["shape_id", "geometry"])
-        .merge(trips)
-        .filter(cols + ["geometry"])
-    )
 
 def trips_to_geojson(
-    feed: "Feed", trip_ids: Optional[Iterable[str]]=None, *, include_stops: bool = False
+    feed: "Feed",
+    trip_ids: Optional[Iterable[str]] = None,
+    *,
+    include_stops: bool = False,
 ) -> Dict:
     """
     Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
@@ -524,19 +514,17 @@ def trips_to_geojson(
     namely WGS84.
 
     Include the trip stops as Point features if ``include_stops``.
-    If an iterable of stop IDs is given, then subset to those stops.
+    If an iterable of trip IDs is given, then subset to those trips.
     """
     # Get trips
     collection = json.loads(geometrize_trips(feed, trip_ids=trip_ids).to_json())
-    
+
     # Get stops if desired
     if include_stops:
         if trip_ids is not None:
-            stop_ids = (
-                feed.stop_times
-                .loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"]
-                .unique()
-            )
+            stop_ids = feed.stop_times.loc[
+                lambda x: x.trip_id.isin(trip_ids), "stop_id"
+            ].unique()
         else:
             stop_ids = None
 
@@ -544,6 +532,7 @@ def trips_to_geojson(
         collection["features"].extend(stops_gj["features"])
 
     return hp.drop_feature_ids(collection)
+
 
 def map_trips(
     feed: "Feed",
@@ -628,9 +617,7 @@ def map_trips(
                 path = fl.GeoJson(
                     f,
                     name=trip,
-                    style_function=lambda x: {
-                        "color": x["properties"]["color"]
-                    },
+                    style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)

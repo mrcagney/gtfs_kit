@@ -88,7 +88,8 @@ class Feed(object):
         build_zero_route_time_series,
         compute_route_time_series,
         build_route_timetable,
-        route_to_geojson,
+        geometrize_routes,
+        routes_to_geojson,
         map_routes,
     )
     from .shapes import (
@@ -212,8 +213,7 @@ class Feed(object):
     def dist_units(self, val):
         if val not in cs.DIST_UNITS:
             raise ValueError(
-                f"Distance units are required and "
-                f"must lie in {cs.DIST_UNITS}"
+                f"Distance units are required and " f"must lie in {cs.DIST_UNITS}"
             )
         else:
             self._dist_units = val
@@ -287,9 +287,7 @@ class Feed(object):
                 d[table] = None
         d["dist_units"] = self.dist_units
 
-        return "\n".join(
-            [f"* {k} --------------------\n\t{v}" for k, v in d.items()]
-        )
+        return "\n".join([f"* {k} --------------------\n\t{v}" for k, v in d.items()])
 
     def __eq__(self, other):
         """
@@ -306,9 +304,7 @@ class Feed(object):
             y = getattr(other, key)
             # DataFrame case
             if isinstance(x, pd.DataFrame):
-                if not isinstance(y, pd.DataFrame) or not hp.almost_equal(
-                    x, y
-                ):
+                if not isinstance(y, pd.DataFrame) or not hp.almost_equal(x, y):
                     return False
             # Other case
             else:
