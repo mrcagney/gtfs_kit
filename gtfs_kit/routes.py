@@ -2,10 +2,11 @@
 Functions about routes.
 """
 from collections import OrderedDict
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+import json
 
+import geopandas as gpd
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
@@ -18,13 +19,13 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def compute_route_stats_base(
-    trip_stats_subset: DataFrame,
+def compute_route_stats_0(
+    trip_stats_subset: pd.DataFrame,
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute stats for the given subset of trips stats.
 
@@ -132,11 +133,7 @@ def compute_route_stats_base(
         # Compute max and mean headway
         stimes = group["start_time"].values
         stimes = sorted(
-            [
-                stime
-                for stime in stimes
-                if headway_start <= stime <= headway_end
-            ]
+            [stime for stime in stimes if headway_start <= stime <= headway_end]
         )
         headways = np.diff(stimes)
         if headways.size:
@@ -149,9 +146,7 @@ def compute_route_stats_base(
             d["mean_headway"] = np.nan
 
         # Compute peak num trips
-        active_trips = hp.get_active_trips_df(
-            group[["start_time", "end_time"]]
-        )
+        active_trips = hp.get_active_trips_df(group[["start_time", "end_time"]])
         times, counts = active_trips.index.values, active_trips.values
         start, end = hp.get_peak_indices(times, counts)
         d["peak_num_trips"] = counts[start]
@@ -180,15 +175,9 @@ def compute_route_stats_base(
         # Compute headway stats
         headways = np.array([])
         for direction in [0, 1]:
-            stimes = group[group["direction_id"] == direction][
-                "start_time"
-            ].values
+            stimes = group[group["direction_id"] == direction]["start_time"].values
             stimes = sorted(
-                [
-                    stime
-                    for stime in stimes
-                    if headway_start <= stime <= headway_end
-                ]
+                [stime for stime in stimes if headway_start <= stime <= headway_end]
             )
             headways = np.concatenate([headways, np.diff(stimes)])
         if headways.size:
@@ -201,9 +190,7 @@ def compute_route_stats_base(
             d["mean_headway"] = np.nan
 
         # Compute peak num trips
-        active_trips = hp.get_active_trips_df(
-            group[["start_time", "end_time"]]
-        )
+        active_trips = hp.get_active_trips_df(group[["start_time", "end_time"]])
         times, counts = active_trips.index.values, active_trips.values
         start, end = hp.get_peak_indices(times, counts)
         d["peak_num_trips"] = counts[start]
@@ -221,8 +208,7 @@ def compute_route_stats_base(
         )
         if f.empty:
             raise ValueError(
-                "At least one trip stats direction ID value "
-                "must be non-NaN."
+                "At least one trip stats direction ID value " "must be non-NaN."
             )
 
         g = (
@@ -234,9 +220,7 @@ def compute_route_stats_base(
         # Add the is_bidirectional column
         def is_bidirectional(group):
             d = {}
-            d["is_bidirectional"] = int(
-                group["direction_id"].unique().size > 1
-            )
+            d["is_bidirectional"] = int(group["direction_id"].unique().size > 1)
             return pd.Series(d)
 
         gg = g.groupby("route_id").apply(is_bidirectional).reset_index()
@@ -245,9 +229,9 @@ def compute_route_stats_base(
         g = f.groupby("route_id").apply(compute_route_stats).reset_index()
 
     # Compute a few more stats
-    g["service_speed"] = (
-        g["service_distance"] / g["service_duration"]
-    ).fillna(g["service_distance"])
+    g["service_speed"] = (g["service_distance"] / g["service_duration"]).fillna(
+        g["service_distance"]
+    )
     g["mean_trip_distance"] = g["service_distance"] / g["num_trips"]
     g["mean_trip_duration"] = g["service_duration"] / g["num_trips"]
 
@@ -259,13 +243,13 @@ def compute_route_stats_base(
     return g
 
 
-def compute_route_time_series_base(
-    trip_stats_subset: DataFrame,
+def compute_route_time_series_0(
+    trip_stats_subset: pd.DataFrame,
     date_label: str = "20010101",
     freq: str = "5Min",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute stats in a 24-hour time series form for the given subset of trips.
 
@@ -329,7 +313,7 @@ def compute_route_time_series_base(
       resampled at the end to the given frequency
     - Trips that lack start or end times are ignored, so the the
       aggregate ``num_trips`` across the day could be less than the
-      ``num_trips`` column of :func:`compute_route_stats_base`
+      ``num_trips`` column of :func:`compute_route_stats_0`
     - All trip departure times are taken modulo 24 hours.
       So routes with trips that end past 23:59:59 will have all
       their stats wrap around to the early morning of the time series,
@@ -357,16 +341,13 @@ def compute_route_time_series_base(
         )
         if tss.empty:
             raise ValueError(
-                "At least one trip stats direction ID value "
-                "must be non-NaN."
+                "At least one trip stats direction ID value " "must be non-NaN."
             )
 
         # Alter route IDs to encode direction:
         # <route ID>-0 and <route ID>-1 or <route ID>-NA
         tss["route_id"] = (
-            tss["route_id"]
-            + "-"
-            + tss["direction_id"].map(lambda x: str(int(x)))
+            tss["route_id"] + "-" + tss["direction_id"].map(lambda x: str(int(x)))
         )
 
     routes = tss["route_id"].unique()
@@ -392,9 +373,7 @@ def compute_route_time_series_base(
     def F(x):
         return (hp.timestr_to_seconds(x) // 60) % (24 * 60)
 
-    tss[["start_index", "end_index"]] = tss[
-        ["start_time", "end_time"]
-    ].applymap(F)
+    tss[["start_index", "end_index"]] = tss[["start_time", "end_time"]].applymap(F)
     routes = sorted(set(tss["route_id"].values))
 
     # Bin each trip according to its start and end time and weight
@@ -454,7 +433,7 @@ def compute_route_time_series_base(
 
 def get_routes(
     feed: "Feed", date: Optional[str] = None, time: Optional[str] = None
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a subset of ``feed.routes``
 
@@ -491,13 +470,13 @@ def get_routes(
 
 def compute_route_stats(
     feed: "Feed",
-    trip_stats_subset: DataFrame,
+    trip_stats_subset: pd.DataFrame,
     dates: List[str],
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute route stats for all the trips that lie in the given subset
     of trip stats and that start on the given dates.
@@ -526,7 +505,7 @@ def compute_route_stats(
         Columns are
 
         - ``'date'``
-        - the columns listed in :func:``compute_route_stats_base``
+        - the columns listed in :func:``compute_route_stats_0``
 
         Exclude dates with no active stops, which could yield the empty DataFrame.
 
@@ -537,7 +516,7 @@ def compute_route_stats(
       date d
     - Assume the following feed attributes are not ``None``:
 
-        * Those used in :func:`.helpers.compute_route_stats_base`
+        * Those used in :func:`.helpers.compute_route_stats_0`
 
     - Raise a ValueError if ``split_directions`` and no non-NaN
       direction ID values present
@@ -569,7 +548,7 @@ def compute_route_stats(
             # Compute stats
             t = trip_stats_subset.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_route_stats_base(
+                compute_route_stats_0(
                     t,
                     split_directions=split_directions,
                     headway_start_time=headway_start_time,
@@ -596,10 +575,10 @@ def build_zero_route_time_series(
     freq: str = "5Min",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a route time series with the same index and hierarchical columns
-    as output by :func:`compute_route_time_series_base`,
+    as output by :func:`compute_route_time_series_0`,
     but fill it full of zero values.
     """
     start = date_label
@@ -621,19 +600,19 @@ def build_zero_route_time_series(
         product = [inds, rids]
         names = ["indicator", "route_id"]
     cols = pd.MultiIndex.from_product(product, names=names)
-    return pd.DataFrame(
-        [[0 for c in cols]], index=rng, columns=cols
-    ).sort_index(axis="columns")
+    return pd.DataFrame([[0 for c in cols]], index=rng, columns=cols).sort_index(
+        axis="columns"
+    )
 
 
 def compute_route_time_series(
     feed: "Feed",
-    trip_stats_subset: DataFrame,
+    trip_stats_subset: pd.DataFrame,
     dates: List[str],
     freq: str = "5Min",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute route stats in time series form for the trips that lie in
     the trip stats subset and that start on the given dates.
@@ -656,7 +635,7 @@ def compute_route_time_series(
     Returns
     -------
     DataFrame
-        Same format as output by :func:`compute_route_time_series_base`
+        Same format as output by :func:`compute_route_time_series_0`
         but with multiple dates
 
         Exclude dates that lie outside of the Feed's date range.
@@ -665,7 +644,7 @@ def compute_route_time_series(
 
     Notes
     -----
-    - See the notes for :func:`compute_route_time_series_base`
+    - See the notes for :func:`compute_route_time_series_0`
     - Assume the following feed attributes are not ``None``:
 
         * Those used in :func:`.trips.get_trips`
@@ -701,11 +680,8 @@ def compute_route_time_series(
         else:
             # Compute stats
             t = ts[ts["trip_id"].isin(ids)].copy()
-            stats = compute_route_time_series_base(
-                t,
-                split_directions=split_directions,
-                freq=freq,
-                date_label=date,
+            stats = compute_route_time_series_0(
+                t, split_directions=split_directions, freq=freq, date_label=date
             )
 
             # Remember stats
@@ -739,7 +715,7 @@ def compute_route_time_series(
 
 def build_route_timetable(
     feed: "Feed", route_id: str, dates: List[str]
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a timetable for the given route and dates.
 
@@ -800,94 +776,91 @@ def build_route_timetable(
     )
 
 
-def route_to_geojson(
+def geometrize_routes(
     feed: "Feed",
-    route_id: str,
-    date: Optional[str] = None,
+    route_ids: Optional[Iterable[str]] = None,
     *,
+    use_utm: bool = False,
+    split_directions: bool = False,
+):
+    """
+    """
+    if feed.shapes is None:
+        raise ValueError("This Feed has no shapes.")
+
+    # Subset routes
+    if route_ids is None:
+        route_ids = feed.routes.route_id
+
+    # Subset trips
+    trip_ids = feed.trips.loc[lambda x: x.route_id.isin(route_ids), "trip_id"]
+
+    # Combine shape LineStrings within route and direction
+    if split_directions:
+        groupby_cols = ["route_id", "direction_id"]
+    else:
+        groupby_cols = ["route_id"]
+
+    def merge_lines(group):
+        d = {}
+        d["geometry"] = so.linemerge(group.geometry.tolist())
+        return pd.Series(d)
+
+    return (
+        feed.routes.merge(
+            feed.geometrize_trips(trip_ids).filter(
+                ["route_id", "direction_id", "geometry"]
+            )
+        )
+        .groupby(groupby_cols)
+        .apply(merge_lines)
+        .reset_index()
+        .pipe(gpd.GeoDataFrame, crs=cs.WGS84)
+    )
+
+
+def routes_to_geojson(
+    feed: "Feed",
+    route_ids: Optional[Iterable[str]] = None,
+    *,
+    split_directions: bool = False,
     include_stops: bool = False,
 ) -> Dict:
     """
-    Return a GeoJSON rendering of the route and, optionally, its stops.
+    Return a GeoJSON FeatureCollection of MultiLineString features representing this Feed's routes.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
 
-    Parameters
-    ----------
-    feed : Feed
-    route_id : string
-        ID of a route in ``feed.routes``
-    date : string
-        YYYYMMDD date string restricting the output to trips active
-        on the date
-    include_stops : boolean
-        If ``True``, then include stop features in the result
-
-    Returns
-    -------
-    dictionary
-        A decoded GeoJSON feature collection comprising a
-        LineString features of the distinct shapes of the trips on the
-        route.
-        If ``include_stops``, then include one Point feature for
-        each stop on the route.
-
+    Include the route stops as Point features if ``include_stops``.
+    If an iterable of route IDs is given, then subset to those routes.
     """
-    # Get set of unique trip shapes for route
-    shapes = (
-        feed.get_trips(date=date)
-        .loc[lambda x: x["route_id"] == route_id, "shape_id"]
-        .unique()
+    # Get trips
+    collection = json.loads(
+        geometrize_routes(
+            feed, route_ids=route_ids, split_directions=split_directions
+        ).to_json()
     )
-    if not shapes.size:
-        return {"type": "FeatureCollection", "features": []}
 
-    geom_by_shape = feed.build_geometry_by_shape(shape_ids=shapes)
-
-    # Get route properties
-    route = (
-        feed.get_routes(date=date)
-        .loc[lambda x: x["route_id"] == route_id]
-        .fillna("n/a")
-        .to_dict(orient="records", into=OrderedDict)
-    )[0]
-
-    # Build route shape features
-    features = [
-        {
-            "type": "Feature",
-            "properties": route,
-            "geometry": sg.mapping(sg.LineString(geom)),
-        }
-        for geom in geom_by_shape.values()
-    ]
-
-    # Build stop features if desired
+    # Get stops if desired
     if include_stops:
-        stops = (
-            feed.get_stops(route_id=route_id)
-            .fillna("n/a")
-            .to_dict(orient="records", into=OrderedDict)
-        )
-        features.extend(
-            [
-                {
-                    "type": "Feature",
-                    "geometry": {
-                        "type": "Point",
-                        "coordinates": [stop["stop_lon"], stop["stop_lat"]],
-                    },
-                    "properties": stop,
-                }
-                for stop in stops
-            ]
-        )
+        if route_ids is not None:
+            stop_ids = (
+                feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
+                .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
+                .unique()
+            )
+        else:
+            stop_ids = None
 
-    return {"type": "FeatureCollection", "features": features}
+        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+        collection["features"].extend(stops_gj["features"])
+
+    return hp.drop_feature_ids(collection)
 
 
 def map_routes(
     feed: "Feed",
     route_ids: List[str],
-    date: Optional[str] = None,
     color_palette: List[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = True,
@@ -943,8 +916,8 @@ def map_routes(
 
     # Create a feature group for each route and add it to the map
     for i, route in enumerate(routes):
-        collection = feed.route_to_geojson(
-            route_id=route["route_id"], date=date, include_stops=include_stops
+        collection = feed.routes_to_geojson(
+            route_ids=[route["route_id"]], include_stops=include_stops
         )
         group = fl.FeatureGroup(name="Route " + route["route_short_name"])
         color = colors[i]
@@ -970,9 +943,7 @@ def map_routes(
                 path = fl.GeoJson(
                     f,
                     name=route,
-                    style_function=lambda x: {
-                        "color": x["properties"]["color"]
-                    },
+                    style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)

@@ -88,23 +88,27 @@ class Feed(object):
         build_zero_route_time_series,
         compute_route_time_series,
         build_route_timetable,
-        route_to_geojson,
+        geometrize_routes,
+        routes_to_geojson,
         map_routes,
     )
     from .shapes import (
+        append_dist_to_shapes,
+        geometrize_shapes,
         build_geometry_by_shape,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
-        append_dist_to_shapes,
     )
     from .stops import (
         get_stops,
-        build_geometry_by_stop,
         compute_stop_activity,
         compute_stop_stats,
         build_zero_stop_time_series,
         compute_stop_time_series,
         build_stop_timetable,
+        geometrize_stops,
+        build_geometry_by_stop,
+        stops_to_geojson,
         get_stops_in_polygon,
         map_stops,
     )
@@ -120,7 +124,8 @@ class Feed(object):
         compute_busiest_date,
         compute_trip_stats,
         locate_trips,
-        trip_to_geojson,
+        geometrize_trips,
+        trips_to_geojson,
         map_trips,
     )
     from .miscellany import (
@@ -208,8 +213,7 @@ class Feed(object):
     def dist_units(self, val):
         if val not in cs.DIST_UNITS:
             raise ValueError(
-                f"Distance units are required and "
-                f"must lie in {cs.DIST_UNITS}"
+                f"Distance units are required and " f"must lie in {cs.DIST_UNITS}"
             )
         else:
             self._dist_units = val
@@ -283,9 +287,7 @@ class Feed(object):
                 d[table] = None
         d["dist_units"] = self.dist_units
 
-        return "\n".join(
-            [f"* {k} --------------------\n\t{v}" for k, v in d.items()]
-        )
+        return "\n".join([f"* {k} --------------------\n\t{v}" for k, v in d.items()])
 
     def __eq__(self, other):
         """
@@ -302,9 +304,7 @@ class Feed(object):
             y = getattr(other, key)
             # DataFrame case
             if isinstance(x, pd.DataFrame):
-                if not isinstance(y, pd.DataFrame) or not hp.almost_equal(
-                    x, y
-                ):
+                if not isinstance(y, pd.DataFrame) or not hp.almost_equal(x, y):
                     return False
             # Other case
             else:

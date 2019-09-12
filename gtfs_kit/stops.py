@@ -2,10 +2,11 @@
 Functions about stops.
 """
 from collections import Counter, OrderedDict
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+import json
 
+import geopandas as gpd
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 import utm
 import shapely.geometry as sg
@@ -29,14 +30,14 @@ STOP_STYLE = {
 }
 
 
-def compute_stop_stats_base(
-    stop_times_subset: DataFrame,
-    trip_subset: DataFrame,
+def compute_stop_stats_0(
+    stop_times_subset: pd.DataFrame,
+    trip_subset: pd.DataFrame,
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Given a subset of a stop times DataFrame and a subset of a trips
     DataFrame, return a DataFrame that provides summary stats about the
@@ -152,14 +153,14 @@ def compute_stop_stats_base(
     return result
 
 
-def compute_stop_time_series_base(
-    stop_times_subset: DataFrame,
-    trip_subset: DataFrame,
+def compute_stop_time_series_0(
+    stop_times_subset: pd.DataFrame,
+    trip_subset: pd.DataFrame,
     freq: str = "5Min",
     date_label: str = "20010101",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Given a subset of a stop times DataFrame and a subset of a trips
     DataFrame, return a DataFrame that provides a summary time series
@@ -206,7 +207,7 @@ def compute_stop_time_series_base(
       resampled at the end to the given frequency
     - Stop times with null departure times are ignored, so the aggregate
       of ``num_trips`` across the day could be less than the
-      ``num_trips`` column in :func:`compute_stop_stats_base`
+      ``num_trips`` column in :func:`compute_stop_stats_0`
     - All trip departure times are taken modulo 24 hours,
       so routes with trips that end past 23:59:59 will have all
       their stats wrap around to the early morning of the time series.
@@ -277,7 +278,7 @@ def get_stops(
     route_id: Optional[str] = None,
     *,
     in_stations: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a section of ``feed.stops``.
 
@@ -331,58 +332,7 @@ def get_stops(
     return s
 
 
-def build_geometry_by_stop(
-    feed: "Feed",
-    stop_ids: Optional[List[str]] = None,
-    *,
-    use_utm: bool = False,
-) -> Dict:
-    """
-    Return a dictionary with the structure
-    stop_id -> Shapely Point with coordinates of the stop.
-
-    Parameters
-    ----------
-    feed : Feed
-    use_utm : boolean
-        If ``True``, then return each point in UTM coordinates
-        appropriate to the region; otherwise use the default WGS84
-        coordinates
-    stop_ids : list
-        Stop IDs (strings) from ``feed.stops`` to restrict output to
-
-    Returns
-    -------
-    dictionary
-        Each key is a stop ID and each value is a Shapely Point with
-        coordinates of the stop
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.stops``
-
-    """
-    d = {}
-    stops = feed.stops.copy()
-    if stop_ids is not None:
-        stops = stops[stops["stop_id"].isin(stop_ids)]
-
-    stops = stops[stops.stop_lat.notna() & stops.stop_lon.notna()]
-
-    if use_utm:
-        for stop, group in stops.groupby("stop_id"):
-            lat, lon = group[["stop_lat", "stop_lon"]].values[0]
-            d[stop] = sg.Point(utm.from_latlon(lat, lon)[:2])
-    else:
-        for stop, group in stops.groupby("stop_id"):
-            lat, lon = group[["stop_lat", "stop_lon"]].values[0]
-            d[stop] = sg.Point([lon, lat])
-    return d
-
-
-def compute_stop_activity(feed: "Feed", dates: List[str]) -> DataFrame:
+def compute_stop_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
     """
     Mark stops as active or inactive on the given dates.
     A stop is *active* on a given date if some trips that starts on the
@@ -444,7 +394,7 @@ def compute_stop_stats(
     headway_end_time: str = "19:00:00",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute stats for all stops for the given dates.
     Optionally, restrict to the stop IDs given.
@@ -538,7 +488,7 @@ def compute_stop_stats(
             t = feed.trips
             trips = t[t["trip_id"].isin(ids)].copy()
             stats = (
-                compute_stop_stats_base(
+                compute_stop_stats_0(
                     stop_times_subset,
                     trips,
                     split_directions=split_directions,
@@ -565,10 +515,10 @@ def build_zero_stop_time_series(
     freq: str = "5Min",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a stop time series with the same index and hierarchical columns
-    as output by :func:`compute_stop_time_series_base`,
+    as output by :func:`compute_stop_time_series_0`,
     but fill it full of zero values.
     """
     start = date_label
@@ -595,11 +545,11 @@ def compute_stop_time_series(
     freq: str = "5Min",
     *,
     split_directions: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute time series for the stops on the given dates at the
     given frequency and return the result as a DataFrame of the same
-    form as output by :func:`.stop_times.compute_stop_time_series_base`.
+    form as output by :func:`.stop_times.compute_stop_time_series_0`.
     Optionally restrict to stops in the given list of stop IDs.
 
     Parameters
@@ -626,7 +576,7 @@ def compute_stop_time_series(
         The maximum allowable frequency is 1 minute.
 
         The columns are the same as in
-        :func:`compute_stop_time_series_base`.
+        :func:`compute_stop_time_series_0`.
 
         Exclude dates that lie outside of the Feed's date range.
         If all dates lie outside the Feed's date range, then return an
@@ -634,7 +584,7 @@ def compute_stop_time_series(
 
     Notes
     -----
-    - See the notes for :func:`compute_stop_time_series_base`
+    - See the notes for :func:`compute_stop_time_series_0`
     - Assume the following feed attributes are not ``None``:
 
         * ``feed.stop_times``
@@ -679,7 +629,7 @@ def compute_stop_time_series(
             # Compute stats
             t = feed.trips
             trips = t[t["trip_id"].isin(ids)].copy()
-            stats = compute_stop_time_series_base(
+            stats = compute_stop_time_series_0(
                 stop_times_subset,
                 trips,
                 split_directions=split_directions,
@@ -718,7 +668,7 @@ def compute_stop_time_series(
 
 def build_stop_timetable(
     feed: "Feed", stop_id: str, dates: List[str]
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a DataFrame containing the timetable for the given stop ID
     and dates.
@@ -767,76 +717,12 @@ def build_stop_timetable(
     return f.sort_values(["date", "departure_time"])
 
 
-def get_stops_in_polygon(
-    feed: "Feed", polygon: Polygon, geo_stops=None
-) -> DataFrame:
+def geometrize_stops_0(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDataFrame:
     """
-    Return the slice of ``feed.stops`` that contains all stops that lie
-    within the given Shapely Polygon object that is specified in
-    WGS84 coordinates.
-
-    Parameters
-    ----------
-    feed : Feed
-    polygon : Shapely Polygon
-        Specified in WGS84 coordinates
-    geo_stops : Geopandas GeoDataFrame
-        A geographic version of ``feed.stops`` which will be computed
-        if not given.
-        Specify this parameter in batch jobs to avoid unnecessary
-        computation.
-
-    Returns
-    -------
-    DataFrame
-        Subset of ``feed.stops``
-
-    Notes
-    -----
-    - Requires GeoPandas
-    - Assume the following feed attributes are not ``None``:
-
-        * ``feed.stops``, if ``geo_stops`` is not given
-
+    Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame of Points
+    and return the result, which will no longer have the columns ``'stop_lon'`` and
+    ``'stop_lat'``.
     """
-    if geo_stops is not None:
-        f = geo_stops.copy()
-    else:
-        f = geometrize_stops(feed.stops)
-
-    cols = f.columns
-    f["hit"] = f["geometry"].within(polygon)
-    f = f[f["hit"]][cols]
-    return ungeometrize_stops(f)
-
-
-def geometrize_stops(stops: List[str], *, use_utm: bool = False) -> DataFrame:
-    """
-    Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame
-    and return the result.
-
-    Parameters
-    ----------
-    stops : DataFrame
-        A GTFS stops table
-    use_utm : boolean
-        If ``True``, then convert the output to local UTM coordinates;
-        otherwise use WGS84 coordinates
-
-    Returns
-    -------
-    GeoPandas GeoDataFrame
-        Looks like the given stops DataFrame, but has a ``'geometry'``
-        column of Shapely Point objects that replaces
-        the ``'stop_lon'`` and ``'stop_lat'`` columns.
-
-    Notes
-    -----
-    Requires GeoPandas.
-
-    """
-    import geopandas as gpd
-
     g = (
         stops.assign(
             geometry=lambda x: [
@@ -855,25 +741,13 @@ def geometrize_stops(stops: List[str], *, use_utm: bool = False) -> DataFrame:
     return g
 
 
-def ungeometrize_stops(geo_stops: DataFrame) -> DataFrame:
+def ungeometrize_stops_0(geo_stops: gpd.GeoDataFrame) -> pd.DataFrame:
     """
-    The inverse of :func:`geometrize_stops`.
+    The inverse of :func:`geometrize_stops_0`.
 
-    Parameters
-    ----------
-    geo_stops : GeoPandas GeoDataFrame
-        Looks like a GTFS stops table, but has a ``'geometry'`` column
-        of Shapely Point objects that replaces the
-        ``'stop_lon'`` and ``'stop_lat'`` columns.
-
-    Returns
-    -------
-    DataFrame
-        A GTFS stops table where the ``'stop_lon'`` and ``'stop_lat'``
-        columns are derived from the points in the given GeoDataFrame
-        and are in WGS84 coordinates regardless of the coordinate
-        reference system of the given GeoDataFrame.
-
+    If ``geo_stops`` is in UTM coordinates (has a UTM CRS property),
+    then convert those UTM coordinates back to WGS84 coordinates,
+    which is the standard for a GTFS shapes table.
     """
     f = geo_stops.copy().to_crs(cs.WGS84)
     f["stop_lon"], f["stop_lat"] = zip(
@@ -883,8 +757,81 @@ def ungeometrize_stops(geo_stops: DataFrame) -> DataFrame:
     return f
 
 
+def geometrize_stops(feed: "Feed", stop_ids:Optional[Iterable[str]]=None, *, use_utm:bool=False) -> gpd.GeoDataFrame:
+    """
+    Given a Feed instance, convert its stops DataFrame to a GeoDataFrame of
+    Points and return the result, which will no longer have the columns
+    ``'stop_lon'`` and ``'stop_lat'``.
+
+    If an iterable of stop IDs is given, then subset to those stops.
+    If ``use_utm``, then use local UTM coordinates for the geometries.
+    """
+    if stop_ids is not None:
+        stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)]
+    else:
+        stops = feed.stops
+
+    return geometrize_stops_0(stops, use_utm=use_utm)
+
+
+def build_geometry_by_stop(feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
+    """
+    Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>. 
+    """
+    return dict(
+        geometrize_stops(feed, stop_ids=stop_ids, use_utm=True)
+        .filter(["stop_id", "geometry"])
+        .values
+    )
+    
+
+def stops_to_geojson(
+    feed: "Feed", stop_ids: Optional[Iterable[str]] = None
+) -> Dict:
+    """
+    Return a GeoJSON FeatureCollection of Point features
+    representing ``feed.stops``.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
+
+    If an iterable of stop IDs is given, then subset to those stops.
+    """
+    return hp.drop_feature_ids(
+        json.loads(geometrize_stops(feed, stop_ids=stop_ids).to_json())
+    )
+
+
+def get_stops_in_polygon(
+    feed: "Feed", polygon: sg.Polygon, geo_stops:Optional[gpd.GeoDataFrame]=None, *, geometrized: bool = False
+) -> pd.DataFrame:
+    """
+    Return the subset of ``feed.stops`` that contains all stops that lie
+    within the given Shapely Polygon that is specified in
+    WGS84 coordinates.
+
+    If ``geometrized``, then return the stops as a GeoDataFrame.
+    Specifying ``geo_stops`` will skip the first step of the
+    algorithm, namely, geometrizing ``feed.stops``.
+    """
+    if geo_stops is not None:
+        f = geo_stops.copy()
+    else:
+        f = geometrize_stops(feed)
+
+    cols = f.columns
+    f["hit"] = f["geometry"].within(polygon)
+    f = f.loc[lambda x: x.hit].filter(cols)
+
+    if geometrized:
+        result = f
+    else:
+        result = ungeometrize_stops_0(f)
+
+    return result
+
+
 def map_stops(
-    feed: "Feed", stop_ids: List[str], stop_style: Dict = STOP_STYLE
+    feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE
 ):
     """
     Return a Folium map showing the given stops.

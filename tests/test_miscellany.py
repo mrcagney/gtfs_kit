@@ -7,7 +7,6 @@ import shapely.geometry as sg
 
 from .context import (
     gtfs_kit,
-    HAS_GEOPANDAS,
     DATA_DIR,
     sample,
     cairns,
@@ -72,12 +71,12 @@ def test_convert_dist():
     )
 
 
-def test_compute_feed_stats_base():
+def test_compute_feed_stats_0():
     feed = cairns.copy()
     trip_stats = cairns_trip_stats
     feed.routes.route_type.iat[0] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = compute_feed_stats_base(
+        f = compute_feed_stats_0(
             feed, trip_stats, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -295,7 +294,6 @@ def test_restrict_to_routes():
     assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
 
 
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
 def test_restrict_to_polygon():
     feed1 = cairns.copy()
     with (DATA_DIR / "cairns_square_stop_750070.geojson").open() as src:
@@ -321,7 +319,6 @@ def test_restrict_to_polygon():
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(not HAS_GEOPANDAS, reason="Requires GeoPandas")
 def test_compute_screen_line_counts():
     feed = cairns.copy()
     dates = cairns_dates + ["20010101"]

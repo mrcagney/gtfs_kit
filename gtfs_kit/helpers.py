@@ -3,6 +3,7 @@ Functions useful across modules.
 """
 import datetime as dt
 from typing import Optional, Dict, List, Union, Callable
+import copy
 
 import pandas as pd
 from pandas import DataFrame
@@ -521,3 +522,18 @@ def make_html(d: Dict) -> str:
     return j2t.convert(
         d, table_attributes={"class": "table table-condensed table-hover"}
     )
+
+def drop_feature_ids(collection: Dict) -> Dict:
+    """
+    Given a GeoJSON FeatureCollection, remove the ``'id'`` attribute of each
+    Feature, if it exists.
+    """
+    new_features = []
+    for f in collection["features"]:
+        new_f = copy.deepcopy(f) 
+        if "id" in new_f:
+            del new_f["id"]
+        new_features.append(new_f)
+
+    collection["features"] = new_features
+    return collection

@@ -3,8 +3,9 @@ Functions about trips.
 """
 from collections import OrderedDict
 import json
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 
+import geopandas as gpd
 import pandas as pd
 from pandas import DataFrame
 import numpy as np
@@ -71,9 +72,7 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
         if service in cali.index:
             weekday_str = hp.weekday_to_str(hp.datestr_to_date(date).weekday())
             if (
-                cali.at[service, "start_date"]
-                <= date
-                <= cali.at[service, "end_date"]
+                cali.at[service, "start_date"] <= date <= cali.at[service, "end_date"]
                 and cali.at[service, weekday_str] == 1
             ):
                 return True
@@ -248,7 +247,6 @@ def compute_trip_stats(
         * ``feed.routes``
         * ``feed.stop_times``
         * ``feed.shapes`` (optionally)
-        * Those used in :func:`.stops.build_geometry_by_stop`
 
     - Calculating trip distances with ``compute_dist_from_shapes=True``
       seems pretty accurate.  For example, calculating trip distances on
@@ -278,11 +276,7 @@ def compute_trip_stats(
         .merge(feed.routes[["route_id", "route_short_name", "route_type"]])
         .merge(feed.stop_times)
         .sort_values(["trip_id", "stop_sequence"])
-        .assign(
-            departure_time=lambda x: x["departure_time"].map(
-                hp.timestr_to_seconds
-            )
-        )
+        .assign(departure_time=lambda x: x["departure_time"].map(hp.timestr_to_seconds))
     )
 
     # Compute all trips stats except distance,
@@ -315,18 +309,12 @@ def compute_trip_stats(
     h = g.apply(my_agg)
 
     # Compute distance
-    if (
-        hp.is_not_null(f, "shape_dist_traveled")
-        and not compute_dist_from_shapes
-    ):
+    if hp.is_not_null(f, "shape_dist_traveled") and not compute_dist_from_shapes:
         # Compute distances using shape_dist_traveled column
-        h["distance"] = g.apply(
-            lambda group: group["shape_dist_traveled"].max()
-        )
+        h["distance"] = g.apply(lambda group: group["shape_dist_traveled"].max())
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
-        geometry_by_stop = feed.build_geometry_by_stop(use_utm=True)
         m_to_dist = hp.get_convert_dist("m", feed.dist_units)
 
         def compute_dist(group):
@@ -427,7 +415,6 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
 
     - ``feed.trips``
     - Those used in :func:`.stop_times.get_stop_times`
-    - Those used in :func:`.shapes.build_geometry_by_shape`
 
     """
     if not hp.is_not_null(feed.stop_times, "shape_dist_traveled"):
@@ -454,9 +441,7 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     def compute_rel_dist(group):
         dists = sorted(group["shape_dist_traveled"].values)
         times = sorted(group["departure_time"].values)
-        ts = sample_times[
-            (sample_times >= times[0]) & (sample_times <= times[-1])
-        ]
+        ts = sample_times[(sample_times >= times[0]) & (sample_times <= times[-1])]
         ds = np.interp(ts, times, dists)
         return pd.DataFrame({"time": ts, "rel_dist": ds / dists[-1]})
 
@@ -497,76 +482,56 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     return h.groupby("shape_id").apply(get_lonlat)
 
 
-def trip_to_geojson(
-    feed: "Feed", trip_id: str, *, include_stops: bool = False
+def geometrize_trips(
+    feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
+) -> gpd.GeoDataFrame:
+    """
+    """
+    if feed.shapes is None:
+        raise ValueError("This Feed has no shapes.")
+
+    if trip_ids is not None:
+        trips = feed.trips.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
+    else:
+        trips = feed.trips.copy()
+
+    return trips.merge(
+        feed.geometrize_shapes(shape_ids=trips.shape_id, use_utm=use_utm).filter(
+            ["shape_id", "geometry"]
+        )
+    ).pipe(gpd.GeoDataFrame, crs=cs.WGS84)
+
+
+def trips_to_geojson(
+    feed: "Feed",
+    trip_ids: Optional[Iterable[str]] = None,
+    *,
+    include_stops: bool = False,
 ) -> Dict:
     """
-    Return a GeoJSON representation of the given trip, optionally with
-    its stops.
+    Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_id : string
-        ID of trip in ``feed.trips``
-    include_stops : boolean
-
-    Returns
-    -------
-    dictionary
-        A (decoded) GeoJSON FeatureCollection comprising a Linestring
-        feature representing the trip's shape.
-        If ``include_stops``, then also include one Point feature for
-        each stop  visited by the trip.
-        The Linestring feature will contain as properties all the
-        columns in ``feed.trips`` pertaining to the given trip,
-        and each Point feature will contain as properties all the
-        columns in ``feed.stops`` pertaining to the stop,
-        except the ``stop_lat`` and ``stop_lon`` properties.
-
-        Return the empty dictionary if the trip has no shape.
-
+    Include the trip stops as Point features if ``include_stops``.
+    If an iterable of trip IDs is given, then subset to those trips.
     """
-    # Get the relevant shapes
-    t = feed.trips.copy()
-    t = t[t["trip_id"] == trip_id].copy()
-    shid = t["shape_id"].iat[0]
-    geometry_by_shape = feed.build_geometry_by_shape(
-        use_utm=False, shape_ids=[shid]
-    )
+    # Get trips
+    collection = json.loads(geometrize_trips(feed, trip_ids=trip_ids).to_json())
 
-    if not geometry_by_shape:
-        return {}
-
-    features = [
-        {
-            "type": "Feature",
-            "properties": json.loads(t.to_json(orient="records"))[0],
-            "geometry": sg.mapping(sg.LineString(geometry_by_shape[shid])),
-        }
-    ]
-
+    # Get stops if desired
     if include_stops:
-        # Get relevant stops and geometrys
-        s = feed.get_stops(trip_id=trip_id)
-        cols = set(s.columns) - set(["stop_lon", "stop_lat"])
-        s = s[list(cols)].copy()
-        stop_ids = s["stop_id"].tolist()
-        geometry_by_stop = feed.build_geometry_by_stop(stop_ids=stop_ids)
-        features.extend(
-            [
-                {
-                    "type": "Feature",
-                    "properties": json.loads(
-                        s[s["stop_id"] == stop_id].to_json(orient="records")
-                    )[0],
-                    "geometry": sg.mapping(geometry_by_stop[stop_id]),
-                }
-                for stop_id in stop_ids
-            ]
-        )
+        if trip_ids is not None:
+            stop_ids = feed.stop_times.loc[
+                lambda x: x.trip_id.isin(trip_ids), "stop_id"
+            ].unique()
+        else:
+            stop_ids = None
 
-    return {"type": "FeatureCollection", "features": features}
+        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+        collection["features"].extend(stops_gj["features"])
+
+    return hp.drop_feature_ids(collection)
 
 
 def map_trips(
@@ -624,8 +589,8 @@ def map_trips(
 
     # Create a feature group for each route and add it to the map
     for i, trip in enumerate(trips):
-        collection = feed.trip_to_geojson(
-            trip_id=trip["trip_id"], include_stops=include_stops
+        collection = feed.trips_to_geojson(
+            trip_ids=[trip["trip_id"]], include_stops=include_stops
         )
         group = fl.FeatureGroup(name="Trip " + trip["trip_id"])
         color = colors[i]
@@ -652,9 +617,7 @@ def map_trips(
                 path = fl.GeoJson(
                     f,
                     name=trip,
-                    style_function=lambda x: {
-                        "color": x["properties"]["color"]
-                    },
+                    style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)

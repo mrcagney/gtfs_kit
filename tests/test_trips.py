@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import pytest
 
+import folium as fl
+
 from .context import (
     gtfs_kit,
     DATA_DIR,
-    HAS_FOLIUM,
     cairns,
     cairns_shapeless,
     cairns_dates,
@@ -13,8 +14,6 @@ from .context import (
 )
 from gtfs_kit import *
 
-if HAS_FOLIUM:
-    import folium as fl
 
 
 def test_is_active_trip():
@@ -171,22 +170,33 @@ def test_locate_trips():
         locate_trips(feed, date, times)
 
 
-def test_trip_to_geojson():
+def test_geometrize_trips():
     feed = cairns.copy()
-    trip_id = feed.trips["trip_id"].values[0]
-    g0 = trip_to_geojson(feed, trip_id)
-    g1 = trip_to_geojson(feed, trip_id, include_stops=True)
-    for g in [g0, g1]:
-        # Should be a dictionary
-        assert isinstance(g, dict)
+    trip_ids = feed.trips.trip_id.loc[:1]
+    g = geometrize_trips(feed, trip_ids)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.shape[0] == len(trip_ids)
 
-    # Should have the correct number of features
-    assert len(g0["features"]) == 1
-    stop_ids = get_stops(feed, trip_id=trip_id)["stop_id"].values
-    assert len(g1["features"]) == 1 + len(stop_ids)
+    with pytest.raises(ValueError):
+        geometrize_trips(cairns_shapeless)
 
 
-@pytest.mark.skipif(not HAS_FOLIUM, reason="Requires Folium")
+def test_trips_to_geojson():
+    feed = cairns.copy()
+    trip_ids = feed.trips.trip_id.loc[:1]
+    n = len(trip_ids)
+    gj = trips_to_geojson(feed, trip_ids)
+    assert len(gj["features"]) == n
+
+    gj = trips_to_geojson(feed, trip_ids, include_stops=True)
+    k = (
+        feed.stop_times
+        .loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"]
+        .nunique()
+    )
+    assert len(gj["features"]) == n + k
+
+
 def test_map_trips():
     feed = cairns.copy()
     tids = feed.trips["trip_id"].values[:2]
