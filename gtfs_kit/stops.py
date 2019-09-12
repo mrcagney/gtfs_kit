@@ -22,13 +22,13 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-#: Folium CircleMarker parameters for mapping stops
+#: Leaflet circleMarker parameters for mapping stops
 STOP_STYLE = {
     "radius": 8,
-    "fill": True,
+    "fill": "true",
     "color": cs.COLORS_SET2[1],
     "weight": 1,
-    "fill_opacity": 0.75,
+    "fillOpacity": 0.75,
 }
 
 
@@ -848,17 +848,19 @@ def map_stops(
         stops = feed.stops.copy()
 
     # Add stops with clustering
-    callback = """\
-    function (row) {
+    callback = f"""\
+    function (row) {{
         var imarker;
-        marker = L.circleMarker(new L.LatLng(row[0], row[1]));
+        marker = L.circleMarker(new L.LatLng(row[0], row[1]),
+            {stop_style}
+        );
         marker.bindPopup(
             '<b>Stop name</b>: ' + row[2] + '<br>' +
             '<b>Stop code</b>: ' + row[3] + '<br>' +
             '<b>Stop ID</b>: ' + row[4] 
         );
         return marker;
-    };
+    }};
     """
     fp.FastMarkerCluster(
         data=stops[
