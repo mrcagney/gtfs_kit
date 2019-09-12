@@ -826,14 +826,9 @@ def get_stops_in_polygon(
     return result
 
 
-def map_stops(
-    feed: "Feed",
-    stop_ids: Optional[Iterable[str]] = None,
-    stop_style: Dict = STOP_STYLE,
-):
+def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE):
     """
-    Return a Folium map showing this Feed's stops.
-    If stop IDs are given, then subset to those stops.
+    Return a Folium map showing the given stops of this Feed.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
@@ -842,10 +837,7 @@ def map_stops(
     group = fl.FeatureGroup(name="Stops")
 
     # Add stops to feature group
-    if stop_ids is not None:
-        stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)].fillna("n/a")
-    else:
-        stops = feed.stops.copy()
+    stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)].fillna("n/a")
 
     # Add stops with clustering
     callback = f"""\

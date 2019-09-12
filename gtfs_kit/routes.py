@@ -10,6 +10,7 @@ import pandas as pd
 import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
+import folium as fl
 
 from . import constants as cs
 from . import helpers as hp
@@ -807,14 +808,12 @@ def geometrize_routes(
         return pd.Series(d)
 
     return (
-        feed.routes.merge(
-            feed.geometrize_trips(trip_ids).filter(
-                ["route_id", "direction_id", "geometry"]
-            )
-        )
+        feed.geometrize_trips(trip_ids)
+        .filter(["route_id", "direction_id", "geometry"])
         .groupby(groupby_cols)
         .apply(merge_lines)
         .reset_index()
+        .merge(feed.routes)
         .pipe(gpd.GeoDataFrame, crs=cs.WGS84)
     )
 
@@ -860,66 +859,31 @@ def routes_to_geojson(
 
 def map_routes(
     feed: "Feed",
-    route_ids: List[str],
+    route_ids: Iterable[str],
     color_palette: List[str] = cs.COLORS_SET2,
     *,
-    include_stops: bool = True,
+    include_stops: bool = False,
 ):
     """
     Return a Folium map showing the given routes and (optionally)
     their stops.
-
-    Parameters
-    ----------
-    feed : Feed
-    route_ids : list
-        IDs of routes in ``feed.routes``
-    date : string
-        YYYYMMDD date string restricting the output to trips active
-        on the date
-    color_palette : list
-        Palette to use to color the routes. If more routes than colors,
-        then colors will be recycled.
-    include_stops : boolean
-        If ``True``, then include stops in the map
-
-    Returns
-    -------
-    dictionary
-        A Folium Map depicting the distinct shapes of the trips on
-        each route.
-        If ``include_stops``, then include the stops for each route.
-
-    Notes
-    ------
-    - Requires Folium
-
     """
-    import folium as fl
-
-    # Get routes slice and convert to dictionary
-    routes = (
-        feed.routes.loc[lambda x: x["route_id"].isin(route_ids)]
-        .fillna("n/a")
-        .to_dict(orient="records")
-    )
+    # Initialize map
+    my_map = fl.Map(tiles="cartodbpositron", prefer_canvas=True)
 
     # Create route colors
-    n = len(routes)
+    n = len(route_ids)
     colors = [color_palette[i % len(color_palette)] for i in range(n)]
-
-    # Initialize map
-    my_map = fl.Map(tiles="cartodbpositron")
 
     # Collect route bounding boxes to set map zoom later
     bboxes = []
 
     # Create a feature group for each route and add it to the map
-    for i, route in enumerate(routes):
+    for i, route_id in enumerate(route_ids):
         collection = feed.routes_to_geojson(
-            route_ids=[route["route_id"]], include_stops=include_stops
+            route_ids=[route_id], include_stops=include_stops
         )
-        group = fl.FeatureGroup(name="Route " + route["route_short_name"])
+        group = fl.FeatureGroup(name=f"Route {route_id}")
         color = colors[i]
 
         for f in collection["features"]:
@@ -942,7 +906,7 @@ def map_routes(
                 prop["color"] = color
                 path = fl.GeoJson(
                     f,
-                    name=route,
+                    name=prop["route_short_name"],
                     style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))

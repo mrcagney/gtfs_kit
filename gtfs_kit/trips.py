@@ -11,6 +11,8 @@ from pandas import DataFrame
 import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
+import folium as fl
+import folium.plugins as fp
 
 from . import constants as cs
 from . import helpers as hp
@@ -536,63 +538,30 @@ def trips_to_geojson(
 
 def map_trips(
     feed: "Feed",
-    trip_ids: List[str],
+    trip_ids: Iterable[str],
     color_palette: List[str] = cs.COLORS_SET2,
     *,
-    include_stops: bool = True,
+    include_stops: bool = False,
 ):
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
-
-    Parameters
-    ----------
-    feed : Feed
-    trip_ids : list
-        IDs of trips in ``feed.trips``
-    color_palette : list
-        Palette to use to color the routes. If more routes than colors,
-        then colors will be recycled.
-    include_stops : boolean
-        If ``True``, then include stops in the map
-
-    Returns
-    -------
-    dictionary
-        A Folium Map depicting the shapes of the trips.
-        If ``include_stops``, then include the stops for each trip.
-
-    Notes
-    ------
-    - Requires Folium
-
     """
-    import folium as fl
-    import folium.plugins as fp
-
-    # Get routes slice and convert to dictionary
-    trips = (
-        feed.trips.loc[lambda x: x["trip_id"].isin(trip_ids)]
-        .fillna("n/a")
-        .to_dict(orient="records")
-    )
-
-    # Create colors
-    n = len(trips)
-    colors = [color_palette[i % len(color_palette)] for i in range(n)]
-
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
 
-    # Collect route bounding boxes to set map zoom later
+    # Create colors
+    n = len(trip_ids)
+    colors = [color_palette[i % len(color_palette)] for i in range(n)]
+
+    # Collect bounding boxes to set map zoom later
     bboxes = []
 
     # Create a feature group for each route and add it to the map
-    for i, trip in enumerate(trips):
-        collection = feed.trips_to_geojson(
-            trip_ids=[trip["trip_id"]], include_stops=include_stops
-        )
-        group = fl.FeatureGroup(name="Trip " + trip["trip_id"])
+    for i, trip_id in enumerate(trip_ids):
+        collection = trips_to_geojson(feed, [trip_id], include_stops=include_stops)
+
+        group = fl.FeatureGroup(name=f"Trip {trip_id}")
         color = colors[i]
 
         for f in collection["features"]:
@@ -610,29 +579,28 @@ def map_trips(
                     popup=fl.Popup(hp.make_html(prop)),
                 ).add_to(group)
 
-            # Add path
+            # Add trip
             else:
-                # Path
                 prop["color"] = color
                 path = fl.GeoJson(
                     f,
-                    name=trip,
+                    name=trip_id,
                     style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)
-
-                # Direction arrows, assuming, as GTFS does, that
-                # trip direction equals LineString direction
-                fp.PolyLineTextPath(
-                    path,
-                    "        \u27A4        ",
-                    repeat=True,
-                    offset=5.5,
-                    attributes={"fill": color, "font-size": "18"},
-                ).add_to(group)
-
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
+
+                # Broken
+                # # Direction arrows, assuming, as GTFS does, that
+                # # trip direction equals LineString direction
+                # fp.PolyLineTextPath(
+                #     path,
+                #     "        \u27A4        ",
+                #     repeat=True,
+                #     offset=5.5,
+                #     attributes={"fill": color, "font-size": "18"},
+                # ).add_to(group)
 
         group.add_to(my_map)
 
