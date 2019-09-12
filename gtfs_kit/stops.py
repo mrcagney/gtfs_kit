@@ -11,6 +11,8 @@ import numpy as np
 import utm
 import shapely.geometry as sg
 from shapely.geometry import Polygon
+import folium as fl
+import folium.plugins as fp
 
 from . import constants as cs
 from . import helpers as hp
@@ -116,9 +118,7 @@ def compute_stop_stats_0(
                 if headway_start <= dtime <= headway_end
             ]
         )
-        headways.extend(
-            [dtimes[i + 1] - dtimes[i] for i in range(len(dtimes) - 1)]
-        )
+        headways.extend([dtimes[i + 1] - dtimes[i] for i in range(len(dtimes) - 1)])
         if headways:
             d["max_headway"] = np.max(headways) / 60  # minutes
             d["min_headway"] = np.min(headways) / 60  # minutes
@@ -136,9 +136,7 @@ def compute_stop_stats_0(
             direction_id=lambda x: x.direction_id.astype(int)
         )
         if f.empty:
-            raise ValueError(
-                "At least one trip direction ID value " "must be non-NaN."
-            )
+            raise ValueError("At least one trip direction ID value " "must be non-NaN.")
         g = f.groupby(["stop_id", "direction_id"])
     else:
         g = f.groupby("stop_id")
@@ -146,9 +144,9 @@ def compute_stop_stats_0(
     result = g.apply(compute_stop_stats).reset_index()
 
     # Convert start and end times to time strings
-    result[["start_time", "end_time"]] = result[
-        ["start_time", "end_time"]
-    ].applymap(lambda x: hp.timestr_to_seconds(x, inverse=True))
+    result[["start_time", "end_time"]] = result[["start_time", "end_time"]].applymap(
+        lambda x: hp.timestr_to_seconds(x, inverse=True)
+    )
 
     return result
 
@@ -229,9 +227,7 @@ def compute_stop_time_series_0(
             direction_id=lambda x: x.direction_id.astype(int)
         )
         if f.empty:
-            raise ValueError(
-                "At least one trip direction ID value " "must be non-NaN."
-            )
+            raise ValueError("At least one trip direction ID value " "must be non-NaN.")
 
         # Alter stop IDs to encode trip direction:
         # <stop ID>-0 and <stop ID>-1
@@ -324,9 +320,7 @@ def get_stops(
         st = feed.stop_times.copy()
         B = st[st["trip_id"].isin(A)]["stop_id"]
         s = s[s["stop_id"].isin(B)].copy()
-    if in_stations and set(["location_type", "parent_station"]) <= set(
-        s.columns
-    ):
+    if in_stations and set(["location_type", "parent_station"]) <= set(s.columns):
         s = s[(s["location_type"] != 1) & (s["parent_station"].notnull())]
 
     return s
@@ -533,9 +527,9 @@ def build_zero_stop_time_series(
         product = [inds, sids]
         names = ["indicator", "stop_id"]
     cols = pd.MultiIndex.from_product(product, names=names)
-    return pd.DataFrame(
-        [[0 for c in cols]], index=rng, columns=cols
-    ).sort_index(axis="columns")
+    return pd.DataFrame([[0 for c in cols]], index=rng, columns=cols).sort_index(
+        axis="columns"
+    )
 
 
 def compute_stop_time_series(
@@ -666,9 +660,7 @@ def compute_stop_time_series(
     return f.rename_axis("datetime", axis="index")
 
 
-def build_stop_timetable(
-    feed: "Feed", stop_id: str, dates: List[str]
-) -> pd.DataFrame:
+def build_stop_timetable(feed: "Feed", stop_id: str, dates: List[str]) -> pd.DataFrame:
     """
     Return a DataFrame containing the timetable for the given stop ID
     and dates.
@@ -717,7 +709,9 @@ def build_stop_timetable(
     return f.sort_values(["date", "departure_time"])
 
 
-def geometrize_stops_0(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDataFrame:
+def geometrize_stops_0(
+    stops: pd.DataFrame, *, use_utm: bool = False
+) -> gpd.GeoDataFrame:
     """
     Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame of Points
     and return the result, which will no longer have the columns ``'stop_lon'`` and
@@ -725,9 +719,7 @@ def geometrize_stops_0(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.Geo
     """
     g = (
         stops.assign(
-            geometry=lambda x: [
-                sg.Point(p) for p in x[["stop_lon", "stop_lat"]].values
-            ]
+            geometry=lambda x: [sg.Point(p) for p in x[["stop_lon", "stop_lat"]].values]
         )
         .drop(["stop_lon", "stop_lat"], axis=1)
         .pipe(lambda x: gpd.GeoDataFrame(x, crs=cs.WGS84))
@@ -750,14 +742,14 @@ def ungeometrize_stops_0(geo_stops: gpd.GeoDataFrame) -> pd.DataFrame:
     which is the standard for a GTFS shapes table.
     """
     f = geo_stops.copy().to_crs(cs.WGS84)
-    f["stop_lon"], f["stop_lat"] = zip(
-        *f["geometry"].map(lambda p: [p.x, p.y])
-    )
+    f["stop_lon"], f["stop_lat"] = zip(*f["geometry"].map(lambda p: [p.x, p.y]))
     del f["geometry"]
     return f
 
 
-def geometrize_stops(feed: "Feed", stop_ids:Optional[Iterable[str]]=None, *, use_utm:bool=False) -> gpd.GeoDataFrame:
+def geometrize_stops(
+    feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
+) -> gpd.GeoDataFrame:
     """
     Given a Feed instance, convert its stops DataFrame to a GeoDataFrame of
     Points and return the result, which will no longer have the columns
@@ -774,7 +766,9 @@ def geometrize_stops(feed: "Feed", stop_ids:Optional[Iterable[str]]=None, *, use
     return geometrize_stops_0(stops, use_utm=use_utm)
 
 
-def build_geometry_by_stop(feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
+def build_geometry_by_stop(
+    feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
+) -> Dict:
     """
     Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>. 
     """
@@ -783,11 +777,9 @@ def build_geometry_by_stop(feed: "Feed", stop_ids: Optional[Iterable[str]] = Non
         .filter(["stop_id", "geometry"])
         .values
     )
-    
 
-def stops_to_geojson(
-    feed: "Feed", stop_ids: Optional[Iterable[str]] = None
-) -> Dict:
+
+def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> Dict:
     """
     Return a GeoJSON FeatureCollection of Point features
     representing ``feed.stops``.
@@ -802,7 +794,11 @@ def stops_to_geojson(
 
 
 def get_stops_in_polygon(
-    feed: "Feed", polygon: sg.Polygon, geo_stops:Optional[gpd.GeoDataFrame]=None, *, geometrized: bool = False
+    feed: "Feed",
+    polygon: sg.Polygon,
+    geo_stops: Optional[gpd.GeoDataFrame] = None,
+    *,
+    geometrized: bool = False,
 ) -> pd.DataFrame:
     """
     Return the subset of ``feed.stops`` that contains all stops that lie
@@ -831,31 +827,14 @@ def get_stops_in_polygon(
 
 
 def map_stops(
-    feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE
+    feed: "Feed",
+    stop_ids: Optional[Iterable[str]] = None,
+    stop_style: Dict = STOP_STYLE,
 ):
     """
-    Return a Folium map showing the given stops.
-
-    Parameters
-    ----------
-    feed : Feed
-    stop_ids : list
-        IDs of trips in ``feed.stops``
-    stop_style: dictionary
-        Folium CircleMarker parameters to use for styling stops.
-
-    Returns
-    -------
-    dictionary
-        A Folium Map depicting the stops as CircleMarkers.
-
-    Notes
-    ------
-    - Requires Folium
-
+    Return a Folium map showing this Feed's stops.
+    If stop IDs are given, then subset to those stops.
     """
-    import folium as fl
-
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
 
@@ -863,21 +842,43 @@ def map_stops(
     group = fl.FeatureGroup(name="Stops")
 
     # Add stops to feature group
-    stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)].fillna("n/a")
-    for prop in stops.to_dict(orient="records"):
-        # Add stop
-        lon = prop["stop_lon"]
-        lat = prop["stop_lat"]
-        fl.CircleMarker(
-            location=[lat, lon],
-            popup=fl.Popup(hp.make_html(prop)),
-            **stop_style,
-        ).add_to(group)
+    if stop_ids is not None:
+        stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)].fillna("n/a")
+    else:
+        stops = feed.stops.copy()
 
-    group.add_to(my_map)
+    # Add stops with clustering
+    callback = """\
+    function (row) {
+        var imarker;
+        marker = L.circleMarker(new L.LatLng(row[0], row[1]));
+        marker.bindPopup(
+            '<b>Stop name</b>: ' + row[2] + '<br>' +
+            '<b>Stop code</b>: ' + row[3] + '<br>' +
+            '<b>Stop ID</b>: ' + row[4] 
+        );
+        return marker;
+    };
+    """
+    fp.FastMarkerCluster(
+        data=stops[
+            ["stop_lat", "stop_lon", "stop_name", "stop_code", "stop_id"]
+        ].values.tolist(),
+        callback=callback,
+        disableClusteringAtZoom=14,
+    ).add_to(my_map)
 
-    # Add layer control
-    fl.LayerControl().add_to(my_map)
+    # for prop in stops.to_dict(orient="records"):
+    #     # Add stop
+    #     lon = prop["stop_lon"]
+    #     lat = prop["stop_lat"]
+    #     fl.CircleMarker(
+    #         location=[lat, lon],
+    #         popup=fl.Popup(hp.make_html(prop)),
+    #         **stop_style,
+    #     ).add_to(group)
+
+    # group.add_to(my_map)
 
     # Fit map to stop bounds
     bounds = [
