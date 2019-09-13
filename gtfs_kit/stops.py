@@ -270,58 +270,37 @@ def compute_stop_time_series_0(
 def get_stops(
     feed: "Feed",
     date: Optional[str] = None,
-    trip_id: Optional[str] = None,
-    route_id: Optional[str] = None,
+    trip_ids: Optional[Iterable[str]] = None,
+    route_ids: Optional[Iterable[str]] = None,
     *,
     in_stations: bool = False,
 ) -> pd.DataFrame:
     """
     Return a section of ``feed.stops``.
-
-    Parameters
-    -----------
-    feed : Feed
-    date : string
-        YYYYMMDD string; restricts the output to stops active
-        (visited by trips) on the date
-    trip_id : string
-        ID of a trip in ``feed.trips``; restricts output to stops
-        visited by the trip
-    route_id : string
-        ID of route in ``feed.routes``; restricts output to stops
-        visited by the route
-    in_stations : boolean
-        If ``True``, then restricts output to stops in stations if
-        station data is available in ``feed.stops``
-
-    Returns
-    -------
-    DataFrame
-        A subset of ``feed.stops`` defined by the parameters above
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.stops``
-    - Those used in :func:`.stop_times.get_stop_times`
-
+    If a YYYYMMDD date string is given, then subset to stops
+    active (visited by trips) on that date.
+    If trip IDs are given, then subset further to stops visited by those
+    trips.
+    If route IDs are given, then ignore the trip IDs and subset further
+    to stops visited by those routes.
+    If ``in_stations``, then subset further stops in stations if station data
+    is available.
     """
     s = feed.stops.copy()
     if date is not None:
-        A = feed.get_stop_times(date)["stop_id"]
-        s = s[s["stop_id"].isin(A)].copy()
-    if trip_id is not None:
+        A = feed.get_stop_times(date).stop_id
+        s = s.loc[lambda x: x.stop_id.isin(A)].copy()
+    if trip_ids is not None:
         st = feed.stop_times.copy()
-        B = st[st["trip_id"] == trip_id]["stop_id"]
-        s = s[s["stop_id"].isin(B)].copy()
-    elif route_id is not None:
-        A = feed.trips[feed.trips["route_id"] == route_id]["trip_id"]
+        B = st.loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"].copy()
+        s = s.loc[lambda x: x.stop_id.isin(B)].copy()
+    elif route_ids is not None:
+        A = feed.trips.loc[lambda x: x.route_id.isin(route_ids), "trip_id"].copy()
         st = feed.stop_times.copy()
-        B = st[st["trip_id"].isin(A)]["stop_id"]
-        s = s[s["stop_id"].isin(B)].copy()
+        B = st.loc[lambda x: x.trip_id.isin(A), "stop_id"].copy()
+        s = s.loc[lambda x: x.stop_id.isin(B)].copy()
     if in_stations and set(["location_type", "parent_station"]) <= set(s.columns):
-        s = s[(s["location_type"] != 1) & (s["parent_station"].notnull())]
+        s = s.loc[lambda x: (x.location_type != 1) & (x.parent_station.notna())].copy()
 
     return s
 

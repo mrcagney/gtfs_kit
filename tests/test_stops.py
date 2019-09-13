@@ -128,16 +128,16 @@ def test_compute_stop_time_series_0():
 def test_get_stops():
     feed = cairns.copy()
     date = cairns_dates[0]
-    trip_id = feed.trips["trip_id"].iat[0]
-    route_id = feed.routes["route_id"].iat[0]
+    trip_ids = feed.trips.trip_id.loc[:1]
+    route_ids = feed.routes.route_id.loc[:1]
     frames = [
         get_stops(feed),
         get_stops(feed, date=date),
-        get_stops(feed, trip_id=trip_id),
-        get_stops(feed, route_id=route_id),
-        get_stops(feed, date=date, trip_id=trip_id),
-        get_stops(feed, date=date, route_id=route_id),
-        get_stops(feed, date=date, trip_id=trip_id, route_id=route_id),
+        get_stops(feed, trip_ids=trip_ids),
+        get_stops(feed, route_ids=route_ids),
+        get_stops(feed, date=date, trip_ids=trip_ids),
+        get_stops(feed, date=date, route_ids=route_ids),
+        get_stops(feed, date=date, trip_ids=trip_ids, route_ids=route_ids),
     ]
     for f in frames:
         # Should be a data frame
@@ -181,7 +181,7 @@ def test_compute_stop_stats():
 
         # Should contain the correct stops
         get = set(f["stop_id"].values)
-        g = get_stops(feed, dates[0]).loc[lambda x: x["stop_id"].isin(sids)]
+        g = get_stops(feed, date=dates[0]).loc[lambda x: x["stop_id"].isin(sids)]
         expect = set(g["stop_id"].values)
         assert get == expect
 
@@ -335,7 +335,7 @@ def test_geometrize_stops():
     assert g_1.equals(g_2)
 
 def test_build_geometry_by_stop():
-    d = build_geometry_by_stop(cairns) 
+    d = build_geometry_by_stop(cairns)
     assert isinstance(d, dict)
     assert len(d) == cairns.stops.stop_id.nunique()
 
