@@ -317,6 +317,8 @@ def test_routes_to_geojson():
     )
     assert len(gj["features"]) == n + k
 
+    with pytest.raises(ValueError):
+        routes_to_geojson(cairns_shapeless)
 
 def test_map_routes():
     feed = cairns.copy()

@@ -515,11 +515,21 @@ def trips_to_geojson(
     The coordinates reference system is the default one for GeoJSON,
     namely WGS84.
 
-    Include the trip stops as Point features if ``include_stops``.
+    If ``include_stops``, then include the trip stops as Point features .
     If an iterable of trip IDs is given, then subset to those trips.
+    If the subset is empty, then return a FeatureCollection with an empty list of
+    features.
+    If the Feed has no shapes, then raise a ValueError.
     """
     # Get trips
-    collection = json.loads(geometrize_trips(feed, trip_ids=trip_ids).to_json())
+    g = geometrize_trips(feed, trip_ids=trip_ids)
+    if g.empty:
+        collection = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+    else:
+        collection = json.loads(g.to_json())
 
     # Get stops if desired
     if include_stops:

@@ -63,7 +63,7 @@ def test_geometrize_shapes():
 
 
 def test_build_geometry_by_shape():
-    d = build_geometry_by_shape(cairns) 
+    d = build_geometry_by_shape(cairns)
     assert isinstance(d, dict)
     assert len(d) == cairns.shapes.shape_id.nunique()
 
@@ -73,6 +73,9 @@ def test_shapes_to_geojson():
     collection = shapes_to_geojson(feed, shape_ids)
     assert isinstance(collection, dict)
     assert len(collection["features"]) == len(shape_ids)
+
+    with pytest.raises(ValueError):
+        shapes_to_geojson(cairns_shapeless)
 
 def test_get_shapes_intersecting_geometry():
     feed = cairns.copy()

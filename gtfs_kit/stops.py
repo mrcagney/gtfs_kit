@@ -770,7 +770,7 @@ def build_geometry_by_stop(
     feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
 ) -> Dict:
     """
-    Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>. 
+    Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>.
     """
     return dict(
         geometrize_stops(feed, stop_ids=stop_ids, use_utm=True)
@@ -787,10 +787,18 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
     namely WGS84.
 
     If an iterable of stop IDs is given, then subset to those stops.
+    If the subset is empty, then return a FeatureCollection with an empty list of
+    features.
     """
-    return hp.drop_feature_ids(
-        json.loads(geometrize_stops(feed, stop_ids=stop_ids).to_json())
-    )
+    g = geometrize_stops(feed, stop_ids=stop_ids)
+    if g.empty:
+        result = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+    else:
+        result = hp.drop_feature_ids(json.loads(g.to_json()))
+    return result
 
 
 def get_stops_in_polygon(
@@ -849,7 +857,7 @@ def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STY
         marker.bindPopup(
             '<b>Stop name</b>: ' + row[2] + '<br>' +
             '<b>Stop code</b>: ' + row[3] + '<br>' +
-            '<b>Stop ID</b>: ' + row[4] 
+            '<b>Stop ID</b>: ' + row[4]
         );
         return marker;
     }};

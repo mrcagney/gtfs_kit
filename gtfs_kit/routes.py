@@ -830,15 +830,21 @@ def routes_to_geojson(
     The coordinates reference system is the default one for GeoJSON,
     namely WGS84.
 
-    Include the route stops as Point features if ``include_stops``.
+    If ``include_stops``, then include the route stops as Point features .
     If an iterable of route IDs is given, then subset to those routes.
+    If the subset is empty, then return a FeatureCollection with an empty list of
+    features.
+    If the Feed has no shapes, then raise a ValueError.
     """
-    # Get trips
-    collection = json.loads(
-        geometrize_routes(
-            feed, route_ids=route_ids, split_directions=split_directions
-        ).to_json()
-    )
+    # Get routes
+    g = geometrize_routes(feed, route_ids=route_ids, split_directions=split_directions)
+    if g.empty:
+        collection = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+    else:
+        collection = json.loads(g.to_json())
 
     # Get stops if desired
     if include_stops:

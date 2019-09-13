@@ -142,8 +142,8 @@ def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *
     ``'shape_dist_traveled'``.
 
     If an iterable of shape IDs is given, then subset to those shapes.
+    If the Feed has no shapes, then raise a ValueError.
     If ``use_utm``, then use local UTM coordinates for the geometries.
-    Raise a ValueError if ``feed.shapes`` is None.
     """
     if feed.shapes is None:
         raise ValueError("This Feed has no shapes.")
@@ -158,7 +158,7 @@ def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *
 
 def build_geometry_by_shape(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
     """
-    Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>. 
+    Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
     """
     return dict(
         geometrize_shapes(feed, shape_ids=shape_ids, use_utm=True)
@@ -176,13 +176,19 @@ def shapes_to_geojson(
     namely WGS84.
 
     If an iterable of shape IDs is given, then subset to those shapes.
-
-    Raise a ValueError if ``feed.shapes is None``
+    If the subset is empty, then return a FeatureCollection with an empty list of
+    features.
+    If the Feed has no shapes, then raise a ValueError.
     """
-    return hp.drop_feature_ids(
-        json.loads(geometrize_shapes(feed, shape_ids=shape_ids).to_json())
-    )
-
+    g = geometrize_shapes(feed, shape_ids=shape_ids)
+    if g.empty:
+        result = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+    else:
+        result = hp.drop_feature_ids(json.loads(g.to_json()))
+    return result
 
 def get_shapes_intersecting_geometry(
     feed: "Feed", geometry: sg.base.BaseGeometry, geo_shapes:Optional[gpd.GeoDataFrame]=None, *, geometrized: bool = False

@@ -196,6 +196,8 @@ def test_trips_to_geojson():
     )
     assert len(gj["features"]) == n + k
 
+    with pytest.raises(ValueError):
+        trips_to_geojson(cairns_shapeless)
 
 def test_map_trips():
     feed = cairns.copy()
