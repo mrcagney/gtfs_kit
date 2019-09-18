@@ -1,7 +1,7 @@
 """
 Functions about shapes.
 """
-from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, Dict, TYPE_CHECKING
 import json
 
 import geopandas as gpd

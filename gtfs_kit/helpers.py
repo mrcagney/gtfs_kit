@@ -6,9 +6,8 @@ from typing import Optional, Dict, List, Union, Callable
 import copy
 
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
-from shapely.geometry import LineString, Point
+import shapely.geometry as sg
 from shapely.ops import transform
 import utm
 import json2table as j2t
@@ -24,7 +23,7 @@ def datestr_to_date(
 ) -> Union[str, dt.date]:
     """
     Given a string ``x`` representing a date in the given format,
-    convert it to a Datetime Date object and return the result.
+    convert it to a datetime.date object and return the result.
     If ``inverse``, then assume that ``x`` is a date object and return
     its corresponding string in the given format.
     """
@@ -116,7 +115,7 @@ def weekday_to_str(
 
 
 def get_segment_length(
-    linestring: LineString, p: Point, q: Optional[Point] = None
+    linestring: sg.LineString, p: sg.Point, q: Optional[sg.Point] = None
 ) -> float:
     """
     Given a Shapely linestring and two Shapely points,
@@ -210,7 +209,7 @@ def get_convert_dist(
     return lambda x: d[di][do] * x
 
 
-def almost_equal(f: DataFrame, g: DataFrame) -> bool:
+def almost_equal(f: pd.DataFrame, g: pd.DataFrame) -> bool:
     """
     Return ``True`` if and only if the given DataFrames are equal after
     sorting their columns names, sorting their values, and
@@ -233,7 +232,7 @@ def almost_equal(f: DataFrame, g: DataFrame) -> bool:
         return F.equals(G)
 
 
-def is_not_null(df: DataFrame, col_name: str) -> bool:
+def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
     """
     Return ``True`` if the given DataFrame has a column of the given
     name (string), and there exists at least one non-NaN value in that
@@ -268,35 +267,30 @@ def get_utm_crs(lat: float, lon: float) -> Dict:
     }
 
 
-def linestring_to_utm(linestring: LineString) -> LineString:
+def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
     """
     Given a Shapely LineString in WGS84 coordinates,
     convert it to the appropriate UTM coordinates.
     If ``inverse``, then do the inverse.
     """
-    proj = lambda x, y: utm.from_latlon(y, x)[:2]
+    def proj(x, y):
+        return utm.from_latlon(y, x)[:2]
+
     return transform(proj, linestring)
 
 
-def get_active_trips_df(trip_times: DataFrame) -> DataFrame:
+def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:
     """
     Count the number of trips in ``trip_times`` that are active
     at any given time.
 
-    Parameters
-    ----------
-    trip_times : DataFrame
-        Contains columns
+    Assume ``trip_times`` contains the columns
 
-        - start_time: start time of the trip in seconds past midnight
-        - end_time: end time of the trip in seconds past midnight
+    - start_time: start time of the trip in seconds past midnight
+    - end_time: end time of the trip in seconds past midnight
 
-    Returns
-    -------
-    Series
-        index is times from midnight when trips start and end,
-        values are number of active trips for that time
-
+    Return a Series whose index is times from midnight when trips
+    start and end and whose values are the number of active trips for that time.
     """
     active_trips = (
         pd.concat(
@@ -314,10 +308,10 @@ def get_active_trips_df(trip_times: DataFrame) -> DataFrame:
 
 
 def combine_time_series(
-    time_series_dict: Dict, kind: str, *, split_directions: bool = False
-) -> DataFrame:
+    time_series_dict: Dict[str, pd.DataFrame], kind: str, *, split_directions: bool = False
+) -> pd.DataFrame:
     """
-    Combine the many time series DataFrames in the given dictionary
+    Combine the time series DataFrames in the given dictionary
     into one time series DataFrame with hierarchical columns.
 
     Parameters
@@ -380,7 +374,7 @@ def combine_time_series(
     return result.rename_axis("datetime", axis="index")
 
 
-def downsample(time_series: DataFrame, freq: str) -> DataFrame:
+def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     """
     Downsample the given route, stop, or feed time series,
     (outputs of :func:`.routes.compute_route_time_series`,
@@ -452,7 +446,7 @@ def downsample(time_series: DataFrame, freq: str) -> DataFrame:
     return result
 
 
-def unstack_time_series(time_series: DataFrame) -> DataFrame:
+def unstack_time_series(time_series: pd.DataFrame) -> pd.DataFrame:
     """
     Given a route, stop, or feed time series of the form output by the functions,
     :func:`compute_stop_time_series`, :func:`compute_route_time_series`, or
@@ -476,7 +470,7 @@ def unstack_time_series(time_series: DataFrame) -> DataFrame:
     )
 
 
-def restack_time_series(unstacked_time_series: DataFrame) -> DataFrame:
+def restack_time_series(unstacked_time_series: pd.DataFrame) -> pd.DataFrame:
     """
     Given an unstacked stop, route, or feed time series in the form
     output by the function :func:`unstack_time_series`, restack it into
@@ -530,7 +524,7 @@ def drop_feature_ids(collection: Dict) -> Dict:
     """
     new_features = []
     for f in collection["features"]:
-        new_f = copy.deepcopy(f) 
+        new_f = copy.deepcopy(f)
         if "id" in new_f:
             del new_f["id"]
         new_features.append(new_f)

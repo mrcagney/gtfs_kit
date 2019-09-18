@@ -28,72 +28,59 @@ def compute_route_stats_0(
     split_directions: bool = False,
 ) -> pd.DataFrame:
     """
-    Compute stats for the given subset of trips stats.
+    Compute stats for the given subset of trips stats (of the form output by the
+    function :func:`.trips.compute_trip_stats`).
 
-    Parameters
-    ----------
-    trip_stats_subset : DataFrame
-        Subset of the output of :func:`.trips.compute_trip_stats`
-    split_directions : boolean
-        If ``True``, then separate the stats by trip direction (0 or 1);
-        otherwise aggregate trips visiting from both directions
-    headway_start_time : string
-        HH:MM:SS time string indicating the start time for computing
-        headway stats
-    headway_end_time : string
-        HH:MM:SS time string indicating the end time for computing
-        headway stats
+    If ``split_directions``, then separate the stats by trip direction (0 or 1).
+    Use the headway start and end times to specify the time period for computing
+    headway stats.
 
-    Returns
-    -------
-    DataFrame
-        Columns are
+    Return a DataFrame with the columns
 
-        - ``'route_id'``
-        - ``'route_short_name'``
-        - ``'route_type'``
-        - ``'direction_id'``
-        - ``'num_trips'``: number of trips on the route in the subset
-        - ``'num_trip_starts'``: number of trips on the route with
-          nonnull start times
-        - ``'num_trip_ends'``: number of trips on the route with nonnull
-          end times that end before 23:59:59
-        - ``'is_loop'``: 1 if at least one of the trips on the route has
-          its ``is_loop`` field equal to 1; 0 otherwise
-        - ``'is_bidirectional'``: 1 if the route has trips in both
-          directions; 0 otherwise
-        - ``'start_time'``: start time of the earliest trip on the route
-        - ``'end_time'``: end time of latest trip on the route
-        - ``'max_headway'``: maximum of the durations (in minutes)
-          between trip starts on the route between
-          ``headway_start_time`` and ``headway_end_time`` on the given
-          dates
-        - ``'min_headway'``: minimum of the durations (in minutes)
-          mentioned above
-        - ``'mean_headway'``: mean of the durations (in minutes)
-          mentioned above
-        - ``'peak_num_trips'``: maximum number of simultaneous trips in
-          service (for the given direction, or for both directions when
-          ``split_directions==False``)
-        - ``'peak_start_time'``: start time of first longest period
-          during which the peak number of trips occurs
-        - ``'peak_end_time'``: end time of first longest period during
-          which the peak number of trips occurs
-        - ``'service_duration'``: total of the duration of each trip on
-          the route in the given subset of trips; measured in hours
-        - ``'service_distance'``: total of the distance traveled by each
-          trip on the route in the given subset of trips; measured in
-          whatever distance units are present in ``trip_stats_subset``;
-          contains all ``np.nan`` entries if ``feed.shapes is None``
-        - ``'service_speed'``: service_distance/service_duration;
-          measured in distance units per hour
-        - ``'mean_trip_distance'``: service_distance/num_trips
-        - ``'mean_trip_duration'``: service_duration/num_trips
+    - ``'route_id'``
+    - ``'route_short_name'``
+    - ``'route_type'``
+    - ``'direction_id'``
+    - ``'num_trips'``: number of trips on the route in the subset
+    - ``'num_trip_starts'``: number of trips on the route with
+      nonnull start times
+    - ``'num_trip_ends'``: number of trips on the route with nonnull
+      end times that end before 23:59:59
+    - ``'is_loop'``: 1 if at least one of the trips on the route has
+      its ``is_loop`` field equal to 1; 0 otherwise
+    - ``'is_bidirectional'``: 1 if the route has trips in both
+      directions; 0 otherwise
+    - ``'start_time'``: start time of the earliest trip on the route
+    - ``'end_time'``: end time of latest trip on the route
+    - ``'max_headway'``: maximum of the durations (in minutes)
+      between trip starts on the route between
+      ``headway_start_time`` and ``headway_end_time`` on the given
+      dates
+    - ``'min_headway'``: minimum of the durations (in minutes)
+      mentioned above
+    - ``'mean_headway'``: mean of the durations (in minutes)
+      mentioned above
+    - ``'peak_num_trips'``: maximum number of simultaneous trips in
+      service (for the given direction, or for both directions when
+      ``split_directions==False``)
+    - ``'peak_start_time'``: start time of first longest period
+      during which the peak number of trips occurs
+    - ``'peak_end_time'``: end time of first longest period during
+      which the peak number of trips occurs
+    - ``'service_duration'``: total of the duration of each trip on
+      the route in the given subset of trips; measured in hours
+    - ``'service_distance'``: total of the distance traveled by each
+      trip on the route in the given subset of trips; measured in
+      whatever distance units are present in ``trip_stats_subset``;
+      contains all ``np.nan`` entries if ``feed.shapes is None``
+    - ``'service_speed'``: service_distance/service_duration;
+      measured in distance units per hour
+    - ``'mean_trip_distance'``: service_distance/num_trips
+    - ``'mean_trip_duration'``: service_duration/num_trips
 
     If not ``split_directions``, then remove the
     direction_id column and compute each route's stats,
-    except for headways, using
-    its trips running in both directions.
+    except for headways, using its trips running in both directions.
     In this case, (1) compute max headway by taking the max of the
     max headways in both directions; (2) compute mean headway by
     taking the weighted mean of the mean headways in both
@@ -252,61 +239,50 @@ def compute_route_time_series_0(
     split_directions: bool = False,
 ) -> pd.DataFrame:
     """
-    Compute stats in a 24-hour time series form for the given subset of trips.
+    Compute stats in a 24-hour time series form for the given subset of trips (of the
+    form output by the function :func:`.trips.compute_trip_stats`).
 
-    Parameters
-    ----------
-    trip_stats_subset : DataFrame
-        A subset of the output of :func:`.trips.compute_trip_stats`
-    split_directions : boolean
-        If ``True``, then separate each routes's stats by trip direction;
-        otherwise aggregate trips in both directions
-    freq : Pandas frequency string
-        Specifices the frequency with which to resample the time series;
-        max frequency is one minute ('Min')
-    date_label : string
-        YYYYMMDD date string used as the date in the time series index
+    If ``split_directions``, then separate each routes's stats by trip direction.
+    Set the time series frequency according to the given frequency string;
+    max frequency is one minute ('Min').
+    Use the given YYYYMMDD date label as the date in the time series index.
 
-    Returns
-    -------
-    DataFrame
-        A time series version of the following route stats for each
-        route.
+    Return a DataFrame time series version the following route stats for each route.
 
-        - ``num_trips``: number of trips in service on the route
-          at any time within the time bin
-        - ``num_trip_starts``: number of trips that start within
-          the time bin
-        - ``num_trip_ends``: number of trips that end within the
-          time bin, ignoring trips that end past midnight
-        - ``service_distance``: sum of the service duration accrued
-          during the time bin across all trips on the route;
-          measured in hours
-        - ``service_distance``: sum of the service distance accrued
-          during the time bin across all trips on the route; measured
-          in kilometers
-        - ``service_speed``: ``service_distance/service_duration``
-          for the route
+    - ``num_trips``: number of trips in service on the route
+      at any time within the time bin
+    - ``num_trip_starts``: number of trips that start within
+      the time bin
+    - ``num_trip_ends``: number of trips that end within the
+      time bin, ignoring trips that end past midnight
+    - ``service_distance``: sum of the service duration accrued
+      during the time bin across all trips on the route;
+      measured in hours
+    - ``service_distance``: sum of the service distance accrued
+      during the time bin across all trips on the route; measured
+      in kilometers
+    - ``service_speed``: ``service_distance/service_duration``
+      for the route
 
-        The columns are hierarchical (multi-indexed) with
+    The columns are hierarchical (multi-indexed) with
 
-        - top level: name is ``'indicator'``; values are
-          ``'num_trip_starts'``, ``'num_trip_ends'``, ``'num_trips'``,
-          ``'service_distance'``, ``'service_duration'``, and
-          ``'service_speed'``
-        - middle level: name is ``'route_id'``;
-          values are the active routes
-        - bottom level: name is ``'direction_id'``; values are 0s and 1s
+    - top level: name is ``'indicator'``; values are
+      ``'num_trip_starts'``, ``'num_trip_ends'``, ``'num_trips'``,
+      ``'service_distance'``, ``'service_duration'``, and
+      ``'service_speed'``
+    - middle level: name is ``'route_id'``;
+      values are the active routes
+    - bottom level: name is ``'direction_id'``; values are 0s and 1s
 
-        If not ``split_directions``, then don't include the bottom level.
+    If not ``split_directions``, then don't include the bottom level.
 
-        The time series has a timestamp index for a 24-hour period
-        sampled at the given frequency.
-        The maximum allowable frequency is 1 minute.
-        If ``trip_stats_subset`` is empty, then return an empty
-        DataFrame with the columns ``'num_trip_starts'``,
-        ``'num_trip_ends'``, ``'num_trips'``, ``'service_distance'``,
-        ``'service_duration'``, and ``'service_speed'``.
+    The time series has a timestamp index for a 24-hour period
+    sampled at the given frequency.
+    The maximum allowable frequency is 1 minute.
+    If ``trip_stats_subset`` is empty, then return an empty
+    DataFrame with the columns ``'num_trip_starts'``,
+    ``'num_trip_ends'``, ``'num_trips'``, ``'service_distance'``,
+    ``'service_duration'``, and ``'service_speed'``.
 
     Notes
     -----
@@ -436,30 +412,11 @@ def get_routes(
     feed: "Feed", date: Optional[str] = None, time: Optional[str] = None
 ) -> pd.DataFrame:
     """
-    Return a subset of ``feed.routes``
-
-    Parameters
-    -----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string restricting routes to only those active on
-        the date
-    time : string
-        HH:MM:SS time string, possibly with HH > 23, restricting routes
-        to only those active during the time
-
-    Returns
-    -------
-    DataFrame
-        A subset of ``feed.routes``
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.routes``
-    - Those used in :func:`.trips.get_trips`.
-
+    Return ``feed.routes`` or a subset thereof.
+    If a YYYYMMDD date string is given, then restrict routes to only those active on
+    the date.
+    If a HH:MM:SS time string is given, possibly with HH > 23, then restrict routes
+    to only those active during the time.
     """
     if date is None:
         return feed.routes.copy()
@@ -480,45 +437,25 @@ def compute_route_stats(
 ) -> pd.DataFrame:
     """
     Compute route stats for all the trips that lie in the given subset
-    of trip stats and that start on the given dates.
+    of trip stats (of the form output by the function :func:`.trips.compute_trip_stats`)
+    and that start on the given dates (YYYYMMDD date strings).
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_stats_subset : DataFrame
-        Slice of the output of :func:`.trips.compute_trip_stats`
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute stats
-    split_directions : boolean
-        If ``True``, then separate the stats by trip direction (0 or 1);
-        otherwise aggregate trips visiting from both directions
-    headway_start_time : string
-        HH:MM:SS time string indicating the start time for computing
-        headway stats
-    headway_end_time : string
-        HH:MM:SS time string indicating the end time for computing
-        headway stats
+    If ``split_directions``, then separate the stats by trip direction (0 or 1).
+    Use the headway start and end times to specify the time period for computing
+    headway stats.
 
-    Returns
-    -------
-    DataFrame
-        Columns are
+    Return a DataFrame with the columns
 
-        - ``'date'``
-        - the columns listed in :func:``compute_route_stats_0``
+    - ``'date'``
+    - the columns listed in :func:``compute_route_stats_0``
 
-        Exclude dates with no active stops, which could yield the empty DataFrame.
+    Exclude dates with no active trips, which could yield the empty DataFrame.
 
     Notes
     -----
     - The route stats for date d contain stats for trips that start on
       date d only and ignore trips that start on date d-1 and end on
       date d
-    - Assume the following feed attributes are not ``None``:
-
-        * Those used in :func:`.helpers.compute_route_stats_0`
-
     - Raise a ValueError if ``split_directions`` and no non-NaN
       direction ID values present
 
@@ -616,40 +553,24 @@ def compute_route_time_series(
 ) -> pd.DataFrame:
     """
     Compute route stats in time series form for the trips that lie in
-    the trip stats subset and that start on the given dates.
+    the trip stats subset (of the form output by the function
+    :func:`.trips.compute_trip_stats`) and that start on the given dates
+    (YYYYMMDD date strings).
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_stats_subset : DataFrame
-        Slice of the output of :func:`.trips.compute_trip_stats`
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute stats
-    split_directions : boolean
-        If ``True``, then separate each routes's stats by trip direction;
-        otherwise aggregate trips in both directions
-    freq : Pandas frequency string
-        Specifices the frequency with which to resample the time series;
-        max frequency is one minute ('Min')
+    If ``split_directions``, then separate each routes's stats by trip direction.
+    Specify the time series frequency with a Pandas frequency string, e.g. ``'5Min';
+    max frequency is one minute ('Min').
 
-    Returns
-    -------
-    DataFrame
-        Same format as output by :func:`compute_route_time_series_0`
-        but with multiple dates
+    Return a DataFrame of the same format output by the function
+    :func:`compute_route_time_series_0` but with multiple dates
 
-        Exclude dates that lie outside of the Feed's date range.
-        If all dates lie outside the Feed's date range, then return an
-        empty DataFrame.
+    Exclude dates that lie outside of the Feed's date range.
+    If all dates lie outside the Feed's date range, then return an
+    empty DataFrame.
 
     Notes
     -----
     - See the notes for :func:`compute_route_time_series_0`
-    - Assume the following feed attributes are not ``None``:
-
-        * Those used in :func:`.trips.get_trips`
-
     - Raise a ValueError if ``split_directions`` and no non-NaN
       direction ID values present
 
@@ -718,37 +639,18 @@ def build_route_timetable(
     feed: "Feed", route_id: str, dates: List[str]
 ) -> pd.DataFrame:
     """
-    Return a timetable for the given route and dates.
+    Return a timetable for the given route and dates (YYYYMMDD date strings).
 
-    Parameters
-    ----------
-    feed : Feed
-    route_id : string
-        ID of a route in ``feed.routes``
-    dates : string or list
-        A YYYYMMDD date string or list thereof
+    Return a DataFrame with whose columns are all those in ``feed.trips`` plus those in
+    ``feed.stop_times`` plus ``'date'``.
+    The trip IDs are restricted to the given route ID.
+    The result is sorted first by date and then by grouping by
+    trip ID and sorting the groups by their first departure time.
 
-    Returns
-    -------
-    DataFrame
-        The columns are all those in ``feed.trips`` plus those in
-        ``feed.stop_times`` plus ``'date'``, and the trip IDs
-        are restricted to the given route ID.
-        The result is sorted first by date and then by grouping by
-        trip ID and sorting the groups by their first departure time.
+    Skip dates outside of the Feed's dates.
 
-        Skip dates outside of the Feed's dates.
-
-        If there is no route activity on the given dates, then return
-        an empty DataFrame.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.stop_times``
-    - Those used in :func:`.trips.get_trips`
-
+    If there is no route activity on the given dates, then return
+    an empty DataFrame.
     """
     dates = feed.subset_dates(dates)
     if not dates:
@@ -783,8 +685,18 @@ def geometrize_routes(
     *,
     use_utm: bool = False,
     split_directions: bool = False,
-):
+) -> gpd.GeoDataFrame:
     """
+    Given a Feed, return a GeoDataFrame with all the columns of ``feed.routes``
+    plus a geometry column of MultiLineStrings, each of which represents the
+    corresponding routes's shape.
+
+    If an iterable of route IDs is given, then subset to those routes.
+    If ``use_utm``, then use local UTM coordinates for the geometries.
+    If ``split_directions``, then add the column ``direction_id`` and split each route
+    route shapes into shapes in trip direction 0 and its shapes in trip direction 1.
+
+    Raise a ValueError if the Feed has no shapes.
     """
     if feed.shapes is None:
         raise ValueError("This Feed has no shapes.")

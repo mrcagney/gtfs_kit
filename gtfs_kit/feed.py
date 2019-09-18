@@ -20,7 +20,6 @@ from pathlib import Path
 import tempfile
 import shutil
 from copy import deepcopy
-from collections import OrderedDict
 import zipfile
 from typing import Optional
 
@@ -187,7 +186,7 @@ class Feed(object):
         feed_info: Optional[DataFrame] = None,
     ):
         """
-        Assume that every non-None input is a Pandas DataFrame,
+        Assume that every non-None input is a DataFrame,
         except for ``dist_units`` which should be a string in
         :const:`.constants.DIST_UNITS`.
 
