@@ -558,7 +558,7 @@ def compute_route_time_series(
     (YYYYMMDD date strings).
 
     If ``split_directions``, then separate each routes's stats by trip direction.
-    Specify the time series frequency with a Pandas frequency string, e.g. ``'5Min';
+    Specify the time series frequency with a Pandas frequency string, e.g. ``'5Min'``;
     max frequency is one minute ('Min').
 
     Return a DataFrame of the same format output by the function
