@@ -4,7 +4,6 @@ Functions about stop times.
 from typing import Optional, List, TYPE_CHECKING
 
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 
 from . import helpers as hp
@@ -14,76 +13,50 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def get_stop_times(feed: "Feed", date: Optional[str] = None) -> DataFrame:
+def get_stop_times(feed: "Feed", date: Optional[str] = None) -> pd.DataFrame:
     """
-    Return a subset of ``feed.stop_times``.
-
-    Parameters
-    ----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string restricting the output to trips active
-        on the date
-
-    Returns
-    -------
-    DataFrame
-        Subset of ``feed.stop_times``
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.stop_times``
-    - Those used in :func:`.trips.get_trips`
-
+    Return ``feed.stop_times``.
+    If a date (YYYYMMDD date string) is given, then subset the result to only those
+    stop times with trips active on the date.
     """
-    f = feed.stop_times.copy()
     if date is None:
-        return f
+        f = feed.stop_times.copy()
+    else:
+        trip_ids = feed.get_trips(date).trip_id
+        f = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
-    g = feed.get_trips(date)
-    return f[f["trip_id"].isin(g["trip_id"])]
+    return f
 
-
-def append_dist_to_stop_times(feed: "Feed", trip_stats: DataFrame) -> "Feed":
+def append_dist_to_stop_times(feed: "Feed", trip_stats: pd.DataFrame) -> "Feed":
     """
     Calculate and append the optional ``shape_dist_traveled`` field in
     ``feed.stop_times`` in terms of the distance units
     ``feed.dist_units``.
-    Need trip stats in the form output by
+    Need trip stats in the form output by the function
     :func:`.trips.compute_trip_stats` for this.
     Return the resulting Feed.
 
-    Notes
-    -----
-    - Does not always give accurate results, as described below.
-    - The algorithm works as follows.
-      Compute the ``shape_dist_traveled`` field by using Shapely to
-      measure the distance of a stop along its trip linestring.
-      If for a given trip this process produces a non-monotonically
-      increasing, hence incorrect, list of (cumulative) distances, then
-      fall back to estimating the distances as follows.
+    This does not always give accurate results.
+    The algorithm works as follows.
+    Compute the ``shape_dist_traveled`` field by using Shapely to
+    measure the distance of a stop along its trip LineString.
+    If for a given trip this process produces a non-monotonically
+    increasing, hence incorrect, list of (cumulative) distances, then
+    fall back to estimating the distances as follows.
 
-      Get the average speed of the trip via ``trip_stats`` and use is to
-      linearly interpolate distances for stop times, assuming that the
-      first stop is at shape_dist_traveled = 0 (the start of the shape)
-      and the last stop is at shape_dist_traveled = the length of the trip
-      (taken from trip_stats and equal to the length of the shape, unless
-      ``trip_stats`` was called with ``get_dist_from_shapes == False``).
-      This fallback method usually kicks in on trips with
-      self-intersecting linestrings.
-      Unfortunately, this fallback method will produce incorrect results
-      when the first stop does not start at the start of its shape
-      (so shape_dist_traveled != 0).
-      This is the case for several trips in `this Portland feed
-      <https://transitfeeds.com/p/trimet/43/1400947517>`_, for example.
-    - Assume the following feed attributes are not ``None``:
-
-        * ``feed.stop_times``
-        * Those used in :func:`.shapes.build_geometry_by_shape`
-        * Those used in :func:`.stops.build_geometry_by_stop`
-
+    Get the average speed of the trip via ``trip_stats`` and use is to
+    linearly interpolate distances for stop times, assuming that the
+    first stop is at shape_dist_traveled = 0 (the start of the shape)
+    and the last stop is at shape_dist_traveled = the length of the trip
+    (taken from trip_stats and equal to the length of the shape, unless
+    ``trip_stats`` was called with ``get_dist_from_shapes == False``).
+    This fallback method usually kicks in on trips with
+    self-intersecting LineStrings.
+    Unfortunately, this fallback method will produce incorrect results
+    when the first stop does not start at the start of its shape
+    (so shape_dist_traveled != 0).
+    This is the case for several trips in `this Portland feed
+    <https://transitfeeds.com/p/trimet/43/1400947517>`_, for example.
     """
     feed = feed.copy()
     geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)

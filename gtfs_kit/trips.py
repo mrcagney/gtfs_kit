@@ -7,12 +7,10 @@ from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 
 import geopandas as gpd
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
 import folium as fl
-import folium.plugins as fp
 
 from . import constants as cs
 from . import helpers as hp
@@ -25,8 +23,8 @@ if TYPE_CHECKING:
 def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     """
     Return ``True`` if the ``feed.calendar`` or ``feed.calendar_dates``
-    says that the trip runs on the given date; return ``False``
-    otherwise.
+    says that the trip runs on the given date (YYYYMMDD date string);
+    return ``False`` otherwise.
 
     Note that a trip that starts on date d, ends after 23:59:59, and
     does not start again on date d+1 is considered active on date d and
@@ -34,28 +32,8 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     This subtle point, which is a side effect of the GTFS, can
     lead to confusion.
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_id : string
-        ID of a trip in ``feed.trips``
-    date : string
-        YYYYMMDD date string
-
-    Returns
-    -------
-    boolean
-        ``True`` if and only if the given trip starts on the given
-        date.
-
-    Notes
-    -----
-    - This function is key for getting all trips, routes, etc. that are
-      active on a given date, so the function needs to be fast
-    - Assume the following feed attributes are not ``None``:
-
-        * ``feed.trips``
-
+    This function is key for getting all trips, routes, etc. that are
+    active on a given date, so the function needs to be fast.
     """
     service = feed._trips_i.at[trip_id, "service_id"]
     # Check feed._calendar_dates_g.
@@ -86,26 +64,13 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
 
 def get_trips(
     feed: "Feed", date: Optional[str] = None, time: Optional[str] = None
-) -> DataFrame:
+) -> pd.DataFrame:
     """
-    Return a subset of ``feed.trips``.
-
-    Parameters
-    ----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string
-    time : string
-        HH:MM:SS time string, possibly with HH > 23
-
-    Returns
-    -------
-    DataFrame
-        The subset of ``feed.trips`` containing trips active (starting)
-        on the given date at the given time.
-        If no date or time are specified, then return the entire
-        ``feed.trips``.
-
+    Return ``feed.trips``.
+    If date (YYYYMMDD date string) is given then subset the result to trips
+    that start on that date.
+    If a time (HH:MM:SS string, possibly with HH > 23) is given in addition to a date,
+    then further subset the result to trips in service at that time.
     """
     if feed.trips is None or date is None:
         return feed.trips
@@ -139,42 +104,24 @@ def get_trips(
     return f
 
 
-def compute_trip_activity(feed: "Feed", dates: List[str]) -> DataFrame:
+def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
     """
-    Mark trip as active or inactive on the given dates as computed
-    by :func:`is_active_trip`.
+    Mark trip as active or inactive on the given dates (YYYYMMDD date strings)
+    as computed by the function :func:`is_active_trip`.
 
-    Parameters
-    ----------
-    feed : Feed
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute activity
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        Columns are
+    - ``'trip_id'``
+    - ``dates[0]``: 1 if the trip is active on ``dates[0]``;
+      0 otherwise
+    - ``dates[1]``: 1 if the trip is active on ``dates[1]``;
+      0 otherwise
+    - etc.
+    - ``dates[-1]``: 1 if the trip is active on ``dates[-1]``;
+      0 otherwise
 
-        - ``'trip_id'``
-        - ``dates[0]``: 1 if the trip is active on ``dates[0]``;
-          0 otherwise
-        - ``dates[1]``: 1 if the trip is active on ``dates[1]``;
-          0 otherwise
-        - etc.
-        - ``dates[-1]``: 1 if the trip is active on ``dates[-1]``;
-          0 otherwise
-
-        If ``dates`` is ``None`` or the empty list, then return an
-        empty DataFrame.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.trips``
-    - Those used in :func:`is_active_trip`
-
+    If ``dates`` is ``None`` or the empty list, then return an
+    empty DataFrame.
     """
     dates = feed.subset_dates(dates)
     if not dates:
@@ -190,15 +137,8 @@ def compute_trip_activity(feed: "Feed", dates: List[str]) -> DataFrame:
 
 def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
     """
-    Given a list of dates, return the first date that has the
+    Given a list of dates (YYYYMMDD date strings), return the first date that has the
     maximum number of active trips.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - Those used in :func:`compute_trip_activity`
-
     """
     f = feed.compute_trip_activity(dates)
     s = [(f[c].sum(), c) for c in f.columns if c != "trip_id"]
@@ -210,7 +150,7 @@ def compute_trip_stats(
     route_ids: Optional[List[str]] = None,
     *,
     compute_dist_from_shapes: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a DataFrame with the following columns:
 
@@ -380,44 +320,26 @@ def compute_trip_stats(
     return h.sort_values(["route_id", "direction_id", "start_time"])
 
 
-def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
+def locate_trips(feed: "Feed", date: str, times: List[str]) -> pd.DataFrame:
     """
     Return the positions of all trips active on the
-    given date and times
+    given date (YYYYMMDD date string) and times (HH:MM:SS time strings,
+    possibly with HH > 23).
 
-    Parameters
-    ----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string
-    times : list
-        HH:MM:SS time strings, possibly with HH > 23
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        Columns are:
+    - ``'trip_id'``
+    - ``'route_id'``
+    - ``'direction_id'``: all NaNs if ``feed.trips.direction_id`` is
+      missing
+    - ``'time'``
+    - ``'rel_dist'``: number between 0 (start) and 1 (end)
+      indicating the relative distance of the trip along its path
+    - ``'lon'``: longitude of trip at given time
+    - ``'lat'``: latitude of trip at given time
 
-        - ``'trip_id'``
-        - ``'route_id'``
-        - ``'direction_id'``: all NaNs if ``feed.trips.direction_id`` is
-          missing
-        - ``'time'``
-        - ``'rel_dist'``: number between 0 (start) and 1 (end)
-          indicating the relative distance of the trip along its path
-        - ``'lon'``: longitude of trip at given time
-        - ``'lat'``: latitude of trip at given time
-
-        Assume ``feed.stop_times`` has an accurate
-        ``shape_dist_traveled`` column.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.trips``
-    - Those used in :func:`.stop_times.get_stop_times`
-
+    Assume ``feed.stop_times`` has an accurate
+    ``shape_dist_traveled`` column.
     """
     if not hp.is_not_null(feed.stop_times, "shape_dist_traveled"):
         raise ValueError(
@@ -488,6 +410,13 @@ def geometrize_trips(
     feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
 ) -> gpd.GeoDataFrame:
     """
+    Return a GeoDataFrame with the columns in ``feed.trips`` and a geometry column
+    of LineStrings, each of which represents the shape of the corresponding trip.
+
+    If an iterable of trip IDs is given, then subset to those trips.
+    If ``use_utm``, then use local UTM coordinates for the geometries.
+
+    Raise a ValueError if the Feed has no shapes.
     """
     if feed.shapes is None:
         raise ValueError("This Feed has no shapes.")

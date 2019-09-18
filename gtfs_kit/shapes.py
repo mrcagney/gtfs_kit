@@ -24,16 +24,10 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
     ``feed.shapes`` in terms of the distance units ``feed.dist_units``.
     Return the resulting Feed.
 
-    Notes
-    -----
-    - As a benchmark, using this function on `this Portland feed
-      <https://transitfeeds.com/p/trimet/43/1400947517>`_
-      produces a ``shape_dist_traveled`` column that differs by at most
-      0.016 km in absolute value from of the original values
-    - Assume the following feed attributes are not ``None``:
-
-        * ``feed.shapes``
-
+    As a benchmark, using this function on `this Portland feed
+    <https://transitfeeds.com/p/trimet/43/1400947517>`_
+    produces a ``shape_dist_traveled`` column that differs by at most
+    0.016 km in absolute value from of the original values.
     """
     if feed.shapes is None:
         raise ValueError(
