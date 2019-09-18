@@ -2,21 +2,14 @@ import pytest
 import pandas as pd
 import itertools
 
-from .context import (
-    gtfs_kit,
-    HAS_FOLIUM,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
-from gtfs_kit import *
+import folium as fl
 
-if HAS_FOLIUM:
-    import folium as fl
+from .context import gtfs_kit, cairns, cairns_shapeless, cairns_dates, cairns_trip_stats
+from gtfs_kit import *
 
 
 @pytest.mark.slow
-def test_compute_route_stats_base():
+def test_compute_route_stats_0():
     feed = cairns.copy()
     ts1 = cairns_trip_stats.copy()
     ts2 = cairns_trip_stats.copy()
@@ -26,10 +19,10 @@ def test_compute_route_stats_base():
         if split_directions and ts.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_route_stats_base(ts, split_directions=split_directions)
+                compute_route_stats_0(ts, split_directions=split_directions)
             continue
 
-        rs = compute_route_stats_base(ts, split_directions=split_directions)
+        rs = compute_route_stats_0(ts, split_directions=split_directions)
 
         # Should be a data frame of the correct shape
         assert isinstance(rs, pd.core.frame.DataFrame)
@@ -70,14 +63,12 @@ def test_compute_route_stats_base():
         assert set(rs.columns) == expect_cols
 
     # Empty check
-    rs = compute_route_stats_base(
-        pd.DataFrame(), split_directions=split_directions
-    )
+    rs = compute_route_stats_0(pd.DataFrame(), split_directions=split_directions)
     assert rs.empty
 
 
 @pytest.mark.slow
-def test_compute_route_time_series_base():
+def test_compute_route_time_series_0():
     feed = cairns.copy()
     ts1 = cairns_trip_stats.copy()
     ts2 = cairns_trip_stats.copy()
@@ -86,11 +77,11 @@ def test_compute_route_time_series_base():
         if split_directions and ts.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_route_stats_base(ts, split_directions=split_directions)
+                compute_route_stats_0(ts, split_directions=split_directions)
             continue
 
-        rs = compute_route_stats_base(ts, split_directions=split_directions)
-        rts = compute_route_time_series_base(
+        rs = compute_route_stats_0(ts, split_directions=split_directions)
+        rts = compute_route_time_series_0(
             ts, split_directions=split_directions, freq="H"
         )
 
@@ -115,7 +106,7 @@ def test_compute_route_time_series_base():
                 assert abs((get - expect) / expect) < 0.001
 
     # Empty check
-    rts = compute_route_time_series_base(
+    rts = compute_route_time_series_0(
         pd.DataFrame(), split_directions=split_directions, freq="1H"
     )
     assert rts.empty
@@ -148,9 +139,7 @@ def test_compute_route_stats():
     dates = cairns_dates + ["20010101"]
     n = 3
     rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[
-        lambda x: x["route_id"].isin(rids)
-    ]
+    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
 
     for split_directions in [True, False]:
         rs = compute_route_stats(
@@ -231,9 +220,7 @@ def test_compute_route_time_series():
     dates = cairns_dates + ["20010101"]  # Spans 3 valid dates
     n = 3
     rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[
-        lambda x: x["route_id"].isin(rids)
-    ]
+    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
 
     for split_directions in [True, False]:
         rs = compute_route_stats(
@@ -288,9 +275,7 @@ def test_build_route_timetable():
     assert isinstance(f, pd.core.frame.DataFrame)
 
     # Should have the correct columns
-    expect_cols = (
-        set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
-    )
+    expect_cols = set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
     assert set(f.columns) == expect_cols
 
     # Should only have feed dates
@@ -301,36 +286,44 @@ def test_build_route_timetable():
     assert f.empty
 
 
-def test_route_to_geojson():
+def test_geometrize_routes():
     feed = cairns.copy()
-    route_id = feed.routes["route_id"].values[0]
-    date = cairns_dates[0]
-    g0 = route_to_geojson(feed, "bingo", date)
-    g1 = route_to_geojson(feed, route_id, date)
-    g2 = route_to_geojson(feed, route_id, date, include_stops=True)
-    for g in [g0, g1, g2]:
-        # Should be a dictionary
-        assert isinstance(g, dict)
+    route_ids = feed.routes.route_id.loc[:1]
+    g = geometrize_routes(feed, route_ids)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.shape[0] == len(route_ids)
 
-    # Should have the correct number of features
-    n = (
-        feed.get_trips(date=date)
-        .loc[lambda x: x["route_id"] == route_id, "shape_id"]
+    g = geometrize_routes(feed, route_ids, split_directions=True)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.shape[0] == 2 * len(route_ids)
+
+    with pytest.raises(ValueError):
+        geometrize_routes(cairns_shapeless)
+
+
+def test_routes_to_geojson():
+    feed = cairns.copy()
+    route_ids = feed.routes.route_id.loc[:1]
+    n = len(route_ids)
+
+    gj = routes_to_geojson(feed, route_ids)
+    assert len(gj["features"]) == n
+
+    gj = routes_to_geojson(feed, route_ids, include_stops=True)
+    k = (
+        feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
+        .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
         .nunique()
     )
-    k = get_stops(feed, route_id=route_id)["stop_id"].shape[0]
+    assert len(gj["features"]) == n + k
 
-    assert len(g0["features"]) == 0
-    assert len(g1["features"]) == n
-    assert len(g2["features"]) == n + k
+    with pytest.raises(ValueError):
+        routes_to_geojson(cairns_shapeless)
 
-
-@pytest.mark.skipif(not HAS_FOLIUM, reason="Requires Folium")
 def test_map_routes():
     feed = cairns.copy()
-    rids = feed.routes["route_id"].values[:2]
-    date = cairns_dates[0]
-    map0 = map_routes(feed, ["bingo"], date=date)
-    map1 = map_routes(feed, rids, date=date, include_stops=True)
+    rids = feed.routes.route_id.loc[:1]
+    map0 = map_routes(feed, ["bingo"])
+    map1 = map_routes(feed, rids, include_stops=True)
     for m in [map0, map1]:
         assert isinstance(m, fl.Map)

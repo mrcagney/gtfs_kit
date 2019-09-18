@@ -13,21 +13,10 @@ if TYPE_CHECKING:
 
 def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
     """
-    Return a list of dates for which the given "Feed" is valid, which
-    could be the empty list if the "Feed" has no calendar information.
+    Return a list of YYYYMMDD date strings for which the given Feed is valid,
+    which could be the empty list if the Feed has no calendar information.
 
-    Parameters
-    ----------
-    feed : "Feed"
-    as_date_obj : boolean
-        If ``True``, then return the dates as ``datetime.date`` objects;
-        otherwise return them as strings
-
-    Returns
-    -------
-    list
-        Dates
-
+    If ``as_date_obj``, then return datetime.date objects instead.
     """
     dates = []
     if feed.calendar is not None and not feed.calendar.empty:
@@ -59,13 +48,13 @@ def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
 
 def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> List[str]:
     """
-    Given a Feed object and a positive integer ``k``,
-    return a list of dates corresponding to the kth Monday--Sunday week
-    (or initial segment thereof) for which the feed is valid.
+    Given a Feed and a positive integer ``k``,
+    return a list of YYYYMMDD date strings corresponding to the kth Monday--Sunday week
+    (or initial segment thereof) for which the Feed is valid.
     For example, k=1 returns the first Monday--Sunday week (or initial segment thereof).
-    If the feed not have k Mondays, then return the empty list.
+    If the Feed does not have k Mondays, then return the empty list.
 
-    If ``as_date_obj``, then return date objects, otherwise return date strings.
+    If ``as_date_obj``, then return datetime.date objects instead.
     """
     dates = feed.get_dates(as_date_obj=True)
     n = len(dates)
@@ -92,8 +81,8 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> List[str]:
 
 def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
     """
-    Return a list of dates for the first Monday--Sunday
-    week (or initial segment thereof) for which this feed is valid.
+    Return a list of YYYYMMDD date strings for the first Monday--Sunday
+    week (or initial segment thereof) for which the given Feed is valid.
     If the feed has no Mondays, then return the empty list.
 
     If ``as_date_obj``, then return date objects, otherwise return date strings.
@@ -103,7 +92,7 @@ def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
 
 def subset_dates(feed: "Feed", dates: List[str]) -> List[str]:
     """
-    Given a "Feed" and a list of dates (YYYYMMDD date strings),
+    Given a Feed and a list of YYYYMMDD date strings,
     return the sublist of dates that lie in the Feed's dates
     (the output :func:`feed.get_dates`).
     """

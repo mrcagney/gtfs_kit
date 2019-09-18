@@ -3,13 +3,14 @@ Functions about trips.
 """
 from collections import OrderedDict
 import json
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 
+import geopandas as gpd
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
+import folium as fl
 
 from . import constants as cs
 from . import helpers as hp
@@ -22,8 +23,8 @@ if TYPE_CHECKING:
 def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     """
     Return ``True`` if the ``feed.calendar`` or ``feed.calendar_dates``
-    says that the trip runs on the given date; return ``False``
-    otherwise.
+    says that the trip runs on the given date (YYYYMMDD date string);
+    return ``False`` otherwise.
 
     Note that a trip that starts on date d, ends after 23:59:59, and
     does not start again on date d+1 is considered active on date d and
@@ -31,28 +32,8 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     This subtle point, which is a side effect of the GTFS, can
     lead to confusion.
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_id : string
-        ID of a trip in ``feed.trips``
-    date : string
-        YYYYMMDD date string
-
-    Returns
-    -------
-    boolean
-        ``True`` if and only if the given trip starts on the given
-        date.
-
-    Notes
-    -----
-    - This function is key for getting all trips, routes, etc. that are
-      active on a given date, so the function needs to be fast
-    - Assume the following feed attributes are not ``None``:
-
-        * ``feed.trips``
-
+    This function is key for getting all trips, routes, etc. that are
+    active on a given date, so the function needs to be fast.
     """
     service = feed._trips_i.at[trip_id, "service_id"]
     # Check feed._calendar_dates_g.
@@ -71,9 +52,7 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
         if service in cali.index:
             weekday_str = hp.weekday_to_str(hp.datestr_to_date(date).weekday())
             if (
-                cali.at[service, "start_date"]
-                <= date
-                <= cali.at[service, "end_date"]
+                cali.at[service, "start_date"] <= date <= cali.at[service, "end_date"]
                 and cali.at[service, weekday_str] == 1
             ):
                 return True
@@ -85,26 +64,13 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
 
 def get_trips(
     feed: "Feed", date: Optional[str] = None, time: Optional[str] = None
-) -> DataFrame:
+) -> pd.DataFrame:
     """
-    Return a subset of ``feed.trips``.
-
-    Parameters
-    ----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string
-    time : string
-        HH:MM:SS time string, possibly with HH > 23
-
-    Returns
-    -------
-    DataFrame
-        The subset of ``feed.trips`` containing trips active (starting)
-        on the given date at the given time.
-        If no date or time are specified, then return the entire
-        ``feed.trips``.
-
+    Return ``feed.trips``.
+    If date (YYYYMMDD date string) is given then subset the result to trips
+    that start on that date.
+    If a time (HH:MM:SS string, possibly with HH > 23) is given in addition to a date,
+    then further subset the result to trips in service at that time.
     """
     if feed.trips is None or date is None:
         return feed.trips
@@ -138,42 +104,24 @@ def get_trips(
     return f
 
 
-def compute_trip_activity(feed: "Feed", dates: List[str]) -> DataFrame:
+def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
     """
-    Mark trip as active or inactive on the given dates as computed
-    by :func:`is_active_trip`.
+    Mark trip as active or inactive on the given dates (YYYYMMDD date strings)
+    as computed by the function :func:`is_active_trip`.
 
-    Parameters
-    ----------
-    feed : Feed
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute activity
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        Columns are
+    - ``'trip_id'``
+    - ``dates[0]``: 1 if the trip is active on ``dates[0]``;
+      0 otherwise
+    - ``dates[1]``: 1 if the trip is active on ``dates[1]``;
+      0 otherwise
+    - etc.
+    - ``dates[-1]``: 1 if the trip is active on ``dates[-1]``;
+      0 otherwise
 
-        - ``'trip_id'``
-        - ``dates[0]``: 1 if the trip is active on ``dates[0]``;
-          0 otherwise
-        - ``dates[1]``: 1 if the trip is active on ``dates[1]``;
-          0 otherwise
-        - etc.
-        - ``dates[-1]``: 1 if the trip is active on ``dates[-1]``;
-          0 otherwise
-
-        If ``dates`` is ``None`` or the empty list, then return an
-        empty DataFrame.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.trips``
-    - Those used in :func:`is_active_trip`
-
+    If ``dates`` is ``None`` or the empty list, then return an
+    empty DataFrame.
     """
     dates = feed.subset_dates(dates)
     if not dates:
@@ -189,15 +137,8 @@ def compute_trip_activity(feed: "Feed", dates: List[str]) -> DataFrame:
 
 def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
     """
-    Given a list of dates, return the first date that has the
+    Given a list of dates (YYYYMMDD date strings), return the first date that has the
     maximum number of active trips.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - Those used in :func:`compute_trip_activity`
-
     """
     f = feed.compute_trip_activity(dates)
     s = [(f[c].sum(), c) for c in f.columns if c != "trip_id"]
@@ -209,7 +150,7 @@ def compute_trip_stats(
     route_ids: Optional[List[str]] = None,
     *,
     compute_dist_from_shapes: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Return a DataFrame with the following columns:
 
@@ -248,7 +189,6 @@ def compute_trip_stats(
         * ``feed.routes``
         * ``feed.stop_times``
         * ``feed.shapes`` (optionally)
-        * Those used in :func:`.stops.build_geometry_by_stop`
 
     - Calculating trip distances with ``compute_dist_from_shapes=True``
       seems pretty accurate.  For example, calculating trip distances on
@@ -278,11 +218,7 @@ def compute_trip_stats(
         .merge(feed.routes[["route_id", "route_short_name", "route_type"]])
         .merge(feed.stop_times)
         .sort_values(["trip_id", "stop_sequence"])
-        .assign(
-            departure_time=lambda x: x["departure_time"].map(
-                hp.timestr_to_seconds
-            )
-        )
+        .assign(departure_time=lambda x: x["departure_time"].map(hp.timestr_to_seconds))
     )
 
     # Compute all trips stats except distance,
@@ -315,18 +251,12 @@ def compute_trip_stats(
     h = g.apply(my_agg)
 
     # Compute distance
-    if (
-        hp.is_not_null(f, "shape_dist_traveled")
-        and not compute_dist_from_shapes
-    ):
+    if hp.is_not_null(f, "shape_dist_traveled") and not compute_dist_from_shapes:
         # Compute distances using shape_dist_traveled column
-        h["distance"] = g.apply(
-            lambda group: group["shape_dist_traveled"].max()
-        )
+        h["distance"] = g.apply(lambda group: group["shape_dist_traveled"].max())
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
-        geometry_by_stop = feed.build_geometry_by_stop(use_utm=True)
         m_to_dist = hp.get_convert_dist("m", feed.dist_units)
 
         def compute_dist(group):
@@ -390,45 +320,26 @@ def compute_trip_stats(
     return h.sort_values(["route_id", "direction_id", "start_time"])
 
 
-def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
+def locate_trips(feed: "Feed", date: str, times: List[str]) -> pd.DataFrame:
     """
     Return the positions of all trips active on the
-    given date and times
+    given date (YYYYMMDD date string) and times (HH:MM:SS time strings,
+    possibly with HH > 23).
 
-    Parameters
-    ----------
-    feed : Feed
-    date : string
-        YYYYMMDD date string
-    times : list
-        HH:MM:SS time strings, possibly with HH > 23
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        Columns are:
+    - ``'trip_id'``
+    - ``'route_id'``
+    - ``'direction_id'``: all NaNs if ``feed.trips.direction_id`` is
+      missing
+    - ``'time'``
+    - ``'rel_dist'``: number between 0 (start) and 1 (end)
+      indicating the relative distance of the trip along its path
+    - ``'lon'``: longitude of trip at given time
+    - ``'lat'``: latitude of trip at given time
 
-        - ``'trip_id'``
-        - ``'route_id'``
-        - ``'direction_id'``: all NaNs if ``feed.trips.direction_id`` is
-          missing
-        - ``'time'``
-        - ``'rel_dist'``: number between 0 (start) and 1 (end)
-          indicating the relative distance of the trip along its path
-        - ``'lon'``: longitude of trip at given time
-        - ``'lat'``: latitude of trip at given time
-
-        Assume ``feed.stop_times`` has an accurate
-        ``shape_dist_traveled`` column.
-
-    Notes
-    -----
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.trips``
-    - Those used in :func:`.stop_times.get_stop_times`
-    - Those used in :func:`.shapes.build_geometry_by_shape`
-
+    Assume ``feed.stop_times`` has an accurate
+    ``shape_dist_traveled`` column.
     """
     if not hp.is_not_null(feed.stop_times, "shape_dist_traveled"):
         raise ValueError(
@@ -454,9 +365,7 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     def compute_rel_dist(group):
         dists = sorted(group["shape_dist_traveled"].values)
         times = sorted(group["departure_time"].values)
-        ts = sample_times[
-            (sample_times >= times[0]) & (sample_times <= times[-1])
-        ]
+        ts = sample_times[(sample_times >= times[0]) & (sample_times <= times[-1])]
         ds = np.interp(ts, times, dists)
         return pd.DataFrame({"time": ts, "rel_dist": ds / dists[-1]})
 
@@ -497,137 +406,101 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> DataFrame:
     return h.groupby("shape_id").apply(get_lonlat)
 
 
-def trip_to_geojson(
-    feed: "Feed", trip_id: str, *, include_stops: bool = False
+def geometrize_trips(
+    feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
+) -> gpd.GeoDataFrame:
+    """
+    Return a GeoDataFrame with the columns in ``feed.trips`` and a geometry column
+    of LineStrings, each of which represents the shape of the corresponding trip.
+
+    If an iterable of trip IDs is given, then subset to those trips.
+    If ``use_utm``, then use local UTM coordinates for the geometries.
+
+    Raise a ValueError if the Feed has no shapes.
+    """
+    if feed.shapes is None:
+        raise ValueError("This Feed has no shapes.")
+
+    if trip_ids is not None:
+        trips = feed.trips.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
+    else:
+        trips = feed.trips.copy()
+
+    return trips.merge(
+        feed.geometrize_shapes(shape_ids=trips.shape_id, use_utm=use_utm).filter(
+            ["shape_id", "geometry"]
+        )
+    ).pipe(gpd.GeoDataFrame, crs=cs.WGS84)
+
+
+def trips_to_geojson(
+    feed: "Feed",
+    trip_ids: Optional[Iterable[str]] = None,
+    *,
+    include_stops: bool = False,
 ) -> Dict:
     """
-    Return a GeoJSON representation of the given trip, optionally with
-    its stops.
+    Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_id : string
-        ID of trip in ``feed.trips``
-    include_stops : boolean
-
-    Returns
-    -------
-    dictionary
-        A (decoded) GeoJSON FeatureCollection comprising a Linestring
-        feature representing the trip's shape.
-        If ``include_stops``, then also include one Point feature for
-        each stop  visited by the trip.
-        The Linestring feature will contain as properties all the
-        columns in ``feed.trips`` pertaining to the given trip,
-        and each Point feature will contain as properties all the
-        columns in ``feed.stops`` pertaining to the stop,
-        except the ``stop_lat`` and ``stop_lon`` properties.
-
-        Return the empty dictionary if the trip has no shape.
-
+    If ``include_stops``, then include the trip stops as Point features .
+    If an iterable of trip IDs is given, then subset to those trips.
+    If the subset is empty, then return a FeatureCollection with an empty list of
+    features.
+    If the Feed has no shapes, then raise a ValueError.
     """
-    # Get the relevant shapes
-    t = feed.trips.copy()
-    t = t[t["trip_id"] == trip_id].copy()
-    shid = t["shape_id"].iat[0]
-    geometry_by_shape = feed.build_geometry_by_shape(
-        use_utm=False, shape_ids=[shid]
-    )
-
-    if not geometry_by_shape:
-        return {}
-
-    features = [
-        {
-            "type": "Feature",
-            "properties": json.loads(t.to_json(orient="records"))[0],
-            "geometry": sg.mapping(sg.LineString(geometry_by_shape[shid])),
+    # Get trips
+    g = geometrize_trips(feed, trip_ids=trip_ids)
+    if g.empty:
+        collection = {
+            "type": "FeatureCollection",
+            "features": [],
         }
-    ]
+    else:
+        collection = json.loads(g.to_json())
 
+    # Get stops if desired
     if include_stops:
-        # Get relevant stops and geometrys
-        s = feed.get_stops(trip_id=trip_id)
-        cols = set(s.columns) - set(["stop_lon", "stop_lat"])
-        s = s[list(cols)].copy()
-        stop_ids = s["stop_id"].tolist()
-        geometry_by_stop = feed.build_geometry_by_stop(stop_ids=stop_ids)
-        features.extend(
-            [
-                {
-                    "type": "Feature",
-                    "properties": json.loads(
-                        s[s["stop_id"] == stop_id].to_json(orient="records")
-                    )[0],
-                    "geometry": sg.mapping(geometry_by_stop[stop_id]),
-                }
-                for stop_id in stop_ids
-            ]
-        )
+        if trip_ids is not None:
+            stop_ids = feed.stop_times.loc[
+                lambda x: x.trip_id.isin(trip_ids), "stop_id"
+            ].unique()
+        else:
+            stop_ids = None
 
-    return {"type": "FeatureCollection", "features": features}
+        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+        collection["features"].extend(stops_gj["features"])
+
+    return hp.drop_feature_ids(collection)
 
 
 def map_trips(
     feed: "Feed",
-    trip_ids: List[str],
+    trip_ids: Iterable[str],
     color_palette: List[str] = cs.COLORS_SET2,
     *,
-    include_stops: bool = True,
+    include_stops: bool = False,
 ):
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
-
-    Parameters
-    ----------
-    feed : Feed
-    trip_ids : list
-        IDs of trips in ``feed.trips``
-    color_palette : list
-        Palette to use to color the routes. If more routes than colors,
-        then colors will be recycled.
-    include_stops : boolean
-        If ``True``, then include stops in the map
-
-    Returns
-    -------
-    dictionary
-        A Folium Map depicting the shapes of the trips.
-        If ``include_stops``, then include the stops for each trip.
-
-    Notes
-    ------
-    - Requires Folium
-
     """
-    import folium as fl
-    import folium.plugins as fp
-
-    # Get routes slice and convert to dictionary
-    trips = (
-        feed.trips.loc[lambda x: x["trip_id"].isin(trip_ids)]
-        .fillna("n/a")
-        .to_dict(orient="records")
-    )
-
-    # Create colors
-    n = len(trips)
-    colors = [color_palette[i % len(color_palette)] for i in range(n)]
-
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
 
-    # Collect route bounding boxes to set map zoom later
+    # Create colors
+    n = len(trip_ids)
+    colors = [color_palette[i % len(color_palette)] for i in range(n)]
+
+    # Collect bounding boxes to set map zoom later
     bboxes = []
 
     # Create a feature group for each route and add it to the map
-    for i, trip in enumerate(trips):
-        collection = feed.trip_to_geojson(
-            trip_id=trip["trip_id"], include_stops=include_stops
-        )
-        group = fl.FeatureGroup(name="Trip " + trip["trip_id"])
+    for i, trip_id in enumerate(trip_ids):
+        collection = trips_to_geojson(feed, [trip_id], include_stops=include_stops)
+
+        group = fl.FeatureGroup(name=f"Trip {trip_id}")
         color = colors[i]
 
         for f in collection["features"]:
@@ -645,31 +518,28 @@ def map_trips(
                     popup=fl.Popup(hp.make_html(prop)),
                 ).add_to(group)
 
-            # Add path
+            # Add trip
             else:
-                # Path
                 prop["color"] = color
                 path = fl.GeoJson(
                     f,
-                    name=trip,
-                    style_function=lambda x: {
-                        "color": x["properties"]["color"]
-                    },
+                    name=trip_id,
+                    style_function=lambda x: {"color": x["properties"]["color"]},
                 )
                 path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)
-
-                # Direction arrows, assuming, as GTFS does, that
-                # trip direction equals LineString direction
-                fp.PolyLineTextPath(
-                    path,
-                    "        \u27A4        ",
-                    repeat=True,
-                    offset=5.5,
-                    attributes={"fill": color, "font-size": "18"},
-                ).add_to(group)
-
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
+
+                # Broken
+                # # Direction arrows, assuming, as GTFS does, that
+                # # trip direction equals LineString direction
+                # fp.PolyLineTextPath(
+                #     path,
+                #     "        \u27A4        ",
+                #     repeat=True,
+                #     offset=5.5,
+                #     attributes={"fill": color, "font-size": "18"},
+                # ).add_to(group)
 
         group.add_to(my_map)
 

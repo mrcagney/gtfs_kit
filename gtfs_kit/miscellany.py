@@ -6,10 +6,8 @@ import math
 from typing import List, Optional, Tuple, TYPE_CHECKING
 
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 import shapely.geometry as sg
-from shapely.geometry import Polygon, LineString
 
 from . import helpers as hp
 from . import constants as cs
@@ -19,38 +17,26 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def summarize(feed: "Feed", table: str = None) -> DataFrame:
+def summarize(feed: "Feed", table: Optional[str] = None) -> pd.DataFrame:
     """
     Return a DataFrame summarizing all GTFS tables in the given feed
     or in the given table if specified.
 
-    Parameters
-    ----------
-    feed : Feed
-    table : string
-        A GTFS table name, e.g. ``'stop_times'``
+    The resulting DataFrame has the following columns.
 
-    Returns
-    -------
-    DataFrame
-        Columns are
+    - ``'table'``: name of the GTFS table, e.g. ``'stops'``
+    - ``'column'``: name of a column in the table,
+      e.g. ``'stop_id'``
+    - ``'num_values'``: number of values in the column
+    - ``'num_nonnull_values'``: number of nonnull values in the
+      column
+    - ``'num_unique_values'``: number of unique values in the
+      column, excluding null values
+    - ``'min_value'``: minimum value in the column
+    - ``'max_value'``: maximum value in the column
 
-        - ``'table'``: name of the GTFS table, e.g. ``'stops'``
-        - ``'column'``: name of a column in the table,
-          e.g. ``'stop_id'``
-        - ``'num_values'``: number of values in the column
-        - ``'num_nonnull_values'``: number of nonnull values in the
-          column
-        - ``'num_unique_values'``: number of unique values in the
-          column, excluding null values
-        - ``'min_value'``: minimum value in the column
-        - ``'max_value'``: maximum value in the column
-
-    Notes
-    -----
-    - If the table is not in the feed, then return an empty DataFrame
-    - If the table is not valid, raise a ValueError
-
+    If the table is not in the feed, then return an empty DataFrame
+    If the table is not valid, raise a ValueError
     """
     gtfs_tables = cs.GTFS_REF.table.unique()
 
@@ -102,27 +88,17 @@ def summarize(feed: "Feed", table: str = None) -> DataFrame:
     return f
 
 
-def describe(feed: "Feed", sample_date: Optional[str] = None) -> DataFrame:
+def describe(feed: "Feed", sample_date: Optional[str] = None) -> pd.DataFrame:
     """
     Return a DataFrame of various feed indicators and values,
     e.g. number of routes.
-    Specialize some those indicators to the given sample date,
+    Specialize some those indicators to the given YYYYMMDD sample date string,
     e.g. number of routes active on the date.
 
-    Parameters
-    ----------
-    feed : Feed
-    sample_date : string
-        YYYYMMDD date string specifying the date to compute sample
-        stats; defaults to the first Thursday of the Feed's period
+    The resulting DataFrame has the columns
 
-    Returns
-    -------
-    DataFrame
-        The columns are
-
-        - ``'indicator'``: string; name of an indicator, e.g. 'num_routes'
-        - ``'value'``: value of the indicator, e.g. 27
+    - ``'indicator'``: string; name of an indicator, e.g. 'num_routes'
+    - ``'value'``: value of the indicator, e.g. 27
 
     """
     from . import calendar as cl
@@ -155,28 +131,18 @@ def describe(feed: "Feed", sample_date: Optional[str] = None) -> DataFrame:
     return f
 
 
-def assess_quality(feed: "Feed") -> DataFrame:
+def assess_quality(feed: "Feed") -> pd.DataFrame:
     """
     Return a DataFrame of various feed indicators and values,
     e.g. number of trips missing shapes.
 
-    Parameters
-    ----------
-    feed : Feed
+    The resulting DataFrame has the columns
 
-    Returns
-    -------
-    DataFrame
-        The columns are
+    - ``'indicator'``: string; name of an indicator, e.g. 'num_routes'
+    - ``'value'``: value of the indicator, e.g. 27
 
-        - ``'indicator'``: string; name of an indicator, e.g. 'num_routes'
-        - ``'value'``: value of the indicator, e.g. 27
-
-    Notes
-    -----
-    - An odd function, but useful to see roughly how broken a feed is
-    - Not a GTFS validator
-
+    This function is odd but useful for seeing roughly how broken a feed is
+    This function is not a GTFS validator.
     """
     d = OrderedDict()
 
@@ -259,7 +225,7 @@ def convert_dist(feed: "Feed", new_dist_units: str) -> "Feed":
     Convert the distances recorded in the ``shape_dist_traveled``
     columns of the given Feed to the given distance units.
     New distance units must lie in :const:`.constants.DIST_UNITS`.
-    Return the resulting feed.
+    Return the resulting Feed.
     """
     feed = feed.copy()
 
@@ -285,10 +251,11 @@ def convert_dist(feed: "Feed", new_dist_units: str) -> "Feed":
     return feed
 
 
-def compute_feed_stats_base(
-    feed: "Feed", trip_stats_subset: DataFrame, *, split_route_types=False
-) -> DataFrame:
+def compute_feed_stats_0(
+    feed: "Feed", trip_stats_subset: pd.DataFrame, *, split_route_types=False
+) -> pd.DataFrame:
     """
+    Helper function for :func:`compute_feed_stats`.
     """
     ts = trip_stats_subset.copy()
     stop_times = feed.stop_times.copy()
@@ -371,67 +338,45 @@ def compute_feed_stats_base(
 
 def compute_feed_stats(
     feed: "Feed",
-    trip_stats: DataFrame,
+    trip_stats: pd.DataFrame,
     dates: List[str],
     *,
     split_route_types=False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
-    Compute some feed stats for the given dates and trip stats.
+    Compute some stats for the given Feed, trip stats (in the format output by the
+    function :func:`.trips.compute_trip_stats`) and dates (YYYYMMDD date stings).
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_stats : DataFrame
-        Trip stats to consider in the format output by
-        :func:`.trips.compute_trip_stats`
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute stats
-    split_route_types: boolean
-        If True then split stats by route type; otherwise don't
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        The columns are
+    - ``'date'``
+    - ``'route_type'`` (optional): presest if and only if ``split_route_types``
+    - ``'num_stops'``: number of stops active on the date
+    - ``'num_routes'``: number of routes active on the date
+    - ``'num_trips'``: number of trips that start on the date
+    - ``'num_trip_starts'``: number of trips with nonnull start
+      times on the date
+    - ``'num_trip_ends'``: number of trips with nonnull start times
+      and nonnull end times on the date, ignoring trips that end
+      after 23:59:59 on the date
+    - ``'peak_num_trips'``: maximum number of simultaneous trips in
+      service on the date
+    - ``'peak_start_time'``: start time of first longest period
+      during which the peak number of trips occurs on the date
+    - ``'peak_end_time'``: end time of first longest period during
+      which the peak number of trips occurs on the date
+    - ``'service_distance'``: sum of the service distances for the
+      active routes on the date
+    - ``'service_duration'``: sum of the service durations for the
+      active routes on the date
+    - ``'service_speed'``: service_distance/service_duration on the
+      date
 
-        - ``'date'``
-        - ``'route_type'`` (optional): presest if and only if ``split_route_types``
-        - ``'num_stops'``: number of stops active on the date
-        - ``'num_routes'``: number of routes active on the date
-        - ``'num_trips'``: number of trips that start on the date
-        - ``'num_trip_starts'``: number of trips with nonnull start
-          times on the date
-        - ``'num_trip_ends'``: number of trips with nonnull start times
-          and nonnull end times on the date, ignoring trips that end
-          after 23:59:59 on the date
-        - ``'peak_num_trips'``: maximum number of simultaneous trips in
-          service on the date
-        - ``'peak_start_time'``: start time of first longest period
-          during which the peak number of trips occurs on the date
-        - ``'peak_end_time'``: end time of first longest period during
-          which the peak number of trips occurs on the date
-        - ``'service_distance'``: sum of the service distances for the
-          active routes on the date
-        - ``'service_duration'``: sum of the service durations for the
-          active routes on the date
-        - ``'service_speed'``: service_distance/service_duration on the
-          date
+    Exclude dates with no active stops, which could yield the empty DataFrame.
 
-        Exclude dates with no active stops, which could yield the empty DataFrame.
-
-    Notes
-    -----
-    - The route and trip stats for date d contain stats for trips that
-      start on date d only and ignore trips that start on date d-1 and
-      end on date d
-    - Assume the following feed attributes are not ``None``:
-
-        * Those used in :func:`.trips.get_trips`
-        * Those used in :func:`.routes.get_routes`
-        * Those used in :func:`.stops.get_stops`
-
+    The route and trip stats for date d contain stats for trips that
+    start on date d only and ignore trips that start on date d-1 and
+    end on date d.
     """
     dates = feed.subset_dates(dates)
     if not dates:
@@ -459,7 +404,7 @@ def compute_feed_stats(
             # Compute stats
             ts = trip_stats.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_feed_stats_base(
+                compute_feed_stats_0(
                     feed, ts, split_route_types=split_route_types
                 )
                 # Assign date
@@ -479,75 +424,51 @@ def compute_feed_stats(
 
 def compute_feed_time_series(
     feed: "Feed",
-    trip_stats: DataFrame,
+    trip_stats: pd.DataFrame,
     dates: List[str],
     freq: str = "5Min",
     *,
     split_route_types: bool = False,
-) -> DataFrame:
+) -> pd.DataFrame:
     """
     Compute some feed stats in time series form for the given dates
-    and trip stats.
+    (YYYYMMDD date strings) and trip stats (of the form output by the function
+    :func:`.trips.compute_trip_stats`).
+    Use the given Pandas frequency string ``freq`` to specify the frequency of the
+    resulting time series, e.g. '5Min'; highest frequency allowable is one minute
+    ('1Min').
+    If ``split_route_types``, then split stats by route type; otherwise don't
 
-    Parameters
-    ----------
-    feed : Feed
-    trip_stats : DataFrame
-        Trip stats to consider in the format output by
-        :func:`.trips.compute_trip_stats`
-    dates : string or list
-        A YYYYMMDD date string or list thereof indicating the date(s)
-        for which to compute stats
-    freq : string
-        Pandas frequency string specifying the frequency of the
-        resulting time series, e.g. '5Min'; highest frequency allowable
-        is one minute ('Min').
-    split_route_types: boolean
-        If True then split stats by route type; otherwise don't
+    Return a time series DataFrame with a datetime index across the given dates sampled
+    at the given frequency across the given dates.
+    The columns are
 
-    Returns
-    -------
-    DataFrame
-        A time series with a datetime index across the given dates sampled
-        at the given frequency across the given dates.
-        The maximum allowable frequency is 1 minute.
+    - ``'num_trips'``: number of trips in service during during the
+      time period
+    - ``'num_trip_starts'``: number of trips with starting during the
+      time period
+    - ``'num_trip_ends'``: number of trips ending during the
+      time period, ignoring the trips the end past midnight
+    - ``'service_distance'``: distance traveled during the time
+      period by all trips active during the time period
+    - ``'service_duration'``: duration traveled during the time
+      period by all trips active during the time period
+    - ``'service_speed'``: ``service_distance/service_duration``
 
-        The columns are
+    Exclude dates that lie outside of the Feed's date range.
+    If all the dates given lie outside of the Feed's date range,
+    then return an empty DataFrame with the specified columns.
 
-        - ``'num_trips'``: number of trips in service during during the
-          time period
-        - ``'num_trip_starts'``: number of trips with starting during the
-          time period
-        - ``'num_trip_ends'``: number of trips ending during the
-          time period, ignoring the trips the end past midnight
-        - ``'service_distance'``: distance traveled during the time
-          period by all trips active during the time period
-        - ``'service_duration'``: duration traveled during the time
-          period by all trips active during the time period
-        - ``'service_speed'``: ``service_distance/service_duration``
+    If ``split_route_types``, then multi-index the columns with
 
-        Exclude dates that lie outside of the Feed's date range.
-        If all the dates given lie outside of the Feed's date range,
-        then return an empty DataFrame with the specified columns.
+    - top level: name is ``'indicator'``; values are
+      ``'num_trip_starts'``, ``'num_trip_ends'``, ``'num_trips'``,
+      ``'service_distance'``, ``'service_duration'``, and
+      ``'service_speed'``
+    - bottom level: name is ``'route_type'``; values are route type values
 
-        If ``split_route_types``, then multi-index the columns with
-
-        - top level: name is ``'indicator'``; values are
-          ``'num_trip_starts'``, ``'num_trip_ends'``, ``'num_trips'``,
-          ``'service_distance'``, ``'service_duration'``, and
-          ``'service_speed'``
-        - bottom level: name is ``'route_type'``; values are route type values
-
-
-    Notes
-    -----
-    - See the notes for :func:`.routes.compute_route_time_series_base`
-    - If all dates lie outside the Feed's date range, then return an
-      empty DataFrame
-    - Assume the following feed attributes are not ``None``:
-
-       * Those used in :func:`.routes.compute_route_time_series`
-
+    If all dates lie outside the Feed's date range, then return an
+    empty DataFrame
     """
     rts = feed.compute_route_time_series(trip_stats, dates, freq=freq)
     if rts.empty:
@@ -605,13 +526,6 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
 
     If ``all_trips``, then create new shapes for all trips by
     connecting stops, and remove the old shapes.
-
-    Assume the following feed attributes are not ``None``:
-
-    - ``feed.stop_times``
-    - ``feed.trips``
-    - ``feed.stops``
-
     """
     feed = feed.copy()
 
@@ -690,7 +604,7 @@ def compute_bounds(feed: "Feed") -> Tuple:
     return lons.min(), lats.min(), lons.max(), lats.max()
 
 
-def compute_convex_hull(feed: "Feed") -> Polygon:
+def compute_convex_hull(feed: "Feed") -> sg.Polygon:
     """
     Return a Shapely Polygon representing the convex hull formed by
     the stops of the given Feed.
@@ -872,7 +786,7 @@ def restrict_to_routes(feed: "Feed", route_ids: List[str]) -> "Feed":
     return feed
 
 
-def restrict_to_polygon(feed: "Feed", polygon: Polygon) -> "Feed":
+def restrict_to_polygon(feed: "Feed", polygon: sg.Polygon) -> "Feed":
     """
     Build a new feed by restricting this one to only the trips
     that have at least one stop intersecting the given Shapely polygon,
@@ -966,8 +880,8 @@ def restrict_to_polygon(feed: "Feed", polygon: Polygon) -> "Feed":
 
 
 def compute_screen_line_counts(
-    feed: "Feed", linestring: LineString, dates: List[str], geo_shapes=None
-) -> DataFrame:
+    feed: "Feed", linestring: sg.LineString, dates: List[str], geo_shapes=None
+) -> pd.DataFrame:
     """
     Find all the Feed trips active on the given dates
     that intersect the given Shapely LineString (with WGS84

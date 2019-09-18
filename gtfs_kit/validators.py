@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-TIME_PATTERN1 = re.compile(r"^[0,1,2,3]\d:\d\d:\d\d$")
+TIME_PATTERN1 = re.compile(r"^\d\d:\d\d:\d\d$")
 TIME_PATTERN2 = re.compile(r"^\d:\d\d:\d\d$")
 DATE_FORMAT = "%Y%m%d"
 TIMEZONES = set(pytz.all_timezones)
@@ -956,7 +956,16 @@ def check_routes(
 
     # Check agency_id
     if "agency_id" in f:
-        if "agency_id" not in feed.agency.columns:
+        if feed.agency is None:
+            problems.append(
+                [
+                    "error",
+                    "agency_id column present in routes agency table missing",
+                    table,
+                    [],
+                ]
+            )
+        elif "agency_id" not in feed.agency.columns:
             problems.append(
                 [
                     "error",
@@ -1041,6 +1050,7 @@ def check_shapes(
     problems = check_for_required_columns(problems, table, f)
     if problems:
         return format_problems(problems, as_df=as_df)
+    f.sort_values(["shape_id", "shape_pt_sequence"], inplace=True)
 
     if include_warnings:
         problems = check_for_invalid_columns(problems, table, f)
@@ -1071,13 +1081,15 @@ def check_shapes(
         g = f.dropna(subset=["shape_dist_traveled"])
         indices = []
         prev_sid = None
+        prev_index = None
         prev_dist = -1
         cols = ["shape_id", "shape_dist_traveled"]
         for i, sid, dist in g[cols].itertuples():
             if sid == prev_sid and dist < prev_dist:
-                indices.append(i)
+                indices.append(prev_index)
 
             prev_sid = sid
+            prev_index = i
             prev_dist = dist
 
         if indices:
@@ -1224,7 +1236,10 @@ def check_stops(
 
     if include_warnings:
         # Check for stops of location type 0 or NaN without stop times
-        ids = feed.stop_times.stop_id.unique()
+        ids = []
+        if feed.stop_times is not None:
+            ids = feed.stop_times.stop_id.unique()
+
         cond = ~feed.stops.stop_id.isin(ids)
         if "location_type" in feed.stops.columns:
             cond &= f.location_type.isin([0, np.nan])
@@ -1276,6 +1291,7 @@ def check_stop_times(
 
     indices = []
     prev_tid = None
+    prev_index = None
     prev_atime = 1
     prev_dtime = 1
     for i, tid, atime, dtime, tp in f[
@@ -1284,7 +1300,7 @@ def check_stop_times(
         if tid != prev_tid:
             # Check last stop of previous trip
             if pd.isna(prev_atime) or pd.isna(prev_dtime):
-                indices.append(i - 1)
+                indices.append(prev_index)
             # Check first stop of current trip
             if pd.isna(atime) or pd.isna(dtime):
                 indices.append(i)
@@ -1293,8 +1309,12 @@ def check_stop_times(
             indices.append(i)
 
         prev_tid = tid
+        prev_index = i
         prev_atime = atime
         prev_dtime = dtime
+
+    if pd.isna(prev_atime) or pd.isna(prev_dtime):
+        indices.append(prev_index)
 
     if indices:
         problems.append(
@@ -1478,7 +1498,7 @@ def check_trips(
 
     # Check for trips with no stop times
     if include_warnings:
-        s = feed.stop_times["trip_id"]
+        s = feed.stop_times["trip_id"] if feed.stop_times is not None else []
         cond = ~f["trip_id"].isin(s)
         problems = check_table(
             problems, table, f, cond, "Trip has no stop times", "warning"

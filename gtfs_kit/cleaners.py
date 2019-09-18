@@ -5,7 +5,6 @@ import math
 from typing import TYPE_CHECKING
 
 import pandas as pd
-from pandas import DataFrame
 import numpy as np
 
 from . import constants as cs
@@ -15,7 +14,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def clean_column_names(df: DataFrame) -> DataFrame:
+def clean_column_names(df: pd.DataFrame) -> pd.DataFrame:
     """
     Strip the whitespace from all column names in the given DataFrame
     and return the result.
@@ -83,7 +82,7 @@ def clean_times(feed: "Feed") -> "Feed":
 
 def drop_zombies(feed: "Feed") -> "Feed":
     """
-    In the given Feed, do the following in order:
+    In the given Feed, do the following in order and return the resulting Feed.
 
     1. Drop stops of location type 0 or NaN with no stop times.
     2. Remove undefined parent stations from the ``parent_station`` column.
@@ -92,7 +91,6 @@ def drop_zombies(feed: "Feed") -> "Feed":
     5. Drop routes with no trips.
     6. Drop services with no trips.
 
-    Return the resulting Feed.
     """
     feed = feed.copy()
 
@@ -175,28 +173,18 @@ def aggregate_routes(
     feed: "Feed", by: str = "route_short_name", route_id_prefix: str = "route_"
 ) -> "Feed":
     """
-    Aggregate routes by route short name, say, and assign new route IDs.
+    Aggregate routes by route short name, say, and assign new route IDs using the
+    given prefix.
 
-    Parameters
-    ----------
-    feed : "Feed"
-    by : string
-        A column of ``feed.routes``
-    route_id_prefix : string
-        Prefix to use when creating new route IDs
+    More specifically, the result is built from the given Feed as follows.
+    Group ``feed.routes`` by the ``by`` column, and for each group
 
-    Returns
-    -------
-    "Feed"
-        The result is built from the given Feed as follows.
-        Group ``feed.routes`` by the ``by`` column, and for each group
-
-        1. Choose the first route in the group
-        2. Assign a new route ID based on the given ``route_id_prefix``
-           string and a running count, e.g. ``'route_013'``
-        3. Assign all the trips associated with routes in the group to
-           that first route
-        4. Update the route IDs in the other "Feed" tables
+    1. Choose the first route in the group
+    2. Assign a new route ID based on the given ``route_id_prefix``
+       string and a running count, e.g. ``'route_013'``
+    3. Assign all the trips associated with routes in the group to
+       that first route
+    4. Update the route IDs in the other "Feed" tables
 
     """
     if by not in feed.routes.columns:
@@ -238,15 +226,14 @@ def aggregate_routes(
 
 def clean(feed: "Feed") -> "Feed":
     """
-    Apply
+    Apply the following functions to the given Feed in order and return the resulting
+    Feed.
 
-    #. :func:`clean_ids`
-    #. :func:`clean_times`
-    #. :func:`clean_route_short_names`
-    #. :func:`drop_zombies`
+    1. :func:`clean_ids`
+    2. :func:`clean_times`
+    3. :func:`clean_route_short_names`
+    4. :func:`drop_zombies`
 
-    to the given Feed in that order.
-    Return the resulting Feed.
     """
     feed = feed.copy()
     ops = [
@@ -265,7 +252,7 @@ def drop_invalid_columns(feed: "Feed") -> "Feed":
     """
     Drop all DataFrame columns of the given Feed that are not
     listed in the GTFS.
-    Return the resulting new "Feed".
+    Return the resulting Feed.
     """
     feed = feed.copy()
     for table, group in cs.GTFS_REF.groupby("table"):

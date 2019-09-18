@@ -4,7 +4,6 @@ import numpy as np
 
 from .context import (
     gtfs_kit,
-    HAS_GEOPANDAS,
     DATA_DIR,
     sample,
     cairns,
