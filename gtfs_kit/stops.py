@@ -591,7 +591,7 @@ def geometrize_stops_0(
     )
 
     if use_utm:
-        lat, lon = stops.loc[0, ["stop_lat", "stop_lon"]].values
+        lat, lon = stops[["stop_lat", "stop_lon"]].values[0]
         crs = hp.get_utm_crs(lat, lon)
         g = g.to_crs(crs)
 

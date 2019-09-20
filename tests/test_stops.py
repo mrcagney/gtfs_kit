@@ -330,8 +330,8 @@ def test_ungeometrize_stops_0():
     assert_frame_equal(stops2[cols], stops[cols])
 
 def test_geometrize_stops():
-    g_1 = geometrize_stops(cairns)
-    g_2 = geometrize_stops_0(cairns.stops)
+    g_1 = geometrize_stops(cairns, use_utm=True)
+    g_2 = geometrize_stops_0(cairns.stops, use_utm=True)
     assert g_1.equals(g_2)
 
 def test_build_geometry_by_stop():

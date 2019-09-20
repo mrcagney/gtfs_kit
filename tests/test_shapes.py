@@ -55,8 +55,8 @@ def test_ungeometrize_shapes_0():
     assert_frame_equal(shapes2[cols], shapes[cols])
 
 def test_geometrize_shapes():
-    g_1 = geometrize_shapes(cairns)
-    g_2 = geometrize_shapes_0(cairns.shapes)
+    g_1 = geometrize_shapes(cairns, use_utm=True)
+    g_2 = geometrize_shapes_0(cairns.shapes, use_utm=True)
     assert g_1.equals(g_2)
     with pytest.raises(ValueError):
         geometrize_shapes(cairns_shapeless)
