@@ -426,11 +426,11 @@ def geometrize_trips(
     else:
         trips = feed.trips.copy()
 
-    return trips.merge(
-        feed.geometrize_shapes(shape_ids=trips.shape_id, use_utm=use_utm).filter(
-            ["shape_id", "geometry"]
-        )
-    ).pipe(gpd.GeoDataFrame, crs=cs.WGS84)
+    return (
+        feed.geometrize_shapes(shape_ids=trips.shape_id.tolist(), use_utm=use_utm)
+        .filter(["shape_id", "geometry"])
+        .merge(trips, how="left")
+    )
 
 
 def trips_to_geojson(

@@ -289,9 +289,10 @@ def test_build_route_timetable():
 def test_geometrize_routes():
     feed = cairns.copy()
     route_ids = feed.routes.route_id.loc[:1]
-    g = geometrize_routes(feed, route_ids)
+    g = geometrize_routes(feed, route_ids, use_utm=True)
     assert isinstance(g, gpd.GeoDataFrame)
     assert g.shape[0] == len(route_ids)
+    assert g.crs != WGS84
 
     g = geometrize_routes(feed, route_ids, split_directions=True)
     assert isinstance(g, gpd.GeoDataFrame)
