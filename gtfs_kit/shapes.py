@@ -91,7 +91,7 @@ def geometrize_shapes_0(
     g = gpd.GeoDataFrame(g, crs=cs.WGS84)
 
     if use_utm:
-        lat, lon = f.loc[0, ["shape_pt_lat", "shape_pt_lon"]].values
+        lat, lon = f[["shape_pt_lat", "shape_pt_lon"]].values[0]
         crs = hp.get_utm_crs(lat, lon)
         g = g.to_crs(crs)
 
