@@ -173,9 +173,10 @@ def test_locate_trips():
 def test_geometrize_trips():
     feed = cairns.copy()
     trip_ids = feed.trips.trip_id.loc[:1]
-    g = geometrize_trips(feed, trip_ids)
+    g = geometrize_trips(feed, trip_ids, use_utm=True)
     assert isinstance(g, gpd.GeoDataFrame)
     assert g.shape[0] == len(trip_ids)
+    assert g.crs != WGS84
 
     with pytest.raises(ValueError):
         geometrize_trips(cairns_shapeless)
