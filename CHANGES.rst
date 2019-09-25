@@ -1,6 +1,11 @@
 Changes
 =======
 
+1.1.1, 2019-09-25
+-----------------
+- Bugfix: imported ``aggregate_stops()`` as a Feed method.
+
+
 1.1.0, 2019-09-25
 -----------------
 - Added ``aggregate_stops()`` function.
