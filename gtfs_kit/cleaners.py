@@ -105,9 +105,7 @@ def drop_zombies(feed: "Feed") -> "Feed":
     if "parent_station" in feed.stops.columns:
         f = feed.stops.copy()
         ids = f.stop_id.unique()
-        f["parent_station"] = f.parent_station.map(
-            lambda x: x if x in ids else np.nan
-        )
+        f["parent_station"] = f.parent_station.map(lambda x: x if x in ids else np.nan)
         feed.stops = f
 
     # Drop trips with no stop times
@@ -216,9 +214,61 @@ def aggregate_routes(
     # Update route IDs of transfers
     if feed.transfers is not None:
         transfers = feed.transfers
-        transfers["route_id"] = transfers["route_id"].map(
-            lambda x: nrid_by_orid[x]
-        )
+        transfers["route_id"] = transfers["route_id"].map(lambda x: nrid_by_orid[x])
+        feed.transfers = transfers
+
+    return feed
+
+
+def aggregate_stops(
+    feed: "Feed", by: str = "stop_code", stop_id_prefix: str = "stop_"
+) -> "Feed":
+    """
+    Aggregate stops by stop code, say, and assign new stop IDs using the
+    given prefix.
+
+    More specifically, the result is built from the given Feed as follows.
+    Group ``feed.stops`` by the ``by`` column, and for each group
+
+    1. Choose the first stop in the group
+    2. Assign a new stop ID based on the given ``stop_id_prefix``
+       string and a running count, e.g. ``'stop_013'``
+    3. Assign all the stops associated with stops in the group to
+       that first stop
+    4. Update the stop IDs in the other "Feed" tables
+
+    """
+    if by not in feed.stops.columns:
+        raise ValueError(f"Column {by} not in feed.stops")
+
+    feed = feed.copy()
+
+    # Create new stop IDs
+    stops = feed.stops
+    n = stops.groupby(by).ngroups
+    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
+    nid_by_oid = dict()
+    i = 1
+    for col, group in stops.groupby(by):
+        nid = f"stop_{i:0{k}d}"
+        d = {oid: nid for oid in group["stop_id"].values}
+        nid_by_oid.update(d)
+        i += 1
+
+    stops["stop_id"] = stops.stop_id.map(lambda x: nid_by_oid[x])
+    stops = stops.groupby(by).first().reset_index()
+    feed.stops = stops
+
+    # Update stop IDs of stop times
+    stop_times = feed.stop_times
+    stop_times["stop_id"] = stop_times.stop_id.map(lambda x: nid_by_oid[x])
+    feed.stop_times = stop_times
+
+    # Update route IDs of transfers
+    if feed.transfers is not None:
+        transfers = feed.transfers
+        transfers["to_stop_id"] = transfers.to_stop_id.map(lambda x: nid_by_oid[x])
+        transfers["from_stop_id"] = transfers.from_stop_id.map(lambda x: nid_by_oid[x])
         feed.transfers = transfers
 
     return feed
@@ -229,19 +279,14 @@ def clean(feed: "Feed") -> "Feed":
     Apply the following functions to the given Feed in order and return the resulting
     Feed.
 
-    1. :func:`clean_ids`
-    2. :func:`clean_times`
-    3. :func:`clean_route_short_names`
-    4. :func:`drop_zombies`
+    #. :func:`clean_ids`
+    #. :func:`clean_times`
+    #. :func:`clean_route_short_names`
+    #. :func:`drop_zombies`
 
     """
     feed = feed.copy()
-    ops = [
-        "clean_ids",
-        "clean_times",
-        "clean_route_short_names",
-        "drop_zombies",
-    ]
+    ops = ["clean_ids", "clean_times", "clean_route_short_names", "drop_zombies"]
     for op in ops:
         feed = globals()[op](feed)
 

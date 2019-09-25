@@ -1,6 +1,12 @@
 Changes
 =======
 
+1.1.0, 2019-09-25
+-----------------
+- Added ``aggregate_stops()`` function.
+- Added optional direction arrows in ``map_trips()``.
+
+
 1.0.2, 2019-09-20
 -----------------
 - Bugfix: Fixed CRS in ``geometrize_trips()`` and ``geometrize_routes()`` when ``use_utm=True``.
