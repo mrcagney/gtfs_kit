@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gtfs_kit"
-version = "1.0.2"
+version = "1.1.0"
 description = "A Python 3.6+ library for analyzing GTFS feeds."
 authors = ["Alex Raichev <araichev@mrcagney.com>"]
 readme = "README.rst"

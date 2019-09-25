@@ -11,6 +11,7 @@ import numpy as np
 import shapely.geometry as sg
 import shapely.ops as so
 import folium as fl
+import folium.plugins as fp
 
 from . import constants as cs
 from . import helpers as hp
@@ -453,10 +454,7 @@ def trips_to_geojson(
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
     if g.empty:
-        collection = {
-            "type": "FeatureCollection",
-            "features": [],
-        }
+        collection = {"type": "FeatureCollection", "features": []}
     else:
         collection = json.loads(g.to_json())
 
@@ -481,10 +479,14 @@ def map_trips(
     color_palette: List[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = False,
+    include_arrows: bool = False,
 ):
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
+    If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
+    on each trip polyline indicating its direction of travel; this fails to work in some
+    browsers, such as Brave 0.68.132.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
@@ -530,16 +532,15 @@ def map_trips(
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                # Broken
-                # # Direction arrows, assuming, as GTFS does, that
-                # # trip direction equals LineString direction
-                # fp.PolyLineTextPath(
-                #     path,
-                #     "        \u27A4        ",
-                #     repeat=True,
-                #     offset=5.5,
-                #     attributes={"fill": color, "font-size": "18"},
-                # ).add_to(group)
+                # Direction arrows, assuming, as GTFS does, that
+                # trip direction equals LineString direction
+                fp.PolyLineTextPath(
+                    path,
+                    "        \u27A4        ",
+                    repeat=True,
+                    offset=5.5,
+                    attributes={"fill": color, "font-size": "18"},
+                ).add_to(group)
 
         group.add_to(my_map)
 
