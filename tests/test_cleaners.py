@@ -43,9 +43,7 @@ def test_clean_route_short_names():
 
     # Should have no effect on a fine feed
     f2 = clean_route_short_names(f1)
-    assert_series_equal(
-        f2.routes["route_short_name"], f1.routes["route_short_name"]
-    )
+    assert_series_equal(f2.routes["route_short_name"], f1.routes["route_short_name"])
 
     # Make route short name duplicates
     f1.routes.loc[1:5, "route_short_name"] = np.nan
@@ -55,9 +53,7 @@ def test_clean_route_short_names():
     assert f2.routes["route_short_name"].nunique() == f2.routes.shape[0]
     # NaNs should be replaced by n/a and route IDs
     expect_rsns = ("n/a-" + sample.routes.iloc[1:5]["route_id"]).tolist()
-    assert (
-        f2.routes.iloc[1:5]["route_short_name"].values.tolist() == expect_rsns
-    )
+    assert f2.routes.iloc[1:5]["route_short_name"].values.tolist() == expect_rsns
     # Should have names without leading or trailing whitespace
     assert not f2.routes["route_short_name"].str.startswith(" ").any()
     assert not f2.routes["route_short_name"].str.endswith(" ").any()
@@ -117,6 +113,26 @@ def test_aggregate_routes():
     # routes and trips data frames
     feed2.routes = feed1.routes
     feed2.trips = feed1.trips
+    assert feed1 == feed2
+
+
+def test_aggregate_stops():
+    feed1 = sample.copy()
+    # Equalize all stop codes
+    feed1.stops["stop_code"] = "bingo"
+    feed2 = aggregate_stops(feed1)
+
+    # feed2 should have only one stop ID
+    assert feed2.stops.shape[0] == 1
+
+    # Feeds should have same stop times, excluding stop IDs
+    feed1.stop_times["stop_id"] = feed2.stop_times.stop_id
+    assert almost_equal(feed1.stop_times, feed2.stop_times)
+
+    # Feeds should have equal attributes excluding
+    # stops stop times data frames
+    feed2.stops = feed1.stops
+    feed2.stop_times = feed1.stop_times
     assert feed1 == feed2
 
 
