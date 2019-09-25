@@ -164,6 +164,7 @@ class Feed(object):
         clean_route_short_names,
         drop_zombies,
         aggregate_routes,
+        aggregate_stops,
         clean,
         drop_invalid_columns,
     )
