@@ -1,6 +1,11 @@
 Changes
 =======
 
+2.0.0, 2019-10-04
+-----------------
+- Improved the fallback algorithm in ``append_dist_to_stop_times()``. Changed the function signature, so this is a major change, hence the major version bump.
+
+
 1.1.1, 2019-09-25
 -----------------
 - Bugfix: imported ``aggregate_stops()`` as a Feed method.

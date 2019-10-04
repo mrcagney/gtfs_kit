@@ -4,6 +4,8 @@ Functions useful across modules.
 import datetime as dt
 from typing import Optional, Dict, List, Union, Callable
 import copy
+from bisect import bisect_left, bisect_right
+from functools import cmp_to_key
 
 import pandas as pd
 import numpy as np
@@ -16,10 +18,7 @@ from . import constants as cs
 
 
 def datestr_to_date(
-    x: Union[dt.date, str],
-    format_str: str = "%Y%m%d",
-    *,
-    inverse: bool = False,
+    x: Union[dt.date, str], format_str: str = "%Y%m%d", *, inverse: bool = False
 ) -> Union[str, dt.date]:
     """
     Given a string ``x`` representing a date in the given format,
@@ -93,15 +92,7 @@ def weekday_to_str(
     Here 0 -> 'monday', 1 -> 'tuesday', and so on.
     If ``inverse``, then perform the inverse operation.
     """
-    s = [
-        "monday",
-        "tuesday",
-        "wednesday",
-        "thursday",
-        "friday",
-        "saturday",
-        "sunday",
-    ]
+    s = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     if not inverse:
         try:
             return s[weekday]
@@ -219,16 +210,8 @@ def almost_equal(f: pd.DataFrame, g: pd.DataFrame) -> bool:
         return f.equals(g)
     else:
         # Put in canonical order
-        F = (
-            f.sort_index(axis=1)
-            .sort_values(list(f.columns))
-            .reset_index(drop=True)
-        )
-        G = (
-            g.sort_index(axis=1)
-            .sort_values(list(g.columns))
-            .reset_index(drop=True)
-        )
+        F = f.sort_index(axis=1).sort_values(list(f.columns)).reset_index(drop=True)
+        G = g.sort_index(axis=1).sort_values(list(g.columns)).reset_index(drop=True)
         return F.equals(G)
 
 
@@ -273,6 +256,7 @@ def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
     convert it to the appropriate UTM coordinates.
     If ``inverse``, then do the inverse.
     """
+
     def proj(x, y):
         return utm.from_latlon(y, x)[:2]
 
@@ -308,7 +292,10 @@ def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:
 
 
 def combine_time_series(
-    time_series_dict: Dict[str, pd.DataFrame], kind: str, *, split_directions: bool = False
+    time_series_dict: Dict[str, pd.DataFrame],
+    kind: str,
+    *,
+    split_directions: bool = False,
 ) -> pd.DataFrame:
     """
     Combine the time series DataFrames in the given dictionary
@@ -411,9 +398,9 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
         # Resample num_trips in a custom way that depends on
         # num_trips and num_trip_ends
         def agg_num_trips(group):
-            return group["num_trips"].iloc[-1] + group["num_trip_ends"].iloc[
-                :-1
-            ].sum(min_count=1)
+            return group["num_trips"].iloc[-1] + group["num_trip_ends"].iloc[:-1].sum(
+                min_count=1
+            )
 
         num_trips = f.groupby(pd.Grouper(freq=freq)).apply(agg_num_trips)
         frames.append(num_trips)
@@ -429,9 +416,7 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
         g = pd.concat(frames, axis=1, keys=inds)
 
         # Calculate speed and add it to f. Can't resample it.
-        speed = (g.service_distance / g.service_duration).fillna(
-            g.service_distance
-        )
+        speed = (g.service_distance / g.service_duration).fillna(g.service_distance)
         speed = pd.concat({"service_speed": speed}, axis=1)
         result = pd.concat([g, speed], axis=1)
 
@@ -495,12 +480,8 @@ def restack_time_series(unstacked_time_series: pd.DataFrame) -> pd.DataFrame:
     # If necessary, insert missing dates and NaNs to complete series index
     num_dates = len(set(g.index.date))
     if num_dates > 1:
-        end_datetime = pd.to_datetime(
-            f"{g.index.date[-1]:%Y-%m-%d}" + " 23:59:59"
-        )
-        new_index = pd.date_range(
-            g.index[0], end_datetime, freq=freq, name="datetime"
-        )
+        end_datetime = pd.to_datetime(f"{g.index.date[-1]:%Y-%m-%d}" + " 23:59:59")
+        new_index = pd.date_range(g.index[0], end_datetime, freq=freq, name="datetime")
         g = g.reindex(new_index)
 
     g.index.freq = freq
@@ -517,6 +498,7 @@ def make_html(d: Dict) -> str:
         d, table_attributes={"class": "table table-condensed table-hover"}
     )
 
+
 def drop_feature_ids(collection: Dict) -> Dict:
     """
     Given a GeoJSON FeatureCollection, remove the ``'id'`` attribute of each
@@ -531,3 +513,77 @@ def drop_feature_ids(collection: Dict) -> Dict:
 
     collection["features"] = new_features
     return collection
+
+
+def longest_subsequence(
+    seq, mode="strictly", order="increasing", key=None, *, index=False
+):
+    """
+    Return the longest increasing subsequence of `seq`.
+
+    Parameters
+    ----------
+    seq : sequence object
+      Can be any sequence, like `str`, `list`, `numpy.array`.
+    mode : {'strict', 'strictly', 'weak', 'weakly'}, optional
+      If set to 'strict', the subsequence will contain unique elements.
+      Using 'weak' an element can be repeated many times.
+      Modes ending in -ly serve as a convenience to use with `order` parameter,
+      because `longest_sequence(seq, 'weakly', 'increasing')` reads better.
+      The default is 'strict'.
+    order : {'increasing', 'decreasing'}, optional
+      By default return the longest increasing subsequence, but it is possible
+      to return the longest decreasing sequence as well.
+    key : function, optional
+      Specifies a function of one argument that is used to extract a comparison
+      key from each list element (e.g., `str.lower`, `lambda x: x[0]`).
+      The default value is `None` (compare the elements directly).
+    index : bool, optional
+      If set to `True`, return the indices of the subsequence, otherwise return
+      the elements. Default is `False`.
+
+    Returns
+    -------
+    elements : list, optional
+      A `list` of elements of the longest subsequence.
+      Returned by default and when `index` is set to `False`.
+    indices : list, optional
+      A `list` of indices pointing to elements in the longest subsequence.
+      Returned when `index` is set to `True`.
+
+    Taken from `this Stack Overflow answer <https://stackoverflow.com/a/38337443>`_.
+    """
+    bisect = bisect_left if mode.startswith("strict") else bisect_right
+
+    # compute keys for comparison just once
+    rank = seq if key is None else map(key, seq)
+    if order == "decreasing":
+        rank = map(cmp_to_key(lambda x, y: 1 if x < y else 0 if x == y else -1), rank)
+    rank = list(rank)
+
+    if not rank:
+        return []
+
+    lastoflength = [0]  # end position of subsequence with given length
+    predecessor = [None]  # penultimate element of l.i.s. ending at given position
+
+    for i in range(1, len(seq)):
+        # seq[i] can extend a subsequence that ends with a lesser (or equal) element
+        j = bisect([rank[k] for k in lastoflength], rank[i])
+        # update existing subsequence of length j or extend the longest
+        try:
+            lastoflength[j] = i
+        except:
+            lastoflength.append(i)
+        # remember element before seq[i] in the subsequence
+        predecessor.append(lastoflength[j - 1] if j > 0 else None)
+
+    # trace indices [p^n(i), ..., p(p(i)), p(i), i], where n=len(lastoflength)-1
+    def trace(i):
+        if i is not None:
+            yield from trace(predecessor[i])
+            yield i
+
+    indices = trace(lastoflength[-1])
+
+    return list(indices) if index else [seq[i] for i in indices]
