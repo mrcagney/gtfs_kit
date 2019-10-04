@@ -754,14 +754,17 @@ def routes_to_geojson(
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
     If the Feed has no shapes, then raise a ValueError.
+    If any of the given route IDs are not found in the feed, then raise a ValueError.
     """
+    if route_ids is not None:
+        D = set(route_ids) - set(feed.routes.route_id)
+        if D:
+            raise ValueError(f"Route IDs {D} not found in feed.")
+
     # Get routes
     g = geometrize_routes(feed, route_ids=route_ids, split_directions=split_directions)
     if g.empty:
-        collection = {
-            "type": "FeatureCollection",
-            "features": [],
-        }
+        collection = {"type": "FeatureCollection", "features": []}
     else:
         collection = json.loads(g.to_json())
 
@@ -792,6 +795,7 @@ def map_routes(
     """
     Return a Folium map showing the given routes and (optionally)
     their stops.
+    If any of the given route IDs are not found in the feed, then raise a ValueError.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron", prefer_canvas=True)

@@ -450,7 +450,13 @@ def trips_to_geojson(
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
     If the Feed has no shapes, then raise a ValueError.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
+    if trip_ids is not None:
+        D = set(trip_ids) - set(feed.trips.trip_id)
+        if D:
+            raise ValueError(f"Trip IDs {D} not found in feed.")
+
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
     if g.empty:
@@ -479,14 +485,11 @@ def map_trips(
     color_palette: List[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = False,
-    include_arrows: bool = False,
 ):
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
-    If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
-    on each trip polyline indicating its direction of travel; this fails to work in some
-    browsers, such as Brave 0.68.132.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
@@ -501,7 +504,6 @@ def map_trips(
     # Create a feature group for each route and add it to the map
     for i, trip_id in enumerate(trip_ids):
         collection = trips_to_geojson(feed, [trip_id], include_stops=include_stops)
-
         group = fl.FeatureGroup(name=f"Trip {trip_id}")
         color = colors[i]
 
@@ -532,15 +534,16 @@ def map_trips(
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                # Direction arrows, assuming, as GTFS does, that
-                # trip direction equals LineString direction
-                fp.PolyLineTextPath(
-                    path,
-                    "        \u27A4        ",
-                    repeat=True,
-                    offset=5.5,
-                    attributes={"fill": color, "font-size": "18"},
-                ).add_to(group)
+                # if include_arrows:
+                #     # Direction arrows, assuming, as GTFS does, that
+                #     # trip direction equals LineString direction
+                #     fp.PolyLineTextPath(
+                #         path,
+                #         "        \u27A4        ",
+                #         repeat=True,
+                #         offset=5.5,
+                #         attributes={"fill": color, "font-size": "18"},
+                #     ).add_to(group)
 
         group.add_to(my_map)
 
