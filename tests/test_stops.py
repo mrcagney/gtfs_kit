@@ -6,30 +6,22 @@ from pandas.util.testing import assert_frame_equal
 import shapely.geometry as sg
 import folium as fl
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    cairns,
-    cairns_dates,
-)
+from .context import gtfs_kit, DATA_DIR, cairns, cairns_dates
 from gtfs_kit import *
 from gtfs_kit import geometrize_stops_0, ungeometrize_stops_0
+
 
 def test_compute_stop_stats_0():
     feed1 = cairns.copy()
     feed2 = cairns.copy()
     feed2.trips.direction_id = np.nan
 
-    for feed, split_directions in itertools.product(
-        [feed1, feed2], [True, False]
-    ):
+    for feed, split_directions in itertools.product([feed1, feed2], [True, False]):
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
                 compute_stop_stats_0(
-                    feed.stop_times,
-                    feed.trips,
-                    split_directions=split_directions,
+                    feed.stop_times, feed.trips, split_directions=split_directions
                 )
             continue
 
@@ -70,16 +62,12 @@ def test_compute_stop_time_series_0():
     feed2 = cairns.copy()
     feed2.trips.direction_id = np.nan
 
-    for feed, split_directions in itertools.product(
-        [feed1, feed2], [True, False]
-    ):
+    for feed, split_directions in itertools.product([feed1, feed2], [True, False]):
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
                 compute_stop_time_series_0(
-                    feed.stop_times,
-                    feed.trips,
-                    split_directions=split_directions,
+                    feed.stop_times, feed.trips, split_directions=split_directions
                 )
             continue
 
@@ -87,10 +75,7 @@ def test_compute_stop_time_series_0():
             feed.stop_times, feed.trips, split_directions=split_directions
         )
         sts = compute_stop_time_series_0(
-            feed.stop_times,
-            feed.trips,
-            freq="1H",
-            split_directions=split_directions,
+            feed.stop_times, feed.trips, freq="1H", split_directions=split_directions
         )
 
         # Should be a data frame
@@ -117,10 +102,7 @@ def test_compute_stop_time_series_0():
 
     # Empty check
     stops_ts = compute_stop_time_series_0(
-        feed.stop_times,
-        pd.DataFrame(),
-        freq="1H",
-        split_directions=split_directions,
+        feed.stop_times, pd.DataFrame(), freq="1H", split_directions=split_directions
     )
     assert stops_ts.empty
 
@@ -241,11 +223,7 @@ def test_compute_stop_time_series():
             feed, dates, stop_ids=sids, split_directions=split_directions
         )
         ts = compute_stop_time_series(
-            feed,
-            dates,
-            stop_ids=sids,
-            freq="12H",
-            split_directions=split_directions,
+            feed, dates, stop_ids=sids, freq="12H", split_directions=split_directions
         )
 
         # Should be a data frame
@@ -276,9 +254,7 @@ def test_compute_stop_time_series():
                 assert get <= expect
 
         # Empty dates should yield empty DataFrame
-        ts = compute_stop_time_series(
-            feed, [], split_directions=split_directions
-        )
+        ts = compute_stop_time_series(feed, [], split_directions=split_directions)
         assert ts.empty
 
 
@@ -292,9 +268,7 @@ def test_build_stop_timetable():
     assert isinstance(f, pd.core.frame.DataFrame)
 
     # Should have the correct columns
-    expect_cols = (
-        set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
-    )
+    expect_cols = set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
     assert set(f.columns) == expect_cols
 
     # Should only have feed dates
@@ -319,6 +293,7 @@ def test_geometrize_stops_0():
     )
     assert set(geo_stops.columns) == expect_cols
 
+
 def test_ungeometrize_stops_0():
     stops = cairns.stops.copy()
     geo_stops = geometrize_stops_0(stops)
@@ -329,15 +304,18 @@ def test_ungeometrize_stops_0():
     cols = sorted(stops.columns)
     assert_frame_equal(stops2[cols], stops[cols])
 
+
 def test_geometrize_stops():
     g_1 = geometrize_stops(cairns, use_utm=True)
     g_2 = geometrize_stops_0(cairns.stops, use_utm=True)
     assert g_1.equals(g_2)
 
+
 def test_build_geometry_by_stop():
     d = build_geometry_by_stop(cairns)
     assert isinstance(d, dict)
     assert len(d) == cairns.stops.stop_id.nunique()
+
 
 def test_stops_to_geojson():
     feed = cairns.copy()
@@ -345,6 +323,10 @@ def test_stops_to_geojson():
     collection = stops_to_geojson(feed, stop_ids)
     assert isinstance(collection, dict)
     assert len(collection["features"]) == len(stop_ids)
+
+    with pytest.raises(ValueError):
+        stops_to_geojson(feed, ["bingo"])
+
 
 def test_get_stops_in_polygon():
     feed = cairns.copy()
@@ -354,7 +336,8 @@ def test_get_stops_in_polygon():
     stop_ids = ["750070"]
     assert pstops["stop_id"].values == stop_ids
 
+
 def test_map_stops():
     feed = cairns.copy()
-    m = map_trips(feed, feed.stops.stop_id.iloc[:5])
+    m = map_stops(feed, feed.stops.stop_id.iloc[:5])
     assert isinstance(m, fl.Map)
