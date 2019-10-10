@@ -450,7 +450,13 @@ def trips_to_geojson(
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
     If the Feed has no shapes, then raise a ValueError.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
+    if trip_ids is not None:
+        D = set(trip_ids) - set(feed.trips.trip_id)
+        if D:
+            raise ValueError(f"Trip IDs {D} not found in feed.")
+
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
     if g.empty:
@@ -484,6 +490,7 @@ def map_trips(
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
     on each trip polyline indicating its direction of travel; this fails to work in some
     browsers, such as Brave 0.68.132.
@@ -522,13 +529,12 @@ def map_trips(
 
             # Add trip
             else:
-                prop["color"] = color
-                path = fl.GeoJson(
-                    f,
-                    name=trip_id,
-                    style_function=lambda x: {"color": x["properties"]["color"]},
+                path = fl.PolyLine(
+                    [[x[1], x[0]] for x in f["geometry"]["coordinates"]],
+                    color=color,
+                    popup=hp.make_html(prop),
                 )
-                path.add_child(fl.Popup(hp.make_html(prop)))
+
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 

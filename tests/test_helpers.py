@@ -98,30 +98,21 @@ def test_is_not_null():
 
 
 def test_get_active_trips_df():
-    f = pd.DataFrame(
-        {"start_time": [1, 2, 3, 4, 5], "end_time": [6, 7, 8, 9, 10]}
-    )
+    f = pd.DataFrame({"start_time": [1, 2, 3, 4, 5], "end_time": [6, 7, 8, 9, 10]})
     expect = pd.Series(
-        index=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        data=[1, 2, 3, 4, 5, 4, 3, 2, 1, 0],
+        index=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], data=[1, 2, 3, 4, 5, 4, 3, 2, 1, 0]
     )
     get = get_active_trips_df(f)
     assert_series_equal(get, expect)
 
-    f = pd.DataFrame(
-        {"start_time": [1, 2, 3, 4, 5], "end_time": [2, 4, 6, 8, 10]}
-    )
-    expect = pd.Series(
-        index=[1, 2, 3, 4, 5, 6, 8, 10], data=[1, 1, 2, 2, 3, 2, 1, 0]
-    )
+    f = pd.DataFrame({"start_time": [1, 2, 3, 4, 5], "end_time": [2, 4, 6, 8, 10]})
+    expect = pd.Series(index=[1, 2, 3, 4, 5, 6, 8, 10], data=[1, 1, 2, 2, 3, 2, 1, 0])
     get = get_active_trips_df(f)
     assert_series_equal(get, expect)
 
 
 def test_downsample():
-    ts = compute_route_time_series(
-        cairns, cairns_trip_stats, cairns_dates, freq="6H"
-    )
+    ts = compute_route_time_series(cairns, cairns_trip_stats, cairns_dates, freq="6H")
     f = downsample(ts, "6H")
     assert ts.equals(f)
 
@@ -154,3 +145,55 @@ def test_restack_time_series():
         g = restack_time_series(unstack_time_series(f))
         assert set(g.columns) == set(f.columns)
         assert f.shape[0] == g.shape[0]
+
+
+def test_longest_subsequence():
+    dates = [
+        ("2015-02-03", "name1"),
+        ("2015-02-04", "nameg"),
+        ("2015-02-04", "name5"),
+        ("2015-02-05", "nameh"),
+        ("1929-03-12", "name4"),
+        ("2023-07-01", "name7"),
+        ("2015-02-07", "name0"),
+        ("2015-02-08", "nameh"),
+        ("2015-02-15", "namex"),
+        ("2015-02-09", "namew"),
+        ("1980-12-23", "name2"),
+        ("2015-02-12", "namen"),
+        ("2015-02-13", "named"),
+    ]
+
+    assert longest_subsequence(dates, "weak") == [
+        ("2015-02-03", "name1"),
+        ("2015-02-04", "name5"),
+        ("2015-02-05", "nameh"),
+        ("2015-02-07", "name0"),
+        ("2015-02-08", "nameh"),
+        ("2015-02-09", "namew"),
+        ("2015-02-12", "namen"),
+        ("2015-02-13", "named"),
+    ]
+
+    from operator import itemgetter
+
+    assert longest_subsequence(dates, "weak", key=itemgetter(0)) == [
+        ("2015-02-03", "name1"),
+        ("2015-02-04", "nameg"),
+        ("2015-02-04", "name5"),
+        ("2015-02-05", "nameh"),
+        ("2015-02-07", "name0"),
+        ("2015-02-08", "nameh"),
+        ("2015-02-09", "namew"),
+        ("2015-02-12", "namen"),
+        ("2015-02-13", "named"),
+    ]
+
+    indices = set(longest_subsequence(dates, key=itemgetter(0), index=True))
+    assert [e for i, e in enumerate(dates) if i not in indices] == [
+        ("2015-02-04", "nameg"),
+        ("1929-03-12", "name4"),
+        ("2023-07-01", "name7"),
+        ("2015-02-15", "namex"),
+        ("1980-12-23", "name2"),
+    ]

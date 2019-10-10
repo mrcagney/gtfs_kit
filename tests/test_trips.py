@@ -15,7 +15,6 @@ from .context import (
 from gtfs_kit import *
 
 
-
 def test_is_active_trip():
     feed = cairns.copy()
     trip_id = "CNS2014-CNS_MUL-Weekday-00-4165878"
@@ -139,7 +138,7 @@ def test_compute_trip_stats():
 def test_locate_trips():
     feed = cairns.copy()
     trip_stats = cairns_trip_stats
-    feed = append_dist_to_stop_times(feed, trip_stats)
+    feed = append_dist_to_stop_times(feed)
     date = cairns_dates[0]
     times = ["08:00:00"]
     f = locate_trips(feed, date, times)
@@ -190,20 +189,18 @@ def test_trips_to_geojson():
     assert len(gj["features"]) == n
 
     gj = trips_to_geojson(feed, trip_ids, include_stops=True)
-    k = (
-        feed.stop_times
-        .loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"]
-        .nunique()
-    )
+    k = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"].nunique()
     assert len(gj["features"]) == n + k
 
     with pytest.raises(ValueError):
         trips_to_geojson(cairns_shapeless)
 
+    with pytest.raises(ValueError):
+        trips_to_geojson(cairns, trip_ids=["bingo"])
+
+
 def test_map_trips():
     feed = cairns.copy()
     tids = feed.trips["trip_id"].values[:2]
-    map0 = map_trips(feed, ["bingo"])
-    map1 = map_trips(feed, tids, include_stops=True)
-    for m in [map0, map1]:
-        assert isinstance(m, fl.Map)
+    m = map_trips(feed, tids, include_stops=True)
+    assert isinstance(m, fl.Map)

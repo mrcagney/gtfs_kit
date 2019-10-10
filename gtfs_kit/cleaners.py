@@ -255,7 +255,10 @@ def aggregate_stops(
         nid_by_oid.update(d)
         i += 1
 
-    stops["stop_id"] = stops.stop_id.map(lambda x: nid_by_oid[x])
+    stops["stop_id"] = stops.stop_id.map(nid_by_oid)
+    if "parent_station" in stops:
+        stops["parent_station"] = stops.parent_station.map(nid_by_oid)
+
     stops = stops.groupby(by).first().reset_index()
     feed.stops = stops
 
