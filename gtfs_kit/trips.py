@@ -490,10 +490,10 @@ def map_trips(
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
     on each trip polyline indicating its direction of travel; this fails to work in some
     browsers, such as Brave 0.68.132.
-    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
@@ -532,7 +532,6 @@ def map_trips(
                 path = fl.PolyLine(
                     [[x[1], x[0]] for x in f["geometry"]["coordinates"]],
                     color=color,
-                    weight=5,
                     popup=hp.make_html(prop),
                 )
 

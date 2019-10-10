@@ -1,9 +1,11 @@
 Changes
 =======
+
 2.1.0, 2019-10-10
 -----------------
 - Bugfix: updated ``aggregate_stops()`` to handle parent stations.
-- Added direction arrows to ``map_trips()``.
+- Added optional direction arrows to ``map_trips()``.
+
 
 2.0.0, 2019-10-04
 -----------------
