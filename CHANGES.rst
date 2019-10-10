@@ -1,10 +1,14 @@
 Changes
 =======
-
-1.2.0, 2019-10-10
+2.1.0, 2019-10-10
 -----------------
 - Bugfix: updated ``aggregate_stops()`` to handle parent stations.
 - Added direction arrows to ``map_trips()``.
+
+2.0.0, 2019-10-04
+-----------------
+- Improved the fallback algorithm in ``append_dist_to_stop_times()``. Changed the function signature, so this is a major change, hence the major version bump.
+- Removed optional direction arrows in ``map_trips()``, because the PolyLineTextPath Folium plugin needed for that seems to be broken.
 
 
 1.1.1, 2019-09-25

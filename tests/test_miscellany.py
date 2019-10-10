@@ -5,14 +5,7 @@ from pandas.util.testing import assert_series_equal
 import numpy as np
 import shapely.geometry as sg
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    sample,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
+from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import *
 
 
@@ -66,8 +59,7 @@ def test_convert_dist():
     # Test with proper conversion
     feed2 = convert_dist(feed1, "m")
     assert_series_equal(
-        feed2.shapes["shape_dist_traveled"] / 1000,
-        feed1.shapes["shape_dist_traveled"],
+        feed2.shapes["shape_dist_traveled"] / 1000, feed1.shapes["shape_dist_traveled"]
     )
 
 
@@ -76,9 +68,7 @@ def test_compute_feed_stats_0():
     trip_stats = cairns_trip_stats
     feed.routes.route_type.iat[0] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = compute_feed_stats_0(
-            feed, trip_stats, split_route_types=split_route_types
-        )
+        f = compute_feed_stats_0(feed, trip_stats, split_route_types=split_route_types)
         # Should be a data frame
         assert isinstance(f, pd.core.frame.DataFrame)
         # Should contain the correct columns
@@ -149,11 +139,7 @@ def test_compute_feed_time_series():
 
     for split_route_types in [True, False]:
         f = compute_feed_time_series(
-            feed,
-            trip_stats,
-            dates,
-            freq="12H",
-            split_route_types=split_route_types,
+            feed, trip_stats, dates, freq="12H", split_route_types=split_route_types
         )
 
         # Should have correct column level names
@@ -197,9 +183,7 @@ def test_create_shapes():
     feed1.trips.loc[feed1.trips["trip_id"] == trip_id, "shape_id"] = np.nan
     feed2 = create_shapes(feed1)
     # Should create only 1 new shape
-    assert (
-        len(set(feed2.shapes["shape_id"]) - set(feed1.shapes["shape_id"])) == 1
-    )
+    assert len(set(feed2.shapes["shape_id"]) - set(feed1.shapes["shape_id"])) == 1
 
     feed2 = create_shapes(feed1, all_trips=True)
     # Number of shapes should equal number of unique stop sequences
@@ -288,9 +272,7 @@ def test_restrict_to_routes():
     shape_ids = feed1.trips[feed1.trips["trip_id"].isin(trip_ids)]["shape_id"]
     assert set(feed2.shapes["shape_id"]) == set(shape_ids)
     # Should have correct stops
-    stop_ids = feed1.stop_times[feed1.stop_times["trip_id"].isin(trip_ids)][
-        "stop_id"
-    ]
+    stop_ids = feed1.stop_times[feed1.stop_times["trip_id"].isin(trip_ids)]["stop_id"]
     assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
 
 
@@ -303,18 +285,14 @@ def test_restrict_to_polygon():
     rsns = ["120", "120N"]
     assert set(feed2.routes["route_short_name"]) == set(rsns)
     # Should have correct trips
-    route_ids = feed1.routes[feed1.routes["route_short_name"].isin(rsns)][
-        "route_id"
-    ]
+    route_ids = feed1.routes[feed1.routes["route_short_name"].isin(rsns)]["route_id"]
     trip_ids = feed1.trips[feed1.trips["route_id"].isin(route_ids)]["trip_id"]
     assert set(feed2.trips["trip_id"]) == set(trip_ids)
     # Should have correct shapes
     shape_ids = feed1.trips[feed1.trips["trip_id"].isin(trip_ids)]["shape_id"]
     assert set(feed2.shapes["shape_id"]) == set(shape_ids)
     # Should have correct stops
-    stop_ids = feed1.stop_times[feed1.stop_times["trip_id"].isin(trip_ids)][
-        "stop_id"
-    ]
+    stop_ids = feed1.stop_times[feed1.stop_times["trip_id"].isin(trip_ids)]["stop_id"]
     assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
 
 
@@ -323,7 +301,7 @@ def test_compute_screen_line_counts():
     feed = cairns.copy()
     dates = cairns_dates + ["20010101"]
     trip_stats = cairns_trip_stats
-    feed = append_dist_to_stop_times(feed, trip_stats)
+    feed = append_dist_to_stop_times(feed)
 
     # Load screen line
     with (DATA_DIR / "cairns_screen_line.geojson").open() as src:

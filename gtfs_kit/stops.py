@@ -654,13 +654,16 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
     If an iterable of stop IDs is given, then subset to those stops.
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
+    If some of the given stop IDs are not found in the feed, then raise a ValueError.    
     """
+    if stop_ids is not None:
+        D = set(stop_ids) - set(feed.stops.stop_id)
+        if D:
+            raise ValueError(f"Stops {D} are not found in feed.")
+
     g = geometrize_stops(feed, stop_ids=stop_ids)
     if g.empty:
-        result = {
-            "type": "FeatureCollection",
-            "features": [],
-        }
+        result = {"type": "FeatureCollection", "features": []}
     else:
         result = hp.drop_feature_ids(json.loads(g.to_json()))
     return result
@@ -702,6 +705,7 @@ def get_stops_in_polygon(
 def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE):
     """
     Return a Folium map showing the given stops of this Feed.
+    If some of the given stop IDs are not found in the feed, then raise a ValueError.    
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")

@@ -2,14 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    sample,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
+from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import *
 
 
@@ -49,19 +42,18 @@ def test_get_start_and_end_times():
 def test_append_dist_to_stop_times():
     feed1 = cairns.copy()
     st1 = feed1.stop_times
-    trip_stats = cairns_trip_stats
-    feed2 = append_dist_to_stop_times(feed1, trip_stats)
+    feed2 = append_dist_to_stop_times(feed1)
     st2 = feed2.stop_times
 
     # Check that colums of st2 equal the columns of st1 plus
     # a shape_dist_traveled column
-    cols1 = list(st1.columns.values) + ["shape_dist_traveled"]
-    cols2 = list(st2.columns.values)
+    cols1 = st1.columns.values.tolist() + ["shape_dist_traveled"]
+    cols2 = st2.columns.values.tolist()
     assert set(cols1) == set(cols2)
 
     # Check that within each trip the shape_dist_traveled column
     # is monotonically increasing
     for trip, group in st2.groupby("trip_id"):
         group = group.sort_values("stop_sequence")
-        sdt = list(group["shape_dist_traveled"].values)
+        sdt = group.shape_dist_traveled.values.tolist()
         assert sdt == sorted(sdt)

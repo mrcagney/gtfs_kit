@@ -321,10 +321,12 @@ def test_routes_to_geojson():
     with pytest.raises(ValueError):
         routes_to_geojson(cairns_shapeless)
 
+    with pytest.raises(ValueError):
+        routes_to_geojson(cairns, route_ids=["bingo"])
+
+
 def test_map_routes():
     feed = cairns.copy()
     rids = feed.routes.route_id.loc[:1]
-    map0 = map_routes(feed, ["bingo"])
-    map1 = map_routes(feed, rids, include_stops=True)
-    for m in [map0, map1]:
-        assert isinstance(m, fl.Map)
+    m = map_routes(feed, rids, include_stops=True)
+    assert isinstance(m, fl.Map)

@@ -450,7 +450,13 @@ def trips_to_geojson(
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
     If the Feed has no shapes, then raise a ValueError.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
+    if trip_ids is not None:
+        D = set(trip_ids) - set(feed.trips.trip_id)
+        if D:
+            raise ValueError(f"Trip IDs {D} not found in feed.")
+
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
     if g.empty:
@@ -487,6 +493,7 @@ def map_trips(
     If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
     on each trip polyline indicating its direction of travel; this fails to work in some
     browsers, such as Brave 0.68.132.
+    If any of the given trip IDs are not found in the feed, then raise a ValueError.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
@@ -528,15 +535,19 @@ def map_trips(
                     weight=5,
                     popup=hp.make_html(prop),
                 )
+
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                if include_arrows:
-                    # Add direction arrows
-                    arrows = fl.plugins.PolyLineTextPath(
-                        path, "      \u27A4      ", repeat=True, offset=15
-                    )
-                    arrows.add_to(group)
+                # Direction arrows, assuming, as GTFS does, that
+                # trip direction equals LineString direction
+                fp.PolyLineTextPath(
+                    path,
+                    "        \u27A4        ",
+                    repeat=True,
+                    offset=5.5,
+                    attributes={"fill": color, "font-size": "18"},
+                ).add_to(group)
 
         group.add_to(my_map)
 
