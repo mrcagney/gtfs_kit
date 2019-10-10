@@ -522,25 +522,21 @@ def map_trips(
 
             # Add trip
             else:
-                prop["color"] = color
-                path = fl.GeoJson(
-                    f,
-                    name=trip_id,
-                    style_function=lambda x: {"color": x["properties"]["color"]},
+                path = fl.PolyLine(
+                    [[x[1], x[0]] for x in f["geometry"]["coordinates"]],
+                    color=color,
+                    weight=5,
+                    popup=hp.make_html(prop),
                 )
-                path.add_child(fl.Popup(hp.make_html(prop)))
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                # Direction arrows, assuming, as GTFS does, that
-                # trip direction equals LineString direction
-                fp.PolyLineTextPath(
-                    path,
-                    "        \u27A4        ",
-                    repeat=True,
-                    offset=5.5,
-                    attributes={"fill": color, "font-size": "18"},
-                ).add_to(group)
+                if include_arrows:
+                    # Add direction arrows
+                    arrows = fl.plugins.PolyLineTextPath(
+                        path, "      \u27A4      ", repeat=True, offset=15
+                    )
+                    arrows.add_to(group)
 
         group.add_to(my_map)
 
