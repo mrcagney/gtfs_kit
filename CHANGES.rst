@@ -1,6 +1,11 @@
 Changes
 =======
 
+2.2.0, 2019-10-31
+-----------------
+- Modularized some by added the functions ``build_aggregate_routes_dict()`` and ``build_aggregate_stops_dict()``.
+
+
 2.1.0, 2019-10-10
 -----------------
 - Bugfix: updated ``aggregate_stops()`` to handle parent stations.
