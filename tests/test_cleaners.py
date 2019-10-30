@@ -95,6 +95,14 @@ def test_drop_zombies():
     assert rid not in f2.routes["route_id"]
 
 
+def test_build_aggregate_routes_dict():
+    routes = sample.routes.copy()
+    # Equalize all route short names
+    routes["route_short_name"] = "bingo"
+    nid_by_oid = build_aggregate_routes_dict(routes, route_id_prefix="bongo_")
+    assert set(nid_by_oid.values()) == {"bongo_1"}
+
+
 def test_aggregate_routes():
     feed1 = sample.copy()
     # Equalize all route short names
@@ -114,6 +122,14 @@ def test_aggregate_routes():
     feed2.routes = feed1.routes
     feed2.trips = feed1.trips
     assert feed1 == feed2
+
+
+def test_build_aggregate_stops_dict():
+    stops = sample.stops.copy()
+    # Equalize all stop codes
+    stops["stop_code"] = "bingo"
+    nid_by_oid = build_aggregate_stops_dict(stops, stop_id_prefix="bongo_")
+    assert set(nid_by_oid.values()) == {"bongo_1"}
 
 
 def test_aggregate_stops():

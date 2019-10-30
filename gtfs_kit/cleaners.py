@@ -2,7 +2,7 @@
 Functions about cleaning feeds.
 """
 import math
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict
 
 import pandas as pd
 import numpy as np
@@ -167,6 +167,36 @@ def clean_route_short_names(feed: "Feed") -> "Feed":
     return feed
 
 
+def build_aggregate_routes_dict(
+    routes: pd.DataFrame, by: str = "route_short_name", route_id_prefix: str = "route_"
+) -> Dict[str, str]:
+    """
+    Given a DataFrame of routes, group the routes by route short name, say,
+    and assign new route IDs using the given prefix.
+    Return a dictionary of the form <old route ID> -> <new route ID>.
+    Helper function for :func:`aggregate_routes`.
+
+    More specifically, group ``routes`` by the ``by`` column, and for each group make
+    one new route ID for all the old route IDs in that group based on the given
+    ``route_id_prefix`` string and a running count, e.g. ``'route_013'``.
+    """
+    if by not in routes.columns:
+        raise ValueError(f"Column {by} not in routes.")
+
+    # Create new route IDs
+    n = routes.groupby(by).ngroups
+    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
+    nid_by_oid = dict()
+    i = 1
+    for col, group in routes.groupby(by):
+        nid = f"{route_id_prefix}{i:0{k}d}"
+        d = {oid: nid for oid in group.route_id.values}
+        nid_by_oid.update(d)
+        i += 1
+
+    return nid_by_oid
+
+
 def aggregate_routes(
     feed: "Feed", by: str = "route_short_name", route_id_prefix: str = "route_"
 ) -> "Feed":
@@ -174,87 +204,87 @@ def aggregate_routes(
     Aggregate routes by route short name, say, and assign new route IDs using the
     given prefix.
 
-    More specifically, the result is built from the given Feed as follows.
-    Group ``feed.routes`` by the ``by`` column, and for each group
-
-    1. Choose the first route in the group
-    2. Assign a new route ID based on the given ``route_id_prefix``
-       string and a running count, e.g. ``'route_013'``
-    3. Assign all the trips associated with routes in the group to
-       that first route
-    4. Update the route IDs in the other "Feed" tables
-
+    More specifically, create new route IDs with the function
+    :func:`build_aggregate_routes_dict` and the parameters ``by`` and
+    ``route_id_prefix`` and update the old route IDs to the new ones in all the relevant
+    Feed tables.
+    Return the resulting Feed.
     """
-    if by not in feed.routes.columns:
-        raise ValueError(f"Column {by} not in feed.routes")
-
     feed = feed.copy()
 
-    # Create new route IDs
+    # Make new route IDs
     routes = feed.routes
-    n = routes.groupby(by).ngroups
-    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
-    nrid_by_orid = dict()
-    i = 1
-    for col, group in routes.groupby(by):
-        nrid = f"route_{i:0{k}d}"
-        d = {orid: nrid for orid in group["route_id"].values}
-        nrid_by_orid.update(d)
-        i += 1
+    nid_by_oid = build_aggregate_routes_dict(routes, by, route_id_prefix)
 
-    routes["route_id"] = routes["route_id"].map(lambda x: nrid_by_orid[x])
+    # Update to new route IDs
+    routes["route_id"] = routes["route_id"].map(lambda x: nid_by_oid[x])
     routes = routes.groupby(by).first().reset_index()
     feed.routes = routes
 
     # Update route IDs of trips
     trips = feed.trips
-    trips["route_id"] = trips["route_id"].map(lambda x: nrid_by_orid[x])
+    trips["route_id"] = trips["route_id"].map(lambda x: nid_by_oid[x])
     feed.trips = trips
 
     # Update route IDs of transfers
     if feed.transfers is not None:
         transfers = feed.transfers
-        transfers["route_id"] = transfers["route_id"].map(lambda x: nrid_by_orid[x])
+        transfers["route_id"] = transfers["route_id"].map(lambda x: nid_by_oid[x])
         feed.transfers = transfers
 
     return feed
+
+
+def build_aggregate_stops_dict(
+    stops: pd.DataFrame, by: str = "stop_code", stop_id_prefix: str = "stop_"
+) -> Dict[str, str]:
+    """
+    Given a DataFrame of stops, group the stops by stop code, say,
+    and assign new stop IDs using the given prefix.
+    Return a dictionary of the form <old stop ID> -> <new stop ID>.
+    Helper function for :func:`aggregate_stops`.
+
+    More specifically, group ``stops`` by the ``by`` column, and for each group make
+    one new stop ID for all the old stops IDs in that group based on the given
+    ``stop_id_prefix`` string and a running count, e.g. ``'stop_013'``.
+    """
+    if by not in stops.columns:
+        raise ValueError(f"Column {by} not in stops.")
+
+    # Create new stop IDs
+    n = stops.groupby(by).ngroups
+    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
+    nid_by_oid = dict()
+    i = 1
+    for col, group in stops.groupby(by):
+        nid = f"{stop_id_prefix}{i:0{k}d}"
+        d = {oid: nid for oid in group.stop_id.values}
+        nid_by_oid.update(d)
+        i += 1
+
+    return nid_by_oid
 
 
 def aggregate_stops(
     feed: "Feed", by: str = "stop_code", stop_id_prefix: str = "stop_"
 ) -> "Feed":
     """
-    Aggregate stops by stop code, say, and assign new stop IDs using the
+    Aggregate routes by route short name, say, and assign new route IDs using the
     given prefix.
 
-    More specifically, the result is built from the given Feed as follows.
-    Group ``feed.stops`` by the ``by`` column, and for each group
-
-    1. Choose the first stop in the group
-    2. Assign a new stop ID based on the given ``stop_id_prefix``
-       string and a running count, e.g. ``'stop_013'``
-    3. Assign all the stops associated with stops in the group to
-       that first stop
-    4. Update the stop IDs in the other "Feed" tables
-
+    More specifically, create new stop IDs with the function
+    :func:`build_aggregate_stops_dict` and the parameters ``by`` and
+    ``stop_id_prefix`` and update the old stop IDs to the new ones in all the relevant
+    Feed tables.
+    Return the resulting Feed.
     """
-    if by not in feed.stops.columns:
-        raise ValueError(f"Column {by} not in feed.stops")
-
     feed = feed.copy()
 
-    # Create new stop IDs
+    # Make new stop ID by old stop ID dict
     stops = feed.stops
-    n = stops.groupby(by).ngroups
-    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
-    nid_by_oid = dict()
-    i = 1
-    for col, group in stops.groupby(by):
-        nid = f"stop_{i:0{k}d}"
-        d = {oid: nid for oid in group["stop_id"].values}
-        nid_by_oid.update(d)
-        i += 1
+    nid_by_oid = build_aggregate_stops_dict(stops, by, stop_id_prefix)
 
+    # Apply dict
     stops["stop_id"] = stops.stop_id.map(nid_by_oid)
     if "parent_station" in stops:
         stops["parent_station"] = stops.parent_station.map(nid_by_oid)
