@@ -515,7 +515,7 @@ def map_trips(
         for f in collection["features"]:
             prop = f["properties"]
 
-            # Add stop
+            # Add stop if present
             if f["geometry"]["type"] == "Point":
                 lon, lat = f["geometry"]["coordinates"]
                 fl.CircleMarker(
@@ -538,15 +538,16 @@ def map_trips(
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                # Direction arrows, assuming, as GTFS does, that
-                # trip direction equals LineString direction
-                fp.PolyLineTextPath(
-                    path,
-                    "        \u27A4        ",
-                    repeat=True,
-                    offset=5.5,
-                    attributes={"fill": color, "font-size": "18"},
-                ).add_to(group)
+                if include_arrows:
+                    # Direction arrows, assuming, as GTFS does, that
+                    # trip direction equals LineString direction
+                    fp.PolyLineTextPath(
+                        path,
+                        "        \u27A4        ",
+                        repeat=True,
+                        offset=5.5,
+                        attributes={"fill": color, "font-size": "18"},
+                    ).add_to(group)
 
         group.add_to(my_map)
 
@@ -554,7 +555,8 @@ def map_trips(
 
     # Fit map to bounds
     bounds = so.unary_union(bboxes).bounds
-    bounds2 = [bounds[1::-1], bounds[3:1:-1]]  # Folium expects this ordering
-    my_map.fit_bounds(bounds2)
+    # Folium wants a different ordering
+    bounds = [(bounds[1], bounds[0]), (bounds[3], bounds[2])]
+    my_map.fit_bounds(bounds)
 
     return my_map

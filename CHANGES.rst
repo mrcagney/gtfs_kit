@@ -1,6 +1,11 @@
 Changes
 =======
 
+2.2.1, 2019-11-07
+-----------------
+- Bugfix: updated function ``map_trips()`` to heed the ``include_arrows`` parameter.
+
+
 2.2.0, 2019-10-31
 -----------------
 - Modularized some by added the functions ``build_aggregate_routes_dict()`` and ``build_aggregate_stops_dict()``.
