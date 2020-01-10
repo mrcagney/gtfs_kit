@@ -100,7 +100,7 @@ def test_build_aggregate_routes_dict():
     # Equalize all route short names
     routes["route_short_name"] = "bingo"
     nid_by_oid = build_aggregate_routes_dict(routes, route_id_prefix="bongo_")
-    assert set(nid_by_oid.values()) == {"bongo_1"}
+    assert set(nid_by_oid.values()) == {"bongo_0"}
 
 
 def test_aggregate_routes():
@@ -129,7 +129,7 @@ def test_build_aggregate_stops_dict():
     # Equalize all stop codes
     stops["stop_code"] = "bingo"
     nid_by_oid = build_aggregate_stops_dict(stops, stop_id_prefix="bongo_")
-    assert set(nid_by_oid.values()) == {"bongo_1"}
+    assert set(nid_by_oid.values()) == {"bongo_0"}
 
 
 def test_aggregate_stops():

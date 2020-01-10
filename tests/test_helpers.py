@@ -197,3 +197,31 @@ def test_longest_subsequence():
         ("2015-02-15", "namex"),
         ("1980-12-23", "name2"),
     ]
+
+
+def test_make_ids():
+    assert make_ids(10, "s") == [
+        "s0",
+        "s1",
+        "s2",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9",
+    ]
+    assert make_ids(11, "s") == [
+        "s00",
+        "s01",
+        "s02",
+        "s03",
+        "s04",
+        "s05",
+        "s06",
+        "s07",
+        "s08",
+        "s09",
+        "s10",
+    ]

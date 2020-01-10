@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 
 from . import constants as cs
+from . import helpers as hp
 
 # Help mypy but avoid circular imports
 if TYPE_CHECKING:
@@ -185,12 +186,11 @@ def build_aggregate_routes_dict(
 
     # Create new route IDs
     n = routes.groupby(by).ngroups
-    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
+    nids = hp.make_ids(n, route_id_prefix)
     nid_by_oid = dict()
-    i = 1
+    i = 0
     for col, group in routes.groupby(by):
-        nid = f"{route_id_prefix}{i:0{k}d}"
-        d = {oid: nid for oid in group.route_id.values}
+        d = {oid: nids[i] for oid in group.route_id.values}
         nid_by_oid.update(d)
         i += 1
 
@@ -253,12 +253,11 @@ def build_aggregate_stops_dict(
 
     # Create new stop IDs
     n = stops.groupby(by).ngroups
-    k = int(math.log10(n)) + 1  # Number of digits for padding IDs
+    nids = hp.make_ids(n, stop_id_prefix)
     nid_by_oid = dict()
-    i = 1
+    i = 0
     for col, group in stops.groupby(by):
-        nid = f"{stop_id_prefix}{i:0{k}d}"
-        d = {oid: nid for oid in group.stop_id.values}
+        d = {oid: nids[i] for oid in group.stop_id.values}
         nid_by_oid.update(d)
         i += 1
 

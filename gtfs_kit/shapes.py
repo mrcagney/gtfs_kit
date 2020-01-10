@@ -30,9 +30,7 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
     0.016 km in absolute value from of the original values.
     """
     if feed.shapes is None:
-        raise ValueError(
-            "This function requires the feed to have a shapes.txt file"
-        )
+        raise ValueError("This function requires the feed to have a shapes.txt file")
 
     feed = feed.copy()
     f = feed.shapes
@@ -82,9 +80,7 @@ def geometrize_shapes_0(
 
     def my_agg(group):
         d = {}
-        d["geometry"] = sg.LineString(
-            group[["shape_pt_lon", "shape_pt_lat"]].values
-        )
+        d["geometry"] = sg.LineString(group[["shape_pt_lon", "shape_pt_lat"]].values)
         return pd.Series(d)
 
     g = f.groupby("shape_id").apply(my_agg).reset_index()
@@ -98,18 +94,18 @@ def geometrize_shapes_0(
     return g
 
 
-def ungeometrize_shapes_0(geo_shapes: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_shapes_0(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_shapes_0`.
 
-    If ``geo_shapes`` is in UTM coordinates (has a UTM CRS property),
+    If ``shapes_g`` is in UTM coordinates (has a UTM CRS property),
     then convert those UTM coordinates back to WGS84 coordinates,
     which is the standard for a GTFS shapes table.
     """
-    geo_shapes = geo_shapes.to_crs(cs.WGS84)
+    shapes_g = shapes_g.to_crs(cs.WGS84)
 
     F = []
-    for index, row in geo_shapes.iterrows():
+    for index, row in shapes_g.iterrows():
         F.extend(
             [
                 [row["shape_id"], i, x, y]
@@ -118,17 +114,13 @@ def ungeometrize_shapes_0(geo_shapes: gpd.GeoDataFrame) -> pd.DataFrame:
         )
 
     return pd.DataFrame(
-        F,
-        columns=[
-            "shape_id",
-            "shape_pt_sequence",
-            "shape_pt_lon",
-            "shape_pt_lat",
-        ],
+        F, columns=["shape_id", "shape_pt_sequence", "shape_pt_lon", "shape_pt_lat",],
     )
 
 
-def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> gpd.GeoDataFrame:
+def geometrize_shapes(
+    feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
+) -> gpd.GeoDataFrame:
     """
     Given a Feed instance, convert its shapes DataFrame to a GeoDataFrame of
     LineStrings and return the result, which will no longer have the columns
@@ -150,7 +142,9 @@ def geometrize_shapes(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *
     return geometrize_shapes_0(shapes, use_utm=use_utm)
 
 
-def build_geometry_by_shape(feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False) -> Dict:
+def build_geometry_by_shape(
+    feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
+) -> Dict:
     """
     Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
     """
@@ -160,9 +154,8 @@ def build_geometry_by_shape(feed: "Feed", shape_ids: Optional[Iterable[str]] = N
         .values
     )
 
-def shapes_to_geojson(
-    feed: "Feed", shape_ids: Optional[Iterable[str]] = None
-) -> Dict:
+
+def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -> Dict:
     """
     Return a GeoJSON FeatureCollection of LineString features
     representing ``feed.shapes``.
@@ -184,19 +177,24 @@ def shapes_to_geojson(
         result = hp.drop_feature_ids(json.loads(g.to_json()))
     return result
 
+
 def get_shapes_intersecting_geometry(
-    feed: "Feed", geometry: sg.base.BaseGeometry, geo_shapes:Optional[gpd.GeoDataFrame]=None, *, geometrized: bool = False
+    feed: "Feed",
+    geometry: sg.base.BaseGeometry,
+    shapes_g: Optional[gpd.GeoDataFrame] = None,
+    *,
+    geometrized: bool = False
 ) -> pd.DataFrame:
     """
     Return the subset of ``feed.shapes`` that contains all shapes that
     intersect the given Shapely geometry, e.g. a Polygon or LineString.
 
     If ``geometrized``, then return the shapes as a GeoDataFrame.
-    Specifying ``geo_shapes`` will skip the first step of the
+    Specifying ``shapes_g`` will skip the first step of the
     algorithm, namely, geometrizing ``feed.shapes``.
     """
-    if geo_shapes is not None:
-        f = geo_shapes.copy()
+    if shapes_g is not None:
+        f = shapes_g.copy()
     else:
         f = geometrize_shapes(feed)
 

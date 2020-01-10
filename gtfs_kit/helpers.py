@@ -6,6 +6,7 @@ from typing import Optional, Dict, List, Union, Callable
 import copy
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
+import math
 
 import pandas as pd
 import numpy as np
@@ -587,3 +588,24 @@ def longest_subsequence(
     indices = trace(lastoflength[-1])
 
     return list(indices) if index else [seq[i] for i in indices]
+
+
+def make_ids(n: int, prefix: str = "id_"):
+    """
+    Return a length ``n`` list of unique sequentially labelled strings for use as IDs.
+
+    Example::
+
+    >>> make_ids(10, prefix="s")
+    ['s01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10']
+
+    """
+    if n < 1:
+        result = []
+    elif n == 1:
+        result = [f"{prefix}0"]
+    else:
+        k = int(math.log10(n - 1)) + 1  # Number of digits for IDs
+        result = [f"{prefix}{i:0{k}d}" for i in range(n)]
+
+    return result

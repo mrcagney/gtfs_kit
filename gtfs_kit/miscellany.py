@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, TYPE_CHECKING
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
+import geopandas as gpd
 
 from . import helpers as hp
 from . import constants as cs
@@ -120,9 +121,7 @@ def describe(feed: "Feed", sample_date: Optional[str] = None) -> pd.DataFrame:
     if sample_date is None or sample_date not in feed.get_dates():
         sample_date = cl.get_first_week(feed)[3]
     d["sample_date"] = sample_date
-    d["num_routes_active_on_sample_date"] = feed.get_routes(sample_date).shape[
-        0
-    ]
+    d["num_routes_active_on_sample_date"] = feed.get_routes(sample_date).shape[0]
     trips = feed.get_trips(sample_date)
     d["num_trips_active_on_sample_date"] = trips.shape[0]
     d["num_stops_active_on_sample_date"] = feed.get_stops(sample_date).shape[0]
@@ -244,9 +243,9 @@ def convert_dist(feed: "Feed", new_dist_units: str) -> "Feed":
         ].map(converter)
 
     if hp.is_not_null(feed.shapes, "shape_dist_traveled"):
-        feed.shapes["shape_dist_traveled"] = feed.shapes[
-            "shape_dist_traveled"
-        ].map(converter)
+        feed.shapes["shape_dist_traveled"] = feed.shapes["shape_dist_traveled"].map(
+            converter
+        )
 
     return feed
 
@@ -277,22 +276,16 @@ def compute_feed_stats_0(
             d["num_routes"] = g.route_id.nunique()
             d["num_trips"] = g.shape[0]
             d["num_trip_starts"] = g.start_time.count()
-            d["num_trip_ends"] = g.loc[
-                g.end_time < 24 * 3600, "end_time"
-            ].count()
+            d["num_trip_ends"] = g.loc[g.end_time < 24 * 3600, "end_time"].count()
             d["service_distance"] = g.distance.sum()
             d["service_duration"] = g.duration.sum()
             if d["service_distance"]:
-                d["service_speed"] = (
-                    d["service_distance"] / d["service_duration"]
-                )
+                d["service_speed"] = d["service_distance"] / d["service_duration"]
             else:
                 d["service_speed"] = 0
 
             # Compute peak stats, which is the slowest part
-            active_trips = hp.get_active_trips_df(
-                g[["start_time", "end_time"]]
-            )
+            active_trips = hp.get_active_trips_df(g[["start_time", "end_time"]])
             times, counts = (active_trips.index.values, active_trips.values)
             start, end = hp.get_peak_indices(times, counts)
             d["peak_num_trips"] = counts[start]
@@ -310,9 +303,7 @@ def compute_feed_stats_0(
         d["num_routes"] = ts.route_id.nunique()
         d["num_trips"] = ts.shape[0]
         d["num_trip_starts"] = ts.start_time.count()
-        d["num_trip_ends"] = ts.loc[
-            ts.end_time < 24 * 3600, "end_time"
-        ].count()
+        d["num_trip_ends"] = ts.loc[ts.end_time < 24 * 3600, "end_time"].count()
         d["service_distance"] = ts.distance.sum()
         d["service_duration"] = ts.duration.sum()
         d["service_speed"] = d["service_distance"] / d["service_duration"]
@@ -404,9 +395,7 @@ def compute_feed_stats(
             # Compute stats
             ts = trip_stats.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_feed_stats_0(
-                    feed, ts, split_route_types=split_route_types
-                )
+                compute_feed_stats_0(feed, ts, split_route_types=split_route_types)
                 # Assign date
                 .assign(date=date)
             )
@@ -487,9 +476,7 @@ def compute_feed_time_series(
             hp.unstack_time_series(rts)
             .merge(feed.routes.filter(["route_id", "route_type"]), how="left")
             .groupby(["datetime", "indicator", "route_type"])
-            .agg(
-                {"value": lambda x: x.sum(min_count=1)}
-            )  # All-NaNs should sum to NaN
+            .agg({"value": lambda x: x.sum(min_count=1)})  # All-NaNs should sum to NaN
             .reset_index()
             .pipe(hp.restack_time_series)
         )
@@ -549,15 +536,10 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
     # sort them to impose a canonical order, and
     # assign shape IDs to them
     stop_seqs = sorted(
-        set(
-            tuple(group["stop_id"].values)
-            for trip, group in f.groupby("trip_id")
-        )
+        set(tuple(group["stop_id"].values) for trip, group in f.groupby("trip_id"))
     )
-    k = int(math.log10(len(stop_seqs))) + 1  # Digits for padding shape IDs
-    shape_by_stop_seq = {
-        seq: f"shape_{i:0{k}d}" for i, seq in enumerate(stop_seqs)
-    }
+    ids = hp.make_ids(len(stop_seqs), "shape_")
+    shape_by_stop_seq = {seq: ids[i] for i, seq in enumerate(stop_seqs)}
 
     # Assign these new shape IDs to given trips
     shape_by_trip = {
@@ -565,9 +547,9 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
         for trip, group in f.groupby("trip_id")
     }
     trip_cond = feed.trips["trip_id"].isin(trip_ids)
-    feed.trips.loc[trip_cond, "shape_id"] = feed.trips.loc[
-        trip_cond, "trip_id"
-    ].map(lambda x: shape_by_trip[x])
+    feed.trips.loc[trip_cond, "shape_id"] = feed.trips.loc[trip_cond, "trip_id"].map(
+        lambda x: shape_by_trip[x]
+    )
 
     # Build new shapes for given trips
     G = [
@@ -580,9 +562,7 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
         ["shape_id", "shape_pt_sequence"]
     )
     g = g.drop(["stop_id"], axis=1)
-    g = g.rename(
-        columns={"stop_lon": "shape_pt_lon", "stop_lat": "shape_pt_lat"}
-    )
+    g = g.rename(columns={"stop_lon": "shape_pt_lon", "stop_lat": "shape_pt_lat"})
 
     if feed.shapes is not None and not all_trips:
         # Update feed shapes with new shapes
@@ -641,8 +621,7 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
     # Get every trip that is active on at least one of the dates
     try:
         trip_ids = feed.compute_trip_activity(dates).loc[
-            lambda x: x[[c for c in x.columns if c != "trip_id"]].sum(axis=1)
-            > 0,
+            lambda x: x[[c for c in x.columns if c != "trip_id"]].sum(axis=1) > 0,
             "trip_id",
         ]
     except KeyError:
@@ -653,9 +632,7 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
     feed.trips = feed.trips.loc[lambda x: x.trip_id.isin(trip_ids)]
 
     # Slice routes
-    feed.routes = feed.routes.loc[
-        lambda x: x.route_id.isin(feed.trips.route_id)
-    ]
+    feed.routes = feed.routes.loc[lambda x: x.route_id.isin(feed.trips.route_id)]
 
     # Slice stop times
     feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
@@ -671,17 +648,13 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
     # Slice calendar
     service_ids = feed.trips.service_id
     if feed.calendar is not None:
-        feed.calendar = feed.calendar.loc[
-            lambda x: x.service_id.isin(service_ids)
-        ]
+        feed.calendar = feed.calendar.loc[lambda x: x.service_id.isin(service_ids)]
 
     # Get agency for trips
     if "agency_id" in feed.routes.columns:
         agency_ids = feed.routes.agency_id
         if len(agency_ids):
-            feed.agency = feed.agency.loc[
-                lambda x: x.agency_id.isin(agency_ids)
-            ]
+            feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)]
 
     # Now for the optional files.
     # Get calendar dates for trips.
@@ -692,9 +665,7 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
 
     # Get frequencies for trips
     if feed.frequencies is not None:
-        feed.frequencies = feed.frequencies.loc[
-            lambda x: x.trip_id.isin(trip_ids)
-        ]
+        feed.frequencies = feed.frequencies.loc[lambda x: x.trip_id.isin(trip_ids)]
 
     # Get shapes for trips
     if feed.shapes is not None:
@@ -704,8 +675,7 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
     # Get transfers for stops
     if feed.transfers is not None:
         feed.transfers = feed.transfers.loc[
-            lambda x: x.from_stop_id.isin(stop_ids)
-            & x.to_stop_id.isin(stop_ids)
+            lambda x: x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids)
         ]
 
     return feed
@@ -730,9 +700,7 @@ def restrict_to_routes(feed: "Feed", route_ids: List[str]) -> "Feed":
 
     # Slice stop times
     trip_ids = feed.trips.trip_id
-    feed.stop_times = feed.stop_times.loc[
-        lambda x: x.trip_id.isin(trip_ids)
-    ].copy()
+    feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
     # Slice stops
     stop_ids = feed.stop_times.stop_id.unique()
@@ -753,9 +721,7 @@ def restrict_to_routes(feed: "Feed", route_ids: List[str]) -> "Feed":
     if "agency_id" in feed.routes.columns:
         agency_ids = feed.routes.agency_id
         if len(agency_ids):
-            feed.agency = feed.agency.loc[
-                lambda x: x.agency_id.isin(agency_ids)
-            ].copy()
+            feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)].copy()
 
     # Now for the optional files.
     # Get calendar dates for trips.
@@ -778,9 +744,7 @@ def restrict_to_routes(feed: "Feed", route_ids: List[str]) -> "Feed":
     # Get transfers for stops
     if feed.transfers is not None:
         feed.transfers = feed.transfers.loc[
-            lambda x: (
-                x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids)
-            )
+            lambda x: (x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids))
         ].copy()
 
     return feed
@@ -843,17 +807,13 @@ def restrict_to_polygon(feed: "Feed", polygon: sg.Polygon) -> "Feed":
     if "agency_id" in feed.routes.columns:
         agency_ids = feed.routes.agency_id
         if len(agency_ids):
-            feed.agency = feed.agency.loc[
-                lambda x: x.agency_id.isin(agency_ids)
-            ].copy()
+            feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)].copy()
 
     # Now for the optional files.
     # Get calendar dates for trips.
     cd = feed.calendar_dates
     if cd is not None:
-        feed.calendar_dates = cd.loc[
-            lambda x: x.service_id.isin(service_ids)
-        ].copy()
+        feed.calendar_dates = cd.loc[lambda x: x.service_id.isin(service_ids)].copy()
 
     # Get frequencies for trips
     if feed.frequencies is not None:
@@ -864,189 +824,198 @@ def restrict_to_polygon(feed: "Feed", polygon: sg.Polygon) -> "Feed":
     # Get shapes for trips
     if feed.shapes is not None:
         shape_ids = feed.trips.shape_id
-        feed.shapes = feed.shapes.loc[
-            lambda x: x.shape_id.isin(shape_ids)
-        ].copy()
+        feed.shapes = feed.shapes.loc[lambda x: x.shape_id.isin(shape_ids)].copy()
 
     # Get transfers for stops
     if feed.transfers is not None:
         t = feed.transfers
         feed.transfers = t.loc[
-            lambda x: x.from_stop_id.isin(stop_ids)
-            & x.to_stop_id.isin(stop_ids)
+            lambda x: x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids)
         ].copy()
 
     return feed
 
 
 def compute_screen_line_counts(
-    feed: "Feed", linestring: sg.LineString, dates: List[str], geo_shapes=None
+    feed: "Feed", screen_lines: gpd.GeoDataFrame, dates: List[str]
 ) -> pd.DataFrame:
     """
-    Find all the Feed trips active on the given dates
-    that intersect the given Shapely LineString (with WGS84
-    longitude-latitude coordinates).
+    Find all the Feed trips active on the given YYYYMMDD dates whose shapes
+    intersect the given GeoDataFrame of screen lines, that is, of straight WGS84
+    LineStrings.
+    Compute the intersection times and directions for each trip.
 
-    Parameters
-    ----------
-    feed : Feed
-    linestring : Shapely LineString
-    dates : list
-        YYYYMMDD date strings
+    Return a DataFrame with the columns
 
-    Returns
-    -------
-    DataFrame
-        The columns are
+    - ``'date'``
+    - ``'trip_id'``
+    - ``'route_id'``
+    - ``'route_short_name'``
+    - ``'shape_id'``: shape ID of the trip
+    - ``'screen_line_id'``: ID of the screen line as specified in ``screen_lines`` or as
+      assigned after the fact.
+    - ``'crossing_distance'``: distance along the trip shape of the screen line
+      intersection
+      ``'crossing_time'``: time that the trip's vehicle crosses
+      the scren line; one trip could cross multiple times
+    - ``'crossing_direction'``: 1 or -1; 1 indicates trip travel from the
+      left side to the right side of the screen line;
+      -1 indicates trip travel in the  opposite direction
 
-        - ``'date'``
-        - ``'trip_id'``
-        - ``'route_id'``
-        - ``'route_short_name'``
-        - ``'crossing_time'``: time that the trip's vehicle crosses
-          the linestring; one trip could cross multiple times
-        - ``'orientation'``: 1 or -1; 1 indicates trip travel from the
-          left side to the right side of the screen line;
-          -1 indicates trip travel in the  opposite direction
+    Notes:
 
-    Notes
-    -----
-    - Requires GeoPandas
-    - The first step is to geometrize ``feed.shapes`` via
-      :func:`.shapes.geometrize_shapes`. Alternatively, use the
-      ``geo_shapes`` GeoDataFrame, if given.
-    - Assume ``feed.stop_times`` has an accurate
-      ``shape_dist_traveled`` column.
-    - Assume that trips travel in the same direction as their
-      shapes. That restriction is part of GTFS, by the way.
-      To calculate direction quickly and accurately, assume that
-      the screen line is straight and doesn't double back on itself.
-    - Probably does not give correct results for trips with
-      self-intersecting shapes.
+    - Assume the Feed's stop times DataFrame has an accurate ``shape_dist_traveled`` column.
+    - Assume that trips travel in the same direction as their shapes, an assumption
+      that is part of the GTFS.
+    - Assume that the screen line is straight and simple.
+    - Probably does not give correct results for trips with self-intersecting shapes.
     - The algorithm works as follows
 
-        1. Compute all the shapes that intersect the linestring
-        2. For each such shape, compute the intersection points
-        3. For each point p, scan through all the trips in the feed
-           that have that shape
-        4. For each date in ``dates``, restrict to trips active on the
-           date and interpolate a stop time for p by assuming that the
-           feed has the shape_dist_traveled field in stop times
-        5. Use that interpolated time as the crossing time of the trip
-           vehicle, and compute the trip orientation to the screen line
-           via a cross product of a vector in the direction of the
-           screen line and a tiny vector in the direction of trip travel
-
-    - Assume the following feed attributes are not ``None``:
-         * ``feed.shapes``, if ``geo_shapes`` is not given
+        1. Find the trip shapes that intersect the screen lines.
+        2. For each such shape and screen line, compute the intersection points, the distance
+           of the point along the shape, and the orientation of the screen line relative to
+           the shape.
+        3. For each given date, restrict to trips active on the
+           date and interpolate a stop time for the intersection point using
+           the ``shape_dist_traveled`` column.
+        4. Use that interpolated time as the crossing time of the trip vehicle.
 
     """
     dates = feed.subset_dates(dates)
     if not dates:
         return pd.DataFrame()
 
-    # Get all shapes that intersect the screen line
-    shapes = feed.get_shapes_intersecting_geometry(
-        linestring, geo_shapes, geometrized=True
-    )
+    # Get shapes as GeoDataFrame
+    shapes_g = feed.geometrize_shapes(use_utm=True)
 
-    # Convert shapes to UTM
-    lat, lon = feed.shapes.loc[0, ["shape_pt_lat", "shape_pt_lon"]].values
-    crs = hp.get_utm_crs(lat, lon)
-    shapes = shapes.to_crs(crs)
+    # Convert screen lines to UTM
+    crs = shapes_g.crs
+    screen_lines = screen_lines.to_crs(crs)
 
-    # Convert linestring to UTM
-    linestring = hp.linestring_to_utm(linestring)
+    # Create screen line IDs if necessary
+    n = screen_lines.shape[0]
+    if "screen_line_id" not in screen_lines.columns:
+        screen_lines["screen_line_id"] = hp.make_ids(n, "sl")
 
-    # Get all intersection points of shapes and linestring
-    shapes["intersection"] = shapes.intersection(linestring)
-
-    # Make a vector in the direction of the screen line
-    # to later calculate trip orientation.
+    # Make a vector in the direction of each screen line to calculate crossing orientation.
     # Does not work in case of a bent screen line.
-    p1 = sg.Point(linestring.coords[0])
-    p2 = sg.Point(linestring.coords[-1])
-    w = np.array([p2.x - p1.x, p2.y - p1.y])
+    p1 = screen_lines.geometry.map(lambda x: np.array(x.coords[0]))
+    p2 = screen_lines.geometry.map(lambda x: np.array(x.coords[-1]))
+    screen_lines["screen_line_vector"] = p2 - p1
 
-    # Build a dictionary from the shapes DataFrame of the form
-    # shape ID -> list of pairs (d, v), one for each intersection point,
-    # where d is the distance of the intersection point along shape,
-    # and v is a tiny vectors from the point in direction of shape.
-    # Assume here that trips travel in the same direction as their shapes.
-    dv_by_shape = {}
-    eps = 1
-    convert_dist = hp.get_convert_dist("m", feed.dist_units)
-    for __, sid, geom, intersection in shapes.itertuples():
-        # Get distances along shape of intersection points (in meters)
-        distances = [geom.project(p) for p in intersection]
-        # Build tiny vectors
-        vectors = []
-        for i, p in enumerate(intersection):
-            q = geom.interpolate(distances[i] + eps)
-            vector = np.array([q.x - p.x, q.y - p.y])
-            vectors.append(vector)
-        # Convert distances to units used in feed
-        distances = [convert_dist(d) for d in distances]
-        dv_by_shape[sid] = list(zip(distances, vectors))
-
-    # Get trips with those shapes
-    t = feed.trips
-    t = t[t["shape_id"].isin(dv_by_shape.keys())].copy()
-
-    # Merge in route short names and stop times
-    t = t.merge(feed.routes[["route_id", "route_short_name"]]).merge(
-        feed.stop_times
+    # Get intersection points of shapes and screen lines
+    g0 = (
+        # Only keep shapes that intersect screen lines to reduce computations
+        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"]))
+        .merge(screen_lines, on="screen_line_id")
+        .assign(geometry_x=lambda x: gpd.GeoSeries(x.geometry_x, crs=crs))
+        .set_geometry("geometry_x")
+        # Compute intersection points
+        .assign(
+            int_point=lambda x: x.geometry_x.intersection(
+                gpd.GeoSeries(x.geometry_y, crs=crs)
+            )
+        )
     )
 
-    # Drop NaN departure times and convert to seconds past midnight
-    t = t[t["departure_time"].notnull()].copy()
-    t["departure_time"] = t["departure_time"].map(hp.timestr_to_seconds)
+    # Unpack multipoint intersections to yield a new GeoDataFrame
+    records = []
+    for row in g0.itertuples(index=False):
+        if isinstance(row.int_point, sg.Point):
+            intersections = [row.int_point]
+        else:
+            intersections = row.int_point
+        for int_point in intersections:
+            record = {
+                "shape_id": row.shape_id,
+                "screen_line_id": row.screen_line_id,
+                "geometry": row.geometry_x,
+                "int_point": int_point,
+                "screen_line_vector": row.screen_line_vector,
+            }
+            records.append(record)
 
-    # Compile crossings by date
-    a = feed.compute_trip_activity(dates)
-    rows = []
+    g = gpd.GeoDataFrame.from_records(records)
+    g.crs = crs
+
+    # Get distance (in meters) of each intersection point along shape
+    g["crossing_dist"] = g.apply(lambda x: x.geometry.project(x.int_point), axis=1)
+
+    # Build a tiny vector along each shape
+    p2 = g.apply(lambda x: x.geometry.interpolate(x.crossing_dist + 1), axis=1).map(
+        lambda x: np.array(x.coords[0])
+    )
+    p1 = g.int_point.map(lambda x: np.array(x.coords[0]))
+    g["shape_vector"] = p2 - p1
+
+    # Compute crossing direction by taking the vector cross product of
+    # the shape vector and the screen line vector
+    det = g.apply(
+        lambda x: np.linalg.det(np.array([x.shape_vector, x.screen_line_vector])),
+        axis=1,
+    )
+    g["crossing_direction"] = det.map(lambda x: 1 if x >= 0 else -1)
+
+    # Convert to feed distance units
+    converter = hp.get_convert_dist("m", feed.dist_units)
+    g["crossing_dist"] = g["crossing_dist"].map(converter)
+
+    # Summarize work so far into a lookup table
+    h = (
+        g.filter(["shape_id", "screen_line_id", "crossing_direction", "crossing_dist"])
+        .set_index("shape_id")
+        .sort_values(
+            ["shape_id", "crossing_dist"]
+        )  # Need this sorting for interpolation to work
+    )
+
+    # Get stop times of trips whose shapes lie in h
+    st = (
+        feed.trips.loc[lambda x: x.shape_id.isin(h.index)]
+        # Merge in route short names and stop times
+        .merge(feed.routes[["route_id", "route_short_name"]]).merge(feed.stop_times)
+        # Keep only non-NaN departure times
+        .loc[lambda x: x.departure_time.notna()]
+        # Convert to seconds past midnight
+        .assign(departure_time=lambda x: x.departure_time.map(hp.timestr_to_seconds))
+    )
+
+    # Compute crossing times by date
+    records = []
+    ta = feed.compute_trip_activity(dates)
     for date in dates:
-        # Slice to trips active on date
-        ids = a.loc[a[date] == 1, "trip_id"]
-        f = t[t["trip_id"].isin(ids)].copy()
+        # Subset to trips active on date and merge with g
+        ids = ta.loc[lambda x: x[date] == 1, "trip_id"]
+        f = st.loc[lambda x: x.trip_id.isin(ids)].sort_values(
+            ["trip_id", "shape_dist_traveled"]
+        )  # Need this sorting for interpolation to work
 
-        # For each shape find the trips that cross the screen line
-        # and get crossing times and orientation
-        f = f.sort_values(["trip_id", "stop_sequence"])
+        # Get crossing time for each trip
         for tid, group in f.groupby("trip_id"):
             sid = group["shape_id"].iat[0]
             rid = group["route_id"].iat[0]
             rsn = group["route_short_name"].iat[0]
-            stop_times = group["departure_time"].values
-            stop_distances = group["shape_dist_traveled"].values
-            for d, v in dv_by_shape[sid]:
-                # Interpolate crossing time
-                time = np.interp(d, stop_distances, stop_times)
-                # Compute direction of trip travel relative to
-                # screen line by looking at the sign of the cross
-                # product of tiny shape vector and screen line vector
-                det = np.linalg.det(np.array([v, w]))
-                if det >= 0:
-                    orientation = 1
-                else:
-                    orientation = -1
-                # Update rows
-                rows.append([date, tid, rid, rsn, time, orientation])
+            dists = group["shape_dist_traveled"].values
+            times = group["departure_time"].values
+            crossing_dists = h.loc[[sid], "crossing_dist"].values
+            crossing_times = np.interp(crossing_dists, dists, times)
+            for i, row in enumerate(h.loc[[sid]].itertuples(index=False)):
+                record = {
+                    "date": date,
+                    "trip_id": tid,
+                    "route_id": group.route_id.iat[0],
+                    "route_short_name": group.route_short_name.iat[0],
+                    "shape_id": group.shape_id.iat[0],
+                    "screen_line_id": row.screen_line_id,
+                    "crossing_direction": row.crossing_direction,
+                    "crossing_distance": row.crossing_dist,
+                    "crossing_time": crossing_times[i],
+                }
+                records.append(record)
 
-    # Create DataFrame
-    cols = [
-        "date",
-        "trip_id",
-        "route_id",
-        "route_short_name",
-        "crossing_time",
-        "orientation",
-    ]
-    g = pd.DataFrame(rows, columns=cols).sort_values(["date", "crossing_time"])
-
-    # Convert departure times back to time strings
-    g["crossing_time"] = g["crossing_time"].map(
-        lambda x: hp.timestr_to_seconds(x, inverse=True)
+    result = pd.DataFrame.from_records(records).assign(
+        crossing_time=lambda x: x.crossing_time.map(
+            lambda x: hp.timestr_to_seconds(x, inverse=True)
+        )
     )
-
-    return g
+    return result

@@ -4,6 +4,7 @@ import pandas as pd
 from pandas.util.testing import assert_series_equal
 import numpy as np
 import shapely.geometry as sg
+import geopandas as gpd
 
 from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import *
@@ -298,17 +299,13 @@ def test_restrict_to_polygon():
 
 @pytest.mark.slow
 def test_compute_screen_line_counts():
-    feed = cairns.copy()
+    feed = cairns.append_dist_to_stop_times()
     dates = cairns_dates + ["20010101"]
-    trip_stats = cairns_trip_stats
-    feed = append_dist_to_stop_times(feed)
 
     # Load screen line
-    with (DATA_DIR / "cairns_screen_line.geojson").open() as src:
-        line = json.load(src)
-        line = sg.shape(line["features"][0]["geometry"])
-
-    f = compute_screen_line_counts(feed, line, dates)
+    path = DATA_DIR / "cairns_screen_lines.geojson"
+    screen_lines = gpd.read_file(path)
+    f = compute_screen_line_counts(feed, screen_lines, dates)
 
     # Should have correct columns
     expect_cols = {
@@ -316,26 +313,20 @@ def test_compute_screen_line_counts():
         "trip_id",
         "route_id",
         "route_short_name",
+        "shape_id",
+        "screen_line_id",
+        "crossing_distance",
         "crossing_time",
-        "orientation",
+        "crossing_direction",
     }
     assert set(f.columns) == expect_cols
 
-    # Should have correct routes
-    rsns = ["120", "120N"]
-    assert set(f["route_short_name"]) == set(rsns)
-
-    # Should have correct number of trips
-    num_unique_trips = 34
-    assert f["trip_id"].nunique() == num_unique_trips
-
-    # Should have correct orientations
-    for ori in [-1, 1]:
-        assert f[f["orientation"] == ori].shape[0] == 2 * num_unique_trips
+    # Should have both directions
+    assert set(f.crossing_direction.unique()) == {-1, 1}
 
     # Should only have feed dates
     assert f.date.unique().tolist() == cairns_dates
 
     # Empty check
-    f = compute_screen_line_counts(feed, line, [])
+    f = compute_screen_line_counts(feed, screen_lines, [])
     assert f.empty

@@ -598,15 +598,15 @@ def geometrize_stops_0(
     return g
 
 
-def ungeometrize_stops_0(geo_stops: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_stops_0(stops_g: gpd.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_stops_0`.
 
-    If ``geo_stops`` is in UTM coordinates (has a UTM CRS property),
+    If ``stops_g`` is in UTM coordinates (has a UTM CRS property),
     then convert those UTM coordinates back to WGS84 coordinates,
     which is the standard for a GTFS shapes table.
     """
-    f = geo_stops.copy().to_crs(cs.WGS84)
+    f = stops_g.copy().to_crs(cs.WGS84)
     f["stop_lon"], f["stop_lat"] = zip(*f["geometry"].map(lambda p: [p.x, p.y]))
     del f["geometry"]
     return f
@@ -654,7 +654,7 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
     If an iterable of stop IDs is given, then subset to those stops.
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
-    If some of the given stop IDs are not found in the feed, then raise a ValueError.    
+    If some of the given stop IDs are not found in the feed, then raise a ValueError.
     """
     if stop_ids is not None:
         D = set(stop_ids) - set(feed.stops.stop_id)
@@ -672,7 +672,7 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
 def get_stops_in_polygon(
     feed: "Feed",
     polygon: sg.Polygon,
-    geo_stops: Optional[gpd.GeoDataFrame] = None,
+    stops_g: Optional[gpd.GeoDataFrame] = None,
     *,
     geometrized: bool = False,
 ) -> pd.DataFrame:
@@ -682,11 +682,11 @@ def get_stops_in_polygon(
     WGS84 coordinates.
 
     If ``geometrized``, then return the stops as a GeoDataFrame.
-    Specifying ``geo_stops`` will skip the first step of the
+    Specifying ``stops_g`` will skip the first step of the
     algorithm, namely, geometrizing ``feed.stops``.
     """
-    if geo_stops is not None:
-        f = geo_stops.copy()
+    if stops_g is not None:
+        f = stops_g.copy()
     else:
         f = geometrize_stops(feed)
 
@@ -705,7 +705,7 @@ def get_stops_in_polygon(
 def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE):
     """
     Return a Folium map showing the given stops of this Feed.
-    If some of the given stop IDs are not found in the feed, then raise a ValueError.    
+    If some of the given stop IDs are not found in the feed, then raise a ValueError.
     """
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
