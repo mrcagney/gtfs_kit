@@ -1,6 +1,12 @@
 Changes
 =======
 
+3.0.0, 2020-01-10
+-----------------
+- Breaking change: improved function ``compute_screen_line_counts()`` to handle multiple screen lines at once.
+- Added helper function ``make_ids()``.
+
+
 2.2.1, 2019-11-07
 -----------------
 - Bugfix: updated function ``map_trips()`` to heed the ``include_arrows`` parameter.
