@@ -596,8 +596,8 @@ def make_ids(n: int, prefix: str = "id_"):
 
     Example::
 
-    >>> make_ids(10, prefix="s")
-    ['s01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10']
+        >>> make_ids(11, prefix="s")
+        ['s00', s01', 's02', 's03', 's04', 's05', 's06', 's07', 's08', 's09', 's10']
 
     """
     if n < 1:
