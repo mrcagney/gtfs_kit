@@ -1,6 +1,11 @@
 Changes
 =======
 
+3.0.1, 2020-01-16
+-----------------
+- Optimized function ``geometrize_routes()`` by ignoring duplicate shapes.
+
+
 3.0.0, 2020-01-10
 -----------------
 - Breaking change: improved function ``compute_screen_line_counts()`` to handle multiple screen lines at once.

@@ -688,7 +688,7 @@ def geometrize_routes(
 ) -> gpd.GeoDataFrame:
     """
     Given a Feed, return a GeoDataFrame with all the columns of ``feed.routes``
-    plus a geometry column of MultiLineStrings, each of which represents the
+    plus a geometry column of (Multi)LineStrings, each of which represents the
     corresponding routes's shape.
 
     If an iterable of route IDs is given, then subset to those routes.
@@ -706,7 +706,11 @@ def geometrize_routes(
         route_ids = feed.routes.route_id
 
     # Subset trips
-    trip_ids = feed.trips.loc[lambda x: x.route_id.isin(route_ids), "trip_id"]
+    trip_ids = (
+        feed.trips.loc[lambda x: x.route_id.isin(route_ids)]
+        # Drop unnecessary duplicate shapes
+        .drop_duplicates(subset="shape_id").loc[:, "trip_id"]
+    )
 
     # Combine shape LineStrings within route and direction
     if split_directions:
