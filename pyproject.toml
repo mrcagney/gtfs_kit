@@ -19,6 +19,7 @@ json2table = "^1.1"
 geopandas = "<1"
 rtree = "<1"
 folium = "<1"
+requests
 
 [tool.poetry.dev-dependencies]
 jupyter = "<2"
