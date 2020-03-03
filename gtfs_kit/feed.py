@@ -25,6 +25,7 @@ from typing import Optional
 
 import pandas as pd
 from pandas.core.frame import DataFrame
+import requests
 
 from . import constants as cs
 from . import helpers as hp
@@ -424,6 +425,14 @@ def read_gtfs(path: Path, dist_units: str) -> "Feed":
 
     # Create feed
     return Feed(**feed_dict)
+
+
+def read_url(url: str, dist_units: str) -> "Feed":
+        r = requests.get(url)
+        with tempfile.NamedTemporaryFile() as f:
+            f.write(r._content)
+            f.seek(0)
+            return read_gtfs(f.name, dist_units=dist_units)
 
 
 def write_gtfs(feed: "Feed", path: Path, ndigits: int = 6) -> None:
