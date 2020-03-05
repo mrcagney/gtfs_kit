@@ -57,7 +57,7 @@ def test_eq():
 
 
 def test_copy():
-    feed1 = read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="km")
+    feed1 = read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
     feed2 = feed1.copy()
 
     # Check attributes
@@ -75,48 +75,48 @@ def test_copy():
 # --------------------------------------------
 # Test functions about inputs and outputs
 # --------------------------------------------
-def test_list_gtfs():
+def test_list_feed():
     # Bad path
     with pytest.raises(ValueError):
-        list_gtfs("bad_path!")
+        list_feed("bad_path!")
 
     for path in [DATA_DIR / "sample_gtfs.zip", DATA_DIR / "sample_gtfs"]:
-        f = list_gtfs(path)
+        f = list_feed(path)
         assert isinstance(f, pd.DataFrame)
         assert set(f.columns) == {"file_name", "file_size"}
         assert f.shape[0] in [12, 13]
 
 
-def test_read_gtfs():
+def test_read_feed():
     # Bad path
     with pytest.raises(ValueError):
-        read_gtfs("bad_path!", dist_units="km")
+        read_feed("bad_path!", dist_units="km")
 
     # Bad dist_units:
     with pytest.raises(ValueError):
-        read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="bingo")
+        read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="bingo")
 
     # Requires dist_units:
     with pytest.raises(TypeError):
-        read_gtfs(path=DATA_DIR / "sample_gtfs.zip")
+        read_feed(path=DATA_DIR / "sample_gtfs.zip")
 
     # Success
-    feed = read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="m")
+    feed = read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="m")
 
     # Success
-    feed = read_gtfs(DATA_DIR / "sample_gtfs", dist_units="m")
+    feed = read_feed(DATA_DIR / "sample_gtfs", dist_units="m")
 
     # Feed should have None feed_info table
     assert feed.feed_info is None
 
 
-def test_write_gtfs():
-    feed1 = read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="km")
+def test_write():
+    feed1 = read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
 
     # Export feed1, import it as feed2, and then test equality
     for out_path in [DATA_DIR / "bingo.zip", DATA_DIR / "bingo"]:
-        write_gtfs(feed1, out_path)
-        feed2 = read_gtfs(out_path, "km")
+        feed1.write(out_path)
+        feed2 = read_feed(out_path, "km")
         assert feed1 == feed2
         try:
             out_path.unlink()
@@ -126,7 +126,7 @@ def test_write_gtfs():
     # Test that integer columns with NaNs get output properly.
     # To this end, put a NaN, 1.0, and 0.0 in the direction_id column of trips.txt, export it, and import the column as strings.
     # Should only get np.nan, '0', and '1' entries.
-    feed3 = read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="km")
+    feed3 = read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
     f = feed3.trips.copy()
     f["direction_id"] = f["direction_id"].astype(object)
     f.loc[0, "direction_id"] = np.nan
@@ -134,7 +134,7 @@ def test_write_gtfs():
     f.loc[2, "direction_id"] = 0.0
     feed3.trips = f
     q = DATA_DIR / "bingo.zip"
-    write_gtfs(feed3, q)
+    feed3.write(q)
 
     tmp_dir = tempfile.TemporaryDirectory()
     shutil.unpack_archive(str(q), tmp_dir.name, "zip")
