@@ -936,6 +936,17 @@ version = ">=4.0.0"
 testing = ["argcomplete", "hypothesis (>=3.56)", "nose", "requests", "mock"]
 
 [[package]]
+category = "dev"
+description = "Pytest Plugin to disable socket calls during tests"
+name = "pytest-socket"
+optional = false
+python-versions = "*"
+version = "0.3.3"
+
+[package.dependencies]
+pytest = ">=3.6.3"
+
+[[package]]
 category = "main"
 description = "Extensions to the standard Python datetime module"
 name = "python-dateutil"
@@ -1249,7 +1260,7 @@ docs = ["sphinx", "jaraco.packaging (>=3.2)", "rst.linker (>=1.9)"]
 testing = ["pathlib2", "contextlib2", "unittest2"]
 
 [metadata]
-content-hash = "5260908e74f0817731f10438efef98704dc1297c4599c8803aa31573354b994d"
+content-hash = "9a49e617cc1396a19698426e98b00b33c4b535af196768fbf59586292dcc19a1"
 python-versions = "^3.6 || ^3.7"
 
 [metadata.files]
@@ -1689,6 +1700,9 @@ pyrsistent = [
 pytest = [
     {file = "pytest-4.6.9-py2.py3-none-any.whl", hash = "sha256:c77a5f30a90e0ce24db9eaa14ddfd38d4afb5ea159309bdd2dae55b931bc9324"},
     {file = "pytest-4.6.9.tar.gz", hash = "sha256:19e8f75eac01dd3f211edd465b39efbcbdc8fc5f7866d7dd49fedb30d8adf339"},
+]
+pytest-socket = [
+    {file = "pytest-socket-0.3.3.tar.gz", hash = "sha256:a90401b7a6db7091add1e33fc94a29dae6b449fdc469a725bd7cea303d12a7ed"},
 ]
 python-dateutil = [
     {file = "python-dateutil-2.8.1.tar.gz", hash = "sha256:73ebfe9dbf22e832286dafa60473e4cd239f8592f699aa5adaf10050e6e1823c"},

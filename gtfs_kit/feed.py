@@ -333,7 +333,7 @@ class Feed(object):
 
         return other
 
-    def write(path: Path, ndigits: int = 6) -> None:
+    def write(self, path: Path, ndigits: int = 6) -> None:
         """
         Write this Feed to the given path.
         If the path end in '.zip', then write the feed as a zip archive.
@@ -377,6 +377,7 @@ class Feed(object):
             shutil.make_archive(basename, format="zip", root_dir=tmp_dir.name)
             tmp_dir.cleanup()
 
+
 # -------------------------------------
 # Functions about input and output
 # -------------------------------------
@@ -414,6 +415,7 @@ def list_feed(path: Path) -> DataFrame:
             rows.append(d)
 
     return pd.DataFrame(rows)
+
 
 def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
     """
@@ -470,7 +472,8 @@ def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
     # Create feed
     return Feed(**feed_dict)
 
-def _read_feed_from_url(url: str, dist_units: str) -> "Feed":  
+
+def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
     """
     Helper function for :func:`read_feed`.
     Create a Feed instance from the given URL and given distance units.
@@ -488,6 +491,7 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
         f.write(r._content)
         f.seek(0)
         return _read_feed_from_path(f.name, dist_units=dist_units)
+
 
 def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
     """
