@@ -1,6 +1,12 @@
 Changes
 =======
 
+4.0.0, 2020-03-06
+-----------------
+- Breaking changes: renamed ``list_gtfs()`` to ``list_feed()``, ``read_gtfs()`` to ``read_feed()``, and ``write_gtfs()`` to ``write()`` and made it a Feed method.
+- Made ``read_feed()`` accept URLs as requested in `pull request 3 <https://github.com/mrcagney/gtfs_kit/pull/3>`_.
+
+
 3.0.1, 2020-01-16
 -----------------
 - Optimized function ``geometrize_routes()`` by ignoring duplicate shapes.
