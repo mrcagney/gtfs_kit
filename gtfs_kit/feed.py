@@ -486,11 +486,13 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
 
 
     """
-    r = requests.get(url)
-    with tempfile.NamedTemporaryFile() as f:
+    f = tempfile.NamedTemporaryFile(delete=False)
+    with requests.get(url) as r:
         f.write(r._content)
-        f.seek(0)
-        return _read_feed_from_path(f.name, dist_units=dist_units)
+    f.close()
+    feed = _read_feed_from_path(f.name, dist_units=dist_units)
+    Path(f.name).unlink()
+    return feed
 
 
 def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
@@ -507,7 +509,11 @@ def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
     - Automatically strip whitespace from the column names in GTFS files
 
     """
-    if Path(path_or_url).exists():
+    try:
+        path_exists = Path(path_or_url).exists()
+    except OSError:
+        path_exists = False
+    if path_exists:
         return _read_feed_from_path(path_or_url, dist_units=dist_units)
     elif requests.head(path_or_url).ok:
         return _read_feed_from_url(path_or_url, dist_units=dist_units)
