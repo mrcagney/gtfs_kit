@@ -16,7 +16,7 @@ Installation
 
 Examples
 ========
-You can play with ``ipynb/examples.ipynb`` in a Jupyter notebook.
+Examples are in the Jupyter notebook ``notebooks/examples.ipynb``.
 
 
 Authors

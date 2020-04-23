@@ -1,6 +1,11 @@
 Changes
 =======
 
+4.0.1, 2020-04-24
+-----------------
+- Bugfix: got ``read_feed()`` working on Windows thanks to `pull request 4 <https://github.com/mrcagney/gtfs_kit/pull/4>`_.
+
+
 4.0.0, 2020-03-06
 -----------------
 - Breaking changes: renamed ``list_gtfs()`` to ``list_feed()``, ``read_gtfs()`` to ``read_feed()``, and ``write_gtfs()`` to ``write()`` and made it a Feed method.
