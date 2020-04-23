@@ -509,7 +509,11 @@ def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
     - Automatically strip whitespace from the column names in GTFS files
 
     """
-    if Path(path_or_url).exists():
+    try:
+        path_exists = Path(path_or_url).exists()
+    except OSError:
+        path_exists = False
+    if path_exists:
         return _read_feed_from_path(path_or_url, dist_units=dist_units)
     elif requests.head(path_or_url).ok:
         return _read_feed_from_url(path_or_url, dist_units=dist_units)
