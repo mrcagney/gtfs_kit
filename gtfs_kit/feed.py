@@ -486,11 +486,13 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
 
 
     """
-    r = requests.get(url)
-    with tempfile.NamedTemporaryFile() as f:
+    f = tempfile.NamedTemporaryFile(delete=False)
+    with requests.get(url) as r:
         f.write(r._content)
-        f.seek(0)
-        return _read_feed_from_path(f.name, dist_units=dist_units)
+    f.close()
+    feed = _read_feed_from_path(f.name, dist_units=dist_units)
+    Path(f.name).unlink()
+    return feed
 
 
 def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
