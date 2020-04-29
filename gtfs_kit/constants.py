@@ -139,7 +139,7 @@ FEED_ATTRS_2 = ["_trips_i", "_calendar_i", "_calendar_dates_g"]
 FEED_ATTRS = FEED_ATTRS_1 + FEED_ATTRS_2
 
 #: WGS84 coordinate reference system for Geopandas
-WGS84 = {"init": "epsg:4326"}
+WGS84 = "epsg:4326"
 
 #: Colorbrewer 8-class Set2 colors
 COLORS_SET2 = [
