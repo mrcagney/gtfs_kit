@@ -1,7 +1,7 @@
 import pytest
 
 import pandas as pd
-from pandas.util.testing import assert_series_equal
+from pandas.testing import assert_series_equal
 import numpy as np
 import shapely.geometry as sg
 import geopandas as gpd

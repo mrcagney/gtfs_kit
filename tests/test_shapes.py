@@ -1,5 +1,5 @@
 import pytest
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import *
@@ -34,14 +34,10 @@ def test_geometrize_shapes_0():
     assert geo_shapes.shape[1] == shapes.shape[1] - 2
     # Should have the correct columns
     expect_cols = set(list(shapes.columns) + ["geometry"]) - set(
-        [
-            "shape_pt_lon",
-            "shape_pt_lat",
-            "shape_pt_sequence",
-            "shape_dist_traveled",
-        ]
+        ["shape_pt_lon", "shape_pt_lat", "shape_pt_sequence", "shape_dist_traveled",]
     )
     assert set(geo_shapes.columns) == expect_cols
+
 
 def test_ungeometrize_shapes_0():
     shapes = cairns.shapes.copy()
@@ -53,6 +49,7 @@ def test_ungeometrize_shapes_0():
     # Data frames should agree on certain columns
     cols = ["shape_id", "shape_pt_lon", "shape_pt_lat"]
     assert_frame_equal(shapes2[cols], shapes[cols])
+
 
 def test_geometrize_shapes():
     g_1 = geometrize_shapes(cairns, use_utm=True)
@@ -67,6 +64,7 @@ def test_build_geometry_by_shape():
     assert isinstance(d, dict)
     assert len(d) == cairns.shapes.shape_id.nunique()
 
+
 def test_shapes_to_geojson():
     feed = cairns.copy()
     shape_ids = feed.shapes.shape_id.unique()[:2]
@@ -76,6 +74,7 @@ def test_shapes_to_geojson():
 
     with pytest.raises(ValueError):
         shapes_to_geojson(cairns_shapeless)
+
 
 def test_get_shapes_intersecting_geometry():
     feed = cairns.copy()
