@@ -11,10 +11,11 @@ language: python
 python:
   - "3.6"
   - "3.7"
+  - "3.8"
 
-# Required for Python 3.7 to work:
+# Required for Python 3.8 to work:
 sudo: required
-dist: xenial
+dist: bionic
 
 # Install dependencies
 before_install:
