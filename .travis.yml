@@ -3,7 +3,6 @@ notifications:
 addons:
   apt:
     packages:
-    - libgdal1i
     - gdal-bin
     - libgdal-dev
     - libspatialindex-dev
