@@ -13,7 +13,7 @@ import numpy as np
 import shapely.geometry as sg
 from shapely.ops import transform
 import utm
-import json2table as j2t
+import json2html as j2h
 
 from . import constants as cs
 
@@ -239,16 +239,7 @@ def get_utm_crs(lat: float, lon: float) -> Dict:
     latitude and longitude.
     """
     zone = utm.from_latlon(lat, lon)[2]
-    south = lat < 0
-    return {
-        "proj": "utm",
-        "zone": zone,
-        "south": south,
-        "ellps": "WGS84",
-        "datum": "WGS84",
-        "units": "m",
-        "no_defs": True,
-    }
+    return f"EPSG:326{zone:02d}"
 
 
 def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
@@ -495,8 +486,8 @@ def make_html(d: Dict) -> str:
     Convert the given dictionary into an HTML table (string) with
     two columns: keys of dictionary, values of dictionary.
     """
-    return j2t.convert(
-        d, table_attributes={"class": "table table-condensed table-hover"}
+    return j2h.json2html.convert(
+        json=d, table_attributes="class='table table-condensed table-hover'"
     )
 
 

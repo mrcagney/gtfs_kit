@@ -1,6 +1,14 @@
 Changes
 =======
 
+4.0.2, 2020-05-07
+-----------------
+- Fixed a CRS deprecation warning as requested in `pull request 5 <https://github.com/mrcagney/gtfs_kit/pull/5>`_.
+- Changed ``get_utm_crs()`` to output an EPSG CRS string, e.g. "EPSG:32655", instead of a PROJ4 definition string. Did this under the recommendation of the `GeoPandas docs <https://geopandas.org/projections.html#manually-specifying-the-crs>`_.
+- Fixed CRS mismatch warning in ``compute_screen_line_counts()``.
+- Updated dependencies and included Python 3.8 support.
+
+
 4.0.1, 2020-04-24
 -----------------
 - Bugfix: got ``read_feed()`` working on Windows thanks to `pull request 4 <https://github.com/mrcagney/gtfs_kit/pull/4>`_.

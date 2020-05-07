@@ -2,7 +2,7 @@ import pytest
 from pathlib import Path
 
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 import numpy as np
 
 from .context import gtfs_kit, DATA_DIR
@@ -29,26 +29,22 @@ def test_eq():
     assert Feed(dist_units="m") == Feed(dist_units="m")
 
     feed1 = Feed(
-        dist_units="m",
-        stops=pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"]),
+        dist_units="m", stops=pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"]),
     )
     assert feed1 == feed1
 
     feed2 = Feed(
-        dist_units="m",
-        stops=pd.DataFrame([[4, 3], [2, 1]], columns=["b", "a"]),
+        dist_units="m", stops=pd.DataFrame([[4, 3], [2, 1]], columns=["b", "a"]),
     )
     assert feed1 == feed2
 
     feed2 = Feed(
-        dist_units="m",
-        stops=pd.DataFrame([[3, 4], [2, 1]], columns=["b", "a"]),
+        dist_units="m", stops=pd.DataFrame([[3, 4], [2, 1]], columns=["b", "a"]),
     )
     assert feed1 != feed2
 
     feed2 = Feed(
-        dist_units="m",
-        stops=pd.DataFrame([[4, 3], [2, 1]], columns=["b", "a"]),
+        dist_units="m", stops=pd.DataFrame([[4, 3], [2, 1]], columns=["b", "a"]),
     )
     assert feed1 == feed2
 

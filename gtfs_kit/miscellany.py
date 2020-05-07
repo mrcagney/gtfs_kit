@@ -906,13 +906,12 @@ def compute_screen_line_counts(
     # Get intersection points of shapes and screen lines
     g0 = (
         # Only keep shapes that intersect screen lines to reduce computations
-        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"]))
-        .merge(screen_lines, on="screen_line_id")
-        .assign(geometry_x=lambda x: gpd.GeoSeries(x.geometry_x, crs=crs))
-        .set_geometry("geometry_x")
+        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
+            screen_lines, on="screen_line_id"
+        )
         # Compute intersection points
         .assign(
-            int_point=lambda x: x.geometry_x.intersection(
+            int_point=lambda x: gpd.GeoSeries(x.geometry_x, crs=crs).intersection(
                 gpd.GeoSeries(x.geometry_y, crs=crs)
             )
         )
