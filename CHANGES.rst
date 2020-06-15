@@ -1,6 +1,11 @@
 Changes
 =======
 
+?.?.?, 2020-??-??
+-----------------
+- Updated ``get_utm_crs()`` to differentiate between northern and southern hemispheres.
+
+
 4.0.2, 2020-05-07
 -----------------
 - Fixed a CRS deprecation warning as requested in `pull request 5 <https://github.com/mrcagney/gtfs_kit/pull/5>`_.
