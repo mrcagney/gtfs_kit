@@ -1,7 +1,7 @@
 Changes
 =======
 
-5.0.0, 2020-??-??
+5.0.0, 2020-06-16
 -----------------
 - Breaking change: refactored ``get_stops_in_polygon()`` to ``get_stops_in_area()``, which accepts a GeoDataFrame.
 - Breaking change: refactored ``restrict_to_polygon()`` to ``restrict_to_area()``, which accepts a GeoDataFrame.

@@ -2,7 +2,7 @@
 Functions about miscellany.
 """
 from collections import OrderedDict
-from typing import List, Optional, Tuple, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
