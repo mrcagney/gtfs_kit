@@ -5,7 +5,7 @@ from collections import Counter, OrderedDict
 from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 import json
 
-import geopandas as gpd
+import geopandas as gp
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
@@ -576,7 +576,7 @@ def build_stop_timetable(feed: "Feed", stop_id: str, dates: List[str]) -> pd.Dat
 
 def geometrize_stops_0(
     stops: pd.DataFrame, *, use_utm: bool = False
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame of Points
     and return the result, which will no longer have the columns ``'stop_lon'`` and
@@ -587,7 +587,7 @@ def geometrize_stops_0(
             geometry=lambda x: [sg.Point(p) for p in x[["stop_lon", "stop_lat"]].values]
         )
         .drop(["stop_lon", "stop_lat"], axis=1)
-        .pipe(lambda x: gpd.GeoDataFrame(x, crs=cs.WGS84))
+        .pipe(lambda x: gp.GeoDataFrame(x, crs=cs.WGS84))
     )
 
     if use_utm:
@@ -598,7 +598,7 @@ def geometrize_stops_0(
     return g
 
 
-def ungeometrize_stops_0(stops_g: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_stops_0(stops_g: gp.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_stops_0`.
 
@@ -614,7 +614,7 @@ def ungeometrize_stops_0(stops_g: gpd.GeoDataFrame) -> pd.DataFrame:
 
 def geometrize_stops(
     feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Given a Feed instance, convert its stops DataFrame to a GeoDataFrame of
     Points and return the result, which will no longer have the columns
@@ -669,37 +669,16 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
     return result
 
 
-def get_stops_in_polygon(
-    feed: "Feed",
-    polygon: sg.Polygon,
-    stops_g: Optional[gpd.GeoDataFrame] = None,
-    *,
-    geometrized: bool = False,
-) -> pd.DataFrame:
+def get_stops_in_area(feed: "Feed", area: gp.GeoDataFrame,) -> pd.DataFrame:
     """
     Return the subset of ``feed.stops`` that contains all stops that lie
-    within the given Shapely Polygon that is specified in
-    WGS84 coordinates.
-
-    If ``geometrized``, then return the stops as a GeoDataFrame.
-    Specifying ``stops_g`` will skip the first step of the
-    algorithm, namely, geometrizing ``feed.stops``.
+    within the given GeoDataFrame of polygons.
     """
-    if stops_g is not None:
-        f = stops_g.copy()
-    else:
-        f = geometrize_stops(feed)
-
-    cols = f.columns
-    f["hit"] = f["geometry"].within(polygon)
-    f = f.loc[lambda x: x.hit].filter(cols)
-
-    if geometrized:
-        result = f
-    else:
-        result = ungeometrize_stops_0(f)
-
-    return result
+    return (
+        gp.sjoin(geometrize_stops(feed), area.to_crs(cs.WGS84))
+        .filter(["stop_id"])
+        .merge(feed.stops)
+    )
 
 
 def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE):

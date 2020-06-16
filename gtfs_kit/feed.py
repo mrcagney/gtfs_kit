@@ -109,7 +109,7 @@ class Feed(object):
         geometrize_stops,
         build_geometry_by_stop,
         stops_to_geojson,
-        get_stops_in_polygon,
+        get_stops_in_area,
         map_stops,
     )
     from .stop_times import (
@@ -137,10 +137,11 @@ class Feed(object):
         compute_feed_time_series,
         create_shapes,
         compute_bounds,
-        compute_center,
+        compute_convex_hull,
+        compute_centroid,
         restrict_to_dates,
         restrict_to_routes,
-        restrict_to_polygon,
+        restrict_to_area,
         compute_screen_line_counts,
     )
     from .validators import (

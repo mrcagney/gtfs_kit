@@ -3,7 +3,7 @@ import itertools
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
-import shapely.geometry as sg
+import geopandas as gp
 import folium as fl
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_dates
@@ -283,7 +283,7 @@ def test_geometrize_stops_0():
     stops = cairns.stops.copy()
     geo_stops = geometrize_stops_0(stops, use_utm=True)
     # Should be a GeoDataFrame
-    assert isinstance(geo_stops, gpd.GeoDataFrame)
+    assert isinstance(geo_stops, gp.GeoDataFrame)
     # Should have the correct shape
     assert geo_stops.shape[0] == stops.shape[0]
     assert geo_stops.shape[1] == stops.shape[1] - 1
@@ -328,13 +328,12 @@ def test_stops_to_geojson():
         stops_to_geojson(feed, ["bingo"])
 
 
-def test_get_stops_in_polygon():
+def test_get_stops_in_area():
     feed = cairns.copy()
-    with (DATA_DIR / "cairns_square_stop_750070.geojson").open() as src:
-        polygon = sg.shape(json.load(src)["features"][0]["geometry"])
-    pstops = get_stops_in_polygon(feed, polygon)
-    stop_ids = ["750070"]
-    assert pstops["stop_id"].values == stop_ids
+    area = gp.read_file(DATA_DIR / "cairns_square_stop_750070.geojson")
+    stops = get_stops_in_area(feed, area)
+    expect_stop_ids = ["750070"]
+    assert stops["stop_id"].values == expect_stop_ids
 
 
 def test_map_stops():

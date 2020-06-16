@@ -4,7 +4,7 @@ import pandas as pd
 from pandas.testing import assert_series_equal
 import numpy as np
 import shapely.geometry as sg
-import geopandas as gpd
+import geopandas as gp
 
 from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import *
@@ -204,6 +204,17 @@ def test_compute_bounds():
     assert -18 < minlat < -15
     assert -18 < maxlat < -15
 
+    # A one-stop bounds should be the stop
+    stop_id = feed.stops.stop_id.iat[0]
+    minlon, minlat, maxlon, maxlat = compute_bounds(feed, [stop_id])
+    expect_lon, expect_lat = feed.stops.loc[
+        lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
+    ].values[0]
+    assert minlon == expect_lon
+    assert minlat == expect_lat
+    assert maxlon == expect_lon
+    assert maxlat == expect_lat
+
 
 def test_compute_convex_hull():
     feed = cairns.copy()
@@ -213,23 +224,36 @@ def test_compute_convex_hull():
     m = sg.MultiPoint(feed.stops[["stop_lon", "stop_lat"]].values)
     assert hull.contains(m)
 
+    # A one-stop hull should be the stop
+    stop_id = feed.stops.stop_id.iat[0]
+    hull = compute_convex_hull(feed, [stop_id])
+    lon, lat = hull.coords[0]
+    expect_lon, expect_lat = feed.stops.loc[
+        lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
+    ].values[0]
+    assert lon == expect_lon
+    assert lat == expect_lat
 
-def test_compute_center():
+
+def test_compute_centroid():
     feed = cairns.copy()
-    centers = [compute_center(feed), compute_center(feed, 20)]
+    centroid = compute_centroid(feed)
+    assert isinstance(centroid, sg.Point)
+    # Centroid should lie within bounds
+    lon, lat = centroid.coords[0]
     bounds = compute_bounds(feed)
-    for lon, lat in centers:
-        # Center should be in the ball park
-        assert bounds[0] < lon < bounds[2]
-        assert bounds[1] < lat < bounds[3]
+    assert bounds[0] < lon < bounds[2]
+    assert bounds[1] < lat < bounds[3]
 
-    # Test edge case of no stop stats on the sample date
-    feed.calendar = None
-    feed.calendar_dates = None
-    center = compute_center(feed)
-    # Center should be in the ball park
-    assert bounds[0] < center[0] < bounds[2]
-    assert bounds[1] < center[1] < bounds[3]
+    # A one-stop centroid should be the stop
+    stop_id = feed.stops.stop_id.iat[0]
+    centroid = compute_centroid(feed, [stop_id])
+    lon, lat = centroid.coords[0]
+    expect_lon, expect_lat = feed.stops.loc[
+        lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
+    ].values[0]
+    assert lon == expect_lon
+    assert lat == expect_lat
 
 
 def test_restrict_to_dates():
@@ -277,11 +301,10 @@ def test_restrict_to_routes():
     assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
 
 
-def test_restrict_to_polygon():
+def test_restrict_to_area():
     feed1 = cairns.copy()
-    with (DATA_DIR / "cairns_square_stop_750070.geojson").open() as src:
-        polygon = sg.shape(json.load(src)["features"][0]["geometry"])
-    feed2 = restrict_to_polygon(feed1, polygon)
+    area = gp.read_file(DATA_DIR / "cairns_square_stop_750070.geojson")
+    feed2 = restrict_to_area(feed1, area)
     # Should have correct routes
     rsns = ["120", "120N"]
     assert set(feed2.routes["route_short_name"]) == set(rsns)
@@ -304,7 +327,7 @@ def test_compute_screen_line_counts():
 
     # Load screen line
     path = DATA_DIR / "cairns_screen_lines.geojson"
-    screen_lines = gpd.read_file(path)
+    screen_lines = gp.read_file(path)
     f = compute_screen_line_counts(feed, screen_lines, dates)
 
     # Should have correct columns
