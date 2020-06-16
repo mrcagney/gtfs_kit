@@ -1,9 +1,16 @@
 Changes
 =======
 
-?.?.?, 2020-??-??
+5.0.0, 2020-06-16
 -----------------
+- Breaking change: refactored ``get_stops_in_polygon()`` to ``get_stops_in_area()``, which accepts a GeoDataFrame.
+- Breaking change: refactored ``restrict_to_polygon()`` to ``restrict_to_area()``, which accepts a GeoDataFrame.
+- Breaking changes: refactored ``compute_center()`` to ``compute_centroid()``.
 - Updated ``get_utm_crs()`` to differentiate between northern and southern hemispheres.
+- Added more defensive copying after subsetting some DataFrames.
+- Fixed calendar_dates table in ``restrict_to_dates()``.
+- Added ``compute_convex_hull()`` to Feed methods. Forgot about that function.
+- Switched from using route IDs to using route short names for layer names in ``map_routes()``.
 
 
 4.0.2, 2020-05-07

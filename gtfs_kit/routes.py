@@ -5,7 +5,7 @@ from collections import OrderedDict
 from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 import json
 
-import geopandas as gpd
+import geopandas as gp
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
@@ -685,7 +685,7 @@ def geometrize_routes(
     *,
     use_utm: bool = False,
     split_directions: bool = False,
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Given a Feed, return a GeoDataFrame with all the columns of ``feed.routes``
     plus a geometry column of (Multi)LineStrings, each of which represents the
@@ -737,7 +737,7 @@ def geometrize_routes(
         .apply(merge_lines)
         .reset_index()
         .merge(feed.routes)
-        .pipe(gpd.GeoDataFrame, crs=crs)
+        .pipe(gp.GeoDataFrame, crs=crs)
     )
 
 
@@ -816,7 +816,15 @@ def map_routes(
         collection = feed.routes_to_geojson(
             route_ids=[route_id], include_stops=include_stops
         )
-        group = fl.FeatureGroup(name=f"Route {route_id}")
+
+        # Use route short name for group name if possible; otherwise use route ID
+        route_name = route_id
+        for f in collection["features"]:
+            if "route_short_name" in f["properties"]:
+                route_name = f["properties"]["route_short_name"]
+                break
+
+        group = fl.FeatureGroup(name=f"Route {route_name}")
         color = colors[i]
 
         for f in collection["features"]:

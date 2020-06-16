@@ -5,7 +5,7 @@ from collections import OrderedDict
 import json
 from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
 
-import geopandas as gpd
+import geopandas as gp
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
@@ -409,7 +409,7 @@ def locate_trips(feed: "Feed", date: str, times: List[str]) -> pd.DataFrame:
 
 def geometrize_trips(
     feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Return a GeoDataFrame with the columns in ``feed.trips`` and a geometry column
     of LineStrings, each of which represents the shape of the corresponding trip.
