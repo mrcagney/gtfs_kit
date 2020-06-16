@@ -13,7 +13,7 @@ import numpy as np
 import shapely.geometry as sg
 from shapely.ops import transform
 import utm
-import json2table as j2t
+import json2html as j2h
 
 from . import constants as cs
 
@@ -234,22 +234,15 @@ def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
 
 def get_utm_crs(lat: float, lon: float) -> Dict:
     """
-    Return a GeoPandas coordinate reference system (CRS) dictionary
+    Return a GeoPandas coordinate reference system (CRS) string
     corresponding to the UTM projection appropriate to the given WGS84
     latitude and longitude.
+
+    Code inspired by https://github.com/Turbo87/utm/issues/51.
     """
     zone = utm.from_latlon(lat, lon)[2]
-    south = lat < 0
-    return {
-        "proj": "utm",
-        "zone": zone,
-        "south": south,
-        "ellps": "WGS84",
-        "datum": "WGS84",
-        "units": "m",
-        "no_defs": True,
-    }
-
+    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"    
+    return result
 
 def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
     """
@@ -495,8 +488,8 @@ def make_html(d: Dict) -> str:
     Convert the given dictionary into an HTML table (string) with
     two columns: keys of dictionary, values of dictionary.
     """
-    return j2t.convert(
-        d, table_attributes={"class": "table table-condensed table-hover"}
+    return j2h.json2html.convert(
+        json=d, table_attributes="class='table table-condensed table-hover'"
     )
 
 

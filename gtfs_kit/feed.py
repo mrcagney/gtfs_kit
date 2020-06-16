@@ -21,10 +21,11 @@ import tempfile
 import shutil
 from copy import deepcopy
 import zipfile
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 from pandas.core.frame import DataFrame
+import requests
 
 from . import constants as cs
 from . import helpers as hp
@@ -108,7 +109,7 @@ class Feed(object):
         geometrize_stops,
         build_geometry_by_stop,
         stops_to_geojson,
-        get_stops_in_polygon,
+        get_stops_in_area,
         map_stops,
     )
     from .stop_times import (
@@ -136,10 +137,11 @@ class Feed(object):
         compute_feed_time_series,
         create_shapes,
         compute_bounds,
-        compute_center,
+        compute_convex_hull,
+        compute_centroid,
         restrict_to_dates,
         restrict_to_routes,
-        restrict_to_polygon,
+        restrict_to_area,
         compute_screen_line_counts,
     )
     from .validators import (
@@ -332,11 +334,55 @@ class Feed(object):
 
         return other
 
+    def write(self, path: Path, ndigits: int = 6) -> None:
+        """
+        Write this Feed to the given path.
+        If the path end in '.zip', then write the feed as a zip archive.
+        Otherwise assume the path is a directory, and write the feed as a
+        collection of CSV files to that directory, creating the directory
+        if it does not exist.
+        Round all decimals to ``ndigits`` decimal places.
+        All distances will be the distance units ``feed.dist_units``.
+        """
+        path = Path(path)
+
+        if path.suffix == ".zip":
+            # Write to temporary directory before zipping
+            zipped = True
+            tmp_dir = tempfile.TemporaryDirectory()
+            new_path = Path(tmp_dir.name)
+        else:
+            zipped = False
+            if not path.exists():
+                path.mkdir()
+            new_path = path
+
+        for table in cs.GTFS_REF["table"].unique():
+            f = getattr(self, table)
+            if f is None:
+                continue
+
+            f = f.copy()
+            # Some columns need to be output as integers.
+            # If there are NaNs in any such column,
+            # then Pandas will format the column as float, which we don't want.
+            f_int_cols = set(cs.INT_COLS) & set(f.columns)
+            for s in f_int_cols:
+                f[s] = f[s].fillna(-1).astype(int).astype(str).replace("-1", "")
+            p = new_path / (table + ".txt")
+            f.to_csv(str(p), index=False, float_format=f"%.{ndigits}f")
+
+        # Zip directory
+        if zipped:
+            basename = str(path.parent / path.stem)
+            shutil.make_archive(basename, format="zip", root_dir=tmp_dir.name)
+            tmp_dir.cleanup()
+
 
 # -------------------------------------
 # Functions about input and output
 # -------------------------------------
-def list_gtfs(path: Path) -> DataFrame:
+def list_feed(path: Path) -> DataFrame:
     """
     Given a path (string or Path object) to a GTFS zip file or
     directory, record the file names and file sizes of the contents,
@@ -372,18 +418,20 @@ def list_gtfs(path: Path) -> DataFrame:
     return pd.DataFrame(rows)
 
 
-def read_gtfs(path: Path, dist_units: str) -> "Feed":
+def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
     """
+    Helper function for :func:`read_feed`.
     Create a Feed instance from the given path and given distance units.
     The path should be a directory containing GTFS text files or a
     zip file that unzips as a collection of GTFS text files
     (and not as a directory containing GTFS text files).
     The distance units given must lie in :const:`constants.dist_units`
 
-    Notes
-    -----
-    - Ignore non-GTFS files
+    Notes:
+
+    - Ignore non-GTFS files in the feed
     - Automatically strip whitespace from the column names in GTFS files
+
     """
     path = Path(path)
     if not path.exists():
@@ -426,46 +474,49 @@ def read_gtfs(path: Path, dist_units: str) -> "Feed":
     return Feed(**feed_dict)
 
 
-def write_gtfs(feed: "Feed", path: Path, ndigits: int = 6) -> None:
+def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
     """
-    Export the given feed to the given path.
-    If the path end in '.zip', then write the feed as a zip archive.
-    Otherwise assume the path is a directory, and write the feed as a
-    collection of CSV files to that directory, creating the directory
-    if it does not exist.
-    Round all decimals to ``ndigits`` decimal places.
-    All distances will be the distance units ``feed.dist_units``.
-    """
-    path = Path(path)
+    Helper function for :func:`read_feed`.
+    Create a Feed instance from the given URL and given distance units.
+    Assume the URL is valid and let the Requests library raise any errors.
 
-    if path.suffix == ".zip":
-        # Write to temporary directory before zipping
-        zipped = True
-        tmp_dir = tempfile.TemporaryDirectory()
-        new_path = Path(tmp_dir.name)
+    Notes:
+
+    - Ignore non-GTFS files in the feed
+    - Automatically strip whitespace from the column names in GTFS files
+
+
+    """
+    f = tempfile.NamedTemporaryFile(delete=False)
+    with requests.get(url) as r:
+        f.write(r._content)
+    f.close()
+    feed = _read_feed_from_path(f.name, dist_units=dist_units)
+    Path(f.name).unlink()
+    return feed
+
+
+def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
+    """
+    Create a Feed instance from the given path or URL and given distance units.
+    If the path exists, then call :func:`_read_feed_from_path`.
+    Else if the URL has OK status according to Requests, then call
+    :func:`_read_feed_from_url`.
+    Else raise a ValueError.
+
+    Notes:
+
+    - Ignore non-GTFS files in the feed
+    - Automatically strip whitespace from the column names in GTFS files
+
+    """
+    try:
+        path_exists = Path(path_or_url).exists()
+    except OSError:
+        path_exists = False
+    if path_exists:
+        return _read_feed_from_path(path_or_url, dist_units=dist_units)
+    elif requests.head(path_or_url).ok:
+        return _read_feed_from_url(path_or_url, dist_units=dist_units)
     else:
-        zipped = False
-        if not path.exists():
-            path.mkdir()
-        new_path = path
-
-    for table in cs.GTFS_REF["table"].unique():
-        f = getattr(feed, table)
-        if f is None:
-            continue
-
-        f = f.copy()
-        # Some columns need to be output as integers.
-        # If there are NaNs in any such column,
-        # then Pandas will format the column as float, which we don't want.
-        f_int_cols = set(cs.INT_COLS) & set(f.columns)
-        for s in f_int_cols:
-            f[s] = f[s].fillna(-1).astype(int).astype(str).replace("-1", "")
-        p = new_path / (table + ".txt")
-        f.to_csv(str(p), index=False, float_format=f"%.{ndigits}f")
-
-    # Zip directory
-    if zipped:
-        basename = str(path.parent / path.stem)
-        shutil.make_archive(basename, format="zip", root_dir=tmp_dir.name)
-        tmp_dir.cleanup()
+        raise ValueError("Path does not exist or URL has bad status.")

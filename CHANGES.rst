@@ -1,6 +1,37 @@
 Changes
 =======
 
+5.0.0, 2020-06-16
+-----------------
+- Breaking change: refactored ``get_stops_in_polygon()`` to ``get_stops_in_area()``, which accepts a GeoDataFrame.
+- Breaking change: refactored ``restrict_to_polygon()`` to ``restrict_to_area()``, which accepts a GeoDataFrame.
+- Breaking changes: refactored ``compute_center()`` to ``compute_centroid()``.
+- Updated ``get_utm_crs()`` to differentiate between northern and southern hemispheres.
+- Added more defensive copying after subsetting some DataFrames.
+- Fixed calendar_dates table in ``restrict_to_dates()``.
+- Added ``compute_convex_hull()`` to Feed methods. Forgot about that function.
+- Switched from using route IDs to using route short names for layer names in ``map_routes()``.
+
+
+4.0.2, 2020-05-07
+-----------------
+- Fixed a CRS deprecation warning as requested in `pull request 5 <https://github.com/mrcagney/gtfs_kit/pull/5>`_.
+- Changed ``get_utm_crs()`` to output an EPSG CRS string, e.g. "EPSG:32655", instead of a PROJ4 definition string. Did this under the recommendation of the `GeoPandas docs <https://geopandas.org/projections.html#manually-specifying-the-crs>`_.
+- Fixed CRS mismatch warning in ``compute_screen_line_counts()``.
+- Updated dependencies and included Python 3.8 support.
+
+
+4.0.1, 2020-04-24
+-----------------
+- Bugfix: got ``read_feed()`` working on Windows thanks to `pull request 4 <https://github.com/mrcagney/gtfs_kit/pull/4>`_.
+
+
+4.0.0, 2020-03-06
+-----------------
+- Breaking changes: renamed ``list_gtfs()`` to ``list_feed()``, ``read_gtfs()`` to ``read_feed()``, and ``write_gtfs()`` to ``write()`` and made it a Feed method.
+- Made ``read_feed()`` accept URLs as requested in `pull request 3 <https://github.com/mrcagney/gtfs_kit/pull/3>`_.
+
+
 3.0.1, 2020-01-16
 -----------------
 - Optimized function ``geometrize_routes()`` by ignoring duplicate shapes.

@@ -15,8 +15,8 @@ import pytest
 
 # Load/create test feeds
 DATA_DIR = Path("data")
-sample = gtfs_kit.read_gtfs(DATA_DIR / "sample_gtfs.zip", dist_units="km")
-cairns = gtfs_kit.read_gtfs(DATA_DIR / "cairns_gtfs.zip", dist_units="km")
+sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
+cairns = gtfs_kit.read_feed(DATA_DIR / "cairns_gtfs.zip", dist_units="km")
 cairns_shapeless = cairns.copy()
 cairns_shapeless.shapes = None
 t = cairns_shapeless.trips
