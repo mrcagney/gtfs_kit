@@ -1,7 +1,8 @@
-import pytest
-import pandas as pd
 import itertools
 
+import pytest
+import pandas as pd
+import geopandas as gp
 import folium as fl
 
 from .context import gtfs_kit, cairns, cairns_shapeless, cairns_dates, cairns_trip_stats
@@ -290,12 +291,12 @@ def test_geometrize_routes():
     feed = cairns.copy()
     route_ids = feed.routes.route_id.loc[:1]
     g = geometrize_routes(feed, route_ids, use_utm=True)
-    assert isinstance(g, gpd.GeoDataFrame)
+    assert isinstance(g, gp.GeoDataFrame)
     assert g.shape[0] == len(route_ids)
     assert g.crs != WGS84
 
     g = geometrize_routes(feed, route_ids, split_directions=True)
-    assert isinstance(g, gpd.GeoDataFrame)
+    assert isinstance(g, gp.GeoDataFrame)
     assert g.shape[0] == 2 * len(route_ids)
 
     with pytest.raises(ValueError):
