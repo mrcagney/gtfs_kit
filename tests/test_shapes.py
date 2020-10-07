@@ -1,5 +1,6 @@
 import pytest
 from pandas.testing import assert_frame_equal
+import geopandas as gp
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import *
@@ -28,7 +29,7 @@ def test_geometrize_shapes_0():
     shapes = cairns.shapes.copy()
     geo_shapes = geometrize_shapes_0(shapes, use_utm=True)
     # Should be a GeoDataFrame
-    assert isinstance(geo_shapes, gpd.GeoDataFrame)
+    assert isinstance(geo_shapes, gp.GeoDataFrame)
     # Should have the correct shape
     assert geo_shapes.shape[0] == shapes["shape_id"].nunique()
     assert geo_shapes.shape[1] == shapes.shape[1] - 2

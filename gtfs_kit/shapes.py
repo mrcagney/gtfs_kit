@@ -4,7 +4,7 @@ Functions about shapes.
 from typing import Optional, Iterable, Dict, TYPE_CHECKING
 import json
 
-import geopandas as gpd
+import geopandas as gp
 import pandas as pd
 import numpy as np
 import utm
@@ -67,7 +67,7 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
 
 def geometrize_shapes_0(
     shapes: pd.DataFrame, *, use_utm: bool = False
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Given a GTFS shapes DataFrame, convert it to a GeoDataFrame of LineStrings
     and return the result, which will no longer have the columns
@@ -84,7 +84,7 @@ def geometrize_shapes_0(
         return pd.Series(d)
 
     g = f.groupby("shape_id").apply(my_agg).reset_index()
-    g = gpd.GeoDataFrame(g, crs=cs.WGS84)
+    g = gp.GeoDataFrame(g, crs=cs.WGS84)
 
     if use_utm:
         lat, lon = f[["shape_pt_lat", "shape_pt_lon"]].values[0]
@@ -94,7 +94,7 @@ def geometrize_shapes_0(
     return g
 
 
-def ungeometrize_shapes_0(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_shapes_0(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_shapes_0`.
 
@@ -120,7 +120,7 @@ def ungeometrize_shapes_0(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
 
 def geometrize_shapes(
     feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
-) -> gpd.GeoDataFrame:
+) -> gp.GeoDataFrame:
     """
     Given a Feed instance, convert its shapes DataFrame to a GeoDataFrame of
     LineStrings and return the result, which will no longer have the columns
@@ -149,7 +149,7 @@ def build_geometry_by_shape(
     Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
     """
     return dict(
-        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=True)
+        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=use_utm)
         .filter(["shape_id", "geometry"])
         .values
     )
@@ -181,7 +181,7 @@ def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -
 def get_shapes_intersecting_geometry(
     feed: "Feed",
     geometry: sg.base.BaseGeometry,
-    shapes_g: Optional[gpd.GeoDataFrame] = None,
+    shapes_g: Optional[gp.GeoDataFrame] = None,
     *,
     geometrized: bool = False
 ) -> pd.DataFrame:

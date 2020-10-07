@@ -234,13 +234,15 @@ def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
 
 def get_utm_crs(lat: float, lon: float) -> Dict:
     """
-    Return a GeoPandas coordinate reference system (CRS) dictionary
+    Return a GeoPandas coordinate reference system (CRS) string
     corresponding to the UTM projection appropriate to the given WGS84
     latitude and longitude.
+
+    Code inspired by https://github.com/Turbo87/utm/issues/51.
     """
     zone = utm.from_latlon(lat, lon)[2]
-    return f"EPSG:326{zone:02d}"
-
+    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"    
+    return result
 
 def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
     """

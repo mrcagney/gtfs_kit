@@ -47,8 +47,8 @@ def test_get_convert_dist():
 
 
 def test_get_utm_crs():
-    assert get_utm_crs(lat=0, lon=-175) == "EPSG:32601"
-    assert get_utm_crs(lat=-36.840556, lon=174.4) == "EPSG:32660"
+    assert get_utm_crs(lat=10, lon=-175) == "EPSG:32601"
+    assert get_utm_crs(lat=-36.840556, lon=174.4) == "EPSG:32760"
 
 
 def test_get_segment_length():

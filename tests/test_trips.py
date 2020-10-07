@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-
+import geopandas as gp
 import folium as fl
 
 from .context import (
@@ -173,7 +173,7 @@ def test_geometrize_trips():
     feed = cairns.copy()
     trip_ids = feed.trips.trip_id.loc[:1]
     g = geometrize_trips(feed, trip_ids, use_utm=True)
-    assert isinstance(g, gpd.GeoDataFrame)
+    assert isinstance(g, gp.GeoDataFrame)
     assert g.shape[0] == len(trip_ids)
     assert g.crs != WGS84
 
