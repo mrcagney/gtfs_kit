@@ -1,5 +1,9 @@
 Changes
 =======
+5.0.1, 2020-10-08
+-----------------
+- Bugfix: properly set the ``use_utm`` flag in ``build_geometry_by_shape()`` and ``build_geometry_by_stop()``.
+
 
 5.0.0, 2020-06-16
 -----------------
