@@ -149,7 +149,7 @@ def build_geometry_by_shape(
     Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
     """
     return dict(
-        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=True)
+        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=use_utm)
         .filter(["shape_id", "geometry"])
         .values
     )

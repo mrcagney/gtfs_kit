@@ -638,7 +638,7 @@ def build_geometry_by_stop(
     Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>.
     """
     return dict(
-        geometrize_stops(feed, stop_ids=stop_ids, use_utm=True)
+        geometrize_stops(feed, stop_ids=stop_ids, use_utm=use_utm)
         .filter(["stop_id", "geometry"])
         .values
     )
