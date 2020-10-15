@@ -14,7 +14,7 @@ python:
 
 # Required for Python 3.8 to work:
 sudo: required
-dist: bionic
+dist: focal
 
 # Install dependencies
 before_install:
