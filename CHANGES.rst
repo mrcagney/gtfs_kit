@@ -1,5 +1,11 @@
 Changes
 =======
+
+5.0.2, 2020-10-16
+-----------------
+- Specified in more detail the Rtree dependency.
+
+
 5.0.1, 2020-10-08
 -----------------
 - Bugfix: properly set the ``use_utm`` flag in ``build_geometry_by_shape()`` and ``build_geometry_by_stop()``.

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gtfs_kit"
-version = "5.0.1"
+version = "5.0.2"
 description = "A Python 3.6.1+ library for analyzing GTFS feeds."
 authors = ["Alex Raichev <araichev@mrcagney.com>"]
 readme = "README.rst"
@@ -17,7 +17,7 @@ pycountry = "<20"
 utm = "<1"
 json2html = "<2"
 geopandas = "<1"
-rtree = "^0.8"
+rtree = ">= 0.8.3"
 folium = "<1"
 requests = "^2.23"
 
