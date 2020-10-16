@@ -17,7 +17,7 @@ pycountry = "<20"
 utm = "<1"
 json2html = "<2"
 geopandas = "<1"
-rtree = "<1"
+rtree = "^0.8"
 folium = "<1"
 requests = "^2.23"
 
