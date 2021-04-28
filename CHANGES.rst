@@ -3,7 +3,7 @@ Changes
 
 5.1.0, 2021-04-29
 -----------------
-- Added support for Python 3.9.
+- Added support for Python 3.9 and dropped support for Python 3.6.
 
 
 5.0.2, 2020-10-16
