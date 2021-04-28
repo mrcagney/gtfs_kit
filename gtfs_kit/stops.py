@@ -1,8 +1,9 @@
 """
 Functions about stops.
 """
-from collections import Counter, OrderedDict
-from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+from __future__ import annotations
+from collections import Counter
+from typing import Optional, Iterable, TYPE_CHECKING
 import json
 
 import geopandas as gp
@@ -87,7 +88,7 @@ def compute_stop_stats_0(
     # Compute stats for each stop
     def compute_stop_stats(group):
         # Operate on the group of all stop times for an individual stop
-        d = OrderedDict()
+        d = dict()
         d["num_routes"] = group["route_id"].unique().size
         d["num_trips"] = group.shape[0]
         d["start_time"] = group["departure_time"].min()
@@ -275,7 +276,7 @@ def get_stops(
     return s
 
 
-def compute_stop_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
+def compute_stop_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     """
     Mark stops as active or inactive on the given dates (YYYYMMDD date strings).
     A stop is *active* on a given date if some trips that starts on the
@@ -313,8 +314,8 @@ def compute_stop_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
 
 def compute_stop_stats(
     feed: "Feed",
-    dates: List[str],
-    stop_ids: Optional[List[str]] = None,
+    dates: list[str],
+    stop_ids: Optional[list[str]] = None,
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
@@ -439,8 +440,8 @@ def build_zero_stop_time_series(
 
 def compute_stop_time_series(
     feed: "Feed",
-    dates: List[str],
-    stop_ids: Optional[List[str]] = None,
+    dates: list[str],
+    stop_ids: Optional[list[str]] = None,
     freq: str = "5Min",
     *,
     split_directions: bool = False,
@@ -544,7 +545,7 @@ def compute_stop_time_series(
     return f.rename_axis("datetime", axis="index")
 
 
-def build_stop_timetable(feed: "Feed", stop_id: str, dates: List[str]) -> pd.DataFrame:
+def build_stop_timetable(feed: "Feed", stop_id: str, dates: list[str]) -> pd.DataFrame:
     """
     Return a DataFrame containing the timetable for the given stop ID
     and dates (YYYYMMDD date strings)
@@ -633,7 +634,7 @@ def geometrize_stops(
 
 def build_geometry_by_stop(
     feed: "Feed", stop_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
-) -> Dict:
+) -> dict:
     """
     Return a dictionary of the form <stop ID> -> <Shapely Point representing stop>.
     """
@@ -644,7 +645,7 @@ def build_geometry_by_stop(
     )
 
 
-def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> Dict:
+def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> dict:
     """
     Return a GeoJSON FeatureCollection of Point features
     representing ``feed.stops``.
@@ -669,7 +670,10 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
     return result
 
 
-def get_stops_in_area(feed: "Feed", area: gp.GeoDataFrame,) -> pd.DataFrame:
+def get_stops_in_area(
+    feed: "Feed",
+    area: gp.GeoDataFrame,
+) -> pd.DataFrame:
     """
     Return the subset of ``feed.stops`` that contains all stops that lie
     within the given GeoDataFrame of polygons.
@@ -681,7 +685,7 @@ def get_stops_in_area(feed: "Feed", area: gp.GeoDataFrame,) -> pd.DataFrame:
     )
 
 
-def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: Dict = STOP_STYLE):
+def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: dict = STOP_STYLE):
     """
     Return a Folium map showing the given stops of this Feed.
     If some of the given stop IDs are not found in the feed, then raise a ValueError.

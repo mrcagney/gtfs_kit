@@ -1,7 +1,8 @@
 """
 Functions about stop times.
 """
-from typing import Optional, List, TYPE_CHECKING
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
@@ -44,7 +45,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
 
     Set the first distance to 0, the last to the length of the trip shape,
     and leave the remaining ones computed above.
-    Choose the longest increasing subsequence of that new set of 
+    Choose the longest increasing subsequence of that new set of
     distances and use them and their corresponding departure times to linearly
     interpolate the rest of the distances.
     """
@@ -127,7 +128,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     return new_feed
 
 
-def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> List[str]:
+def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> list[str]:
     """
     Return the first departure time and last arrival time
     (HH:MM:SS time strings) listed in ``feed.stop_times``, respectively.
