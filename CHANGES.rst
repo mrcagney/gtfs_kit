@@ -1,6 +1,11 @@
 Changes
 =======
 
+5.1.0, 2021-04-29
+-----------------
+- Added support for Python 3.9.
+
+
 5.0.2, 2020-10-16
 -----------------
 - Specified in more detail the Rtree dependency.

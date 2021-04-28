@@ -1,9 +1,9 @@
 """
 Functions about trips.
 """
-from collections import OrderedDict
+from __future__ import annotations
 import json
-from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, TYPE_CHECKING
 
 import geopandas as gp
 import pandas as pd
@@ -105,7 +105,7 @@ def get_trips(
     return f
 
 
-def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
+def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     """
     Mark trip as active or inactive on the given dates (YYYYMMDD date strings)
     as computed by the function :func:`is_active_trip`.
@@ -136,7 +136,7 @@ def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
     return f[["trip_id"] + list(dates)]
 
 
-def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
+def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
     """
     Given a list of dates (YYYYMMDD date strings), return the first date that has the
     maximum number of active trips.
@@ -148,7 +148,7 @@ def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
 
 def compute_trip_stats(
     feed: "Feed",
-    route_ids: Optional[List[str]] = None,
+    route_ids: Optional[list[str]] = None,
     *,
     compute_dist_from_shapes: bool = False,
 ) -> pd.DataFrame:
@@ -228,7 +228,7 @@ def compute_trip_stats(
     g = f.groupby("trip_id")
 
     def my_agg(group):
-        d = OrderedDict()
+        d = dict()
         d["route_id"] = group["route_id"].iat[0]
         d["route_short_name"] = group["route_short_name"].iat[0]
         d["route_type"] = group["route_type"].iat[0]
@@ -321,7 +321,7 @@ def compute_trip_stats(
     return h.sort_values(["route_id", "direction_id", "start_time"])
 
 
-def locate_trips(feed: "Feed", date: str, times: List[str]) -> pd.DataFrame:
+def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
     """
     Return the positions of all trips active on the
     given date (YYYYMMDD date string) and times (HH:MM:SS time strings,
@@ -439,7 +439,7 @@ def trips_to_geojson(
     trip_ids: Optional[Iterable[str]] = None,
     *,
     include_stops: bool = False,
-) -> Dict:
+) -> dict:
     """
     Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
     The coordinates reference system is the default one for GeoJSON,
@@ -482,7 +482,7 @@ def trips_to_geojson(
 def map_trips(
     feed: "Feed",
     trip_ids: Iterable[str],
-    color_palette: List[str] = cs.COLORS_SET2,
+    color_palette: list[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = False,
     include_arrows: bool = False,

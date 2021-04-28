@@ -1,8 +1,8 @@
 """
 Functions about routes.
 """
-from collections import OrderedDict
-from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+from __future__ import annotations
+from typing import Optional, Iterable, TYPE_CHECKING
 import json
 
 import geopandas as gp
@@ -106,7 +106,7 @@ def compute_route_stats_0(
     def compute_route_stats_split_directions(group):
         # Take this group of all trips stats for a single route
         # and compute route-level stats.
-        d = OrderedDict()
+        d = dict()
         d["route_short_name"] = group["route_short_name"].iat[0]
         d["route_type"] = group["route_type"].iat[0]
         d["num_trips"] = group.shape[0]
@@ -147,7 +147,7 @@ def compute_route_stats_0(
         return pd.Series(d)
 
     def compute_route_stats(group):
-        d = OrderedDict()
+        d = dict()
         d["route_short_name"] = group["route_short_name"].iat[0]
         d["route_type"] = group["route_type"].iat[0]
         d["num_trips"] = group.shape[0]
@@ -429,7 +429,7 @@ def get_routes(
 def compute_route_stats(
     feed: "Feed",
     trip_stats_subset: pd.DataFrame,
-    dates: List[str],
+    dates: list[str],
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
@@ -546,7 +546,7 @@ def build_zero_route_time_series(
 def compute_route_time_series(
     feed: "Feed",
     trip_stats_subset: pd.DataFrame,
-    dates: List[str],
+    dates: list[str],
     freq: str = "5Min",
     *,
     split_directions: bool = False,
@@ -636,7 +636,7 @@ def compute_route_time_series(
 
 
 def build_route_timetable(
-    feed: "Feed", route_id: str, dates: List[str]
+    feed: "Feed", route_id: str, dates: list[str]
 ) -> pd.DataFrame:
     """
     Return a timetable for the given route and dates (YYYYMMDD date strings).
@@ -747,7 +747,7 @@ def routes_to_geojson(
     *,
     split_directions: bool = False,
     include_stops: bool = False,
-) -> Dict:
+) -> dict:
     """
     Return a GeoJSON FeatureCollection of MultiLineString features representing this Feed's routes.
     The coordinates reference system is the default one for GeoJSON,
@@ -792,7 +792,7 @@ def routes_to_geojson(
 def map_routes(
     feed: "Feed",
     route_ids: Iterable[str],
-    color_palette: List[str] = cs.COLORS_SET2,
+    color_palette: list[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = False,
 ):

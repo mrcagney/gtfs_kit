@@ -1,8 +1,9 @@
 """
 Functions useful across modules.
 """
+from __future__ import annotations
 import datetime as dt
-from typing import Optional, Dict, List, Union, Callable
+from typing import Optional, Union, Callable
 import copy
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
@@ -158,7 +159,7 @@ def get_max_runs(x) -> np.array:
     # return run_starts[idx], run_ends[idx]
 
 
-def get_peak_indices(times: List, counts: List) -> np.array:
+def get_peak_indices(times: list, counts: list) -> np.array:
     """
     Given an increasing list of times as seconds past midnight and a
     list of trip counts at those respective times,
@@ -232,7 +233,7 @@ def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
         return False
 
 
-def get_utm_crs(lat: float, lon: float) -> Dict:
+def get_utm_crs(lat: float, lon: float) -> dict:
     """
     Return a GeoPandas coordinate reference system (CRS) string
     corresponding to the UTM projection appropriate to the given WGS84
@@ -241,8 +242,9 @@ def get_utm_crs(lat: float, lon: float) -> Dict:
     Code inspired by https://github.com/Turbo87/utm/issues/51.
     """
     zone = utm.from_latlon(lat, lon)[2]
-    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"    
+    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"
     return result
+
 
 def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
     """
@@ -286,7 +288,7 @@ def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:
 
 
 def combine_time_series(
-    time_series_dict: Dict[str, pd.DataFrame],
+    time_series_dict: dict[str, pd.DataFrame],
     kind: str,
     *,
     split_directions: bool = False,
@@ -483,7 +485,7 @@ def restack_time_series(unstacked_time_series: pd.DataFrame) -> pd.DataFrame:
     return g
 
 
-def make_html(d: Dict) -> str:
+def make_html(d: dict) -> str:
     """
     Convert the given dictionary into an HTML table (string) with
     two columns: keys of dictionary, values of dictionary.
@@ -493,7 +495,7 @@ def make_html(d: Dict) -> str:
     )
 
 
-def drop_feature_ids(collection: Dict) -> Dict:
+def drop_feature_ids(collection: dict) -> dict:
     """
     Given a GeoJSON FeatureCollection, remove the ``'id'`` attribute of each
     Feature, if it exists.

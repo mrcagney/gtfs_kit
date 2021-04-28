@@ -1,10 +1,11 @@
 """
 Functions about validation.
 """
+from __future__ import annotations
 import re
 import pytz
 import datetime as dt
-from typing import Optional, List, Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 
 import pycountry
 import numpy as np
@@ -23,13 +24,9 @@ TIME_PATTERN2 = re.compile(r"^\d:\d\d:\d\d$")
 DATE_FORMAT = "%Y%m%d"
 TIMEZONES = set(pytz.all_timezones)
 # ISO639-1 language codes, both lower and upper case
-LANGS = set(
-    [lang.alpha_2 for lang in pycountry.languages if hasattr(lang, "alpha_2")]
-)
+LANGS = set([lang.alpha_2 for lang in pycountry.languages if hasattr(lang, "alpha_2")])
 LANGS |= set(x.upper() for x in LANGS)
-CURRENCIES = set(
-    [c.alpha_3 for c in pycountry.currencies if hasattr(c, "alpha_3")]
-)
+CURRENCIES = set([c.alpha_3 for c in pycountry.currencies if hasattr(c, "alpha_3")])
 URL_PATTERN = re.compile(
     r"^(?:http)s?://"  # http:// or https://
     r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|"  # domain...
@@ -135,9 +132,7 @@ def valid_color(x: str) -> bool:
         return False
 
 
-def check_for_required_columns(
-    problems: List, table: str, df: DataFrame
-) -> List:
+def check_for_required_columns(problems: list, table: str, df: DataFrame) -> list:
     """
     Check that the given GTFS table has the required columns.
 
@@ -171,9 +166,7 @@ def check_for_required_columns(
 
     """
     r = cs.GTFS_REF
-    req_columns = r.loc[
-        (r["table"] == table) & r["column_required"], "column"
-    ].values
+    req_columns = r.loc[(r["table"] == table) & r["column_required"], "column"].values
     for col in req_columns:
         if col not in df.columns:
             problems.append(["error", f"Missing column {col}", table, []])
@@ -181,9 +174,7 @@ def check_for_required_columns(
     return problems
 
 
-def check_for_invalid_columns(
-    problems: List, table: str, df: DataFrame
-) -> List:
+def check_for_invalid_columns(problems: list, table: str, df: DataFrame) -> list:
     """
     Check for invalid columns in the given GTFS DataFrame.
 
@@ -220,21 +211,19 @@ def check_for_invalid_columns(
     valid_columns = r.loc[r["table"] == table, "column"].values
     for col in df.columns:
         if col not in valid_columns:
-            problems.append(
-                ["warning", f"Unrecognized column {col}", table, []]
-            )
+            problems.append(["warning", f"Unrecognized column {col}", table, []])
 
     return problems
 
 
 def check_table(
-    problems: List,
+    problems: list,
     table: str,
     df: DataFrame,
     condition,
     message: str,
     type_: str = "error",
-) -> List:
+) -> list:
     """
     Check the given GTFS table for the given problem condition.
 
@@ -283,7 +272,7 @@ def check_table(
 
 
 def check_column(
-    problems: List,
+    problems: list,
     table: str,
     df: DataFrame,
     column: str,
@@ -292,7 +281,7 @@ def check_column(
     type_: str = "error",
     *,
     column_required: bool = True,
-) -> List:
+) -> list:
     """
     Check the given column of the given GTFS with the given problem
     checker.
@@ -361,13 +350,13 @@ def check_column(
 
 
 def check_column_id(
-    problems: List,
+    problems: list,
     table: str,
     df: DataFrame,
     column: str,
     *,
     column_required: bool = True,
-) -> List:
+) -> list:
     """
     A specialization of :func:`check_column`.
 
@@ -432,7 +421,7 @@ def check_column_id(
 
 
 def check_column_linked_id(
-    problems: List,
+    problems: list,
     table: str,
     df: DataFrame,
     column: str,
@@ -440,7 +429,7 @@ def check_column_linked_id(
     target_column: Optional[str] = None,
     *,
     column_required: bool = True,
-) -> List:
+) -> list:
     """
     A modified version of :func:`check_column_id`.
 
@@ -514,9 +503,7 @@ def check_column_linked_id(
     return problems
 
 
-def format_problems(
-    problems: List, *, as_df: bool = False
-) -> Union[List, DataFrame]:
+def format_problems(problems: list, *, as_df: bool = False) -> Union[list, DataFrame]:
     """
     Format the given problems list as a DataFrame.
 
@@ -554,7 +541,7 @@ def format_problems(
 
 def check_agency(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Check that ``feed.agency`` follows the GTFS.
     Return a list of problems of the form described in
@@ -577,9 +564,7 @@ def check_agency(
         problems = check_for_invalid_columns(problems, table, f)
 
     # Check service_id
-    problems = check_column_id(
-        problems, table, f, "agency_id", column_required=False
-    )
+    problems = check_column_id(problems, table, f, "agency_id", column_required=False)
 
     # Check agency_name
     problems = check_column(problems, table, f, "agency_name", valid_str)
@@ -588,9 +573,7 @@ def check_agency(
     problems = check_column(problems, table, f, "agency_url", valid_url)
 
     # Check agency_timezone
-    problems = check_column(
-        problems, table, f, "agency_timezone", valid_timezone
-    )
+    problems = check_column(problems, table, f, "agency_timezone", valid_timezone)
 
     # Check agency_fare_url
     problems = check_column(
@@ -617,7 +600,7 @@ def check_agency(
 
 def check_calendar(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.calendar``.
     """
@@ -670,7 +653,7 @@ def check_calendar(
 
 def check_calendar_dates(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.calendar_dates``.
     """
@@ -697,9 +680,7 @@ def check_calendar_dates(
 
     # No duplicate (service_id, date) pairs allowed
     cond = f[["service_id", "date"]].duplicated()
-    problems = check_table(
-        problems, table, f, cond, "Repeated pair (service_id, date)"
-    )
+    problems = check_table(problems, table, f, cond, "Repeated pair (service_id, date)")
 
     # Check exception_type
     v = lambda x: x in [1, 2]
@@ -710,7 +691,7 @@ def check_calendar_dates(
 
 def check_fare_attributes(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.calendar_dates``.
     """
@@ -733,9 +714,7 @@ def check_fare_attributes(
     problems = check_column_id(problems, table, f, "fare_id")
 
     # Check currency_type
-    problems = check_column(
-        problems, table, f, "currency_type", valid_currency
-    )
+    problems = check_column(problems, table, f, "currency_type", valid_currency)
 
     # Check payment_method
     v = lambda x: x in range(2)
@@ -756,7 +735,7 @@ def check_fare_attributes(
 
 def check_fare_rules(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.calendar_dates``.
     """
@@ -802,7 +781,7 @@ def check_fare_rules(
 
 def check_feed_info(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.feed_info``.
     """
@@ -822,14 +801,10 @@ def check_feed_info(
         problems = check_for_invalid_columns(problems, table, f)
 
     # Check feed_publisher_name
-    problems = check_column(
-        problems, table, f, "feed_publisher_name", valid_str
-    )
+    problems = check_column(problems, table, f, "feed_publisher_name", valid_str)
 
     # Check feed_publisher_url
-    problems = check_column(
-        problems, table, f, "feed_publisher_url", valid_url
-    )
+    problems = check_column(problems, table, f, "feed_publisher_url", valid_url)
 
     # Check feed_lang
     problems = check_column(problems, table, f, "feed_lang", valid_lang)
@@ -863,7 +838,7 @@ def check_feed_info(
 
 def check_frequencies(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.frequencies``.
     """
@@ -883,9 +858,7 @@ def check_frequencies(
         problems = check_for_invalid_columns(problems, table, f)
 
     # Check trip_id
-    problems = check_column_linked_id(
-        problems, table, f, "trip_id", feed.trips
-    )
+    problems = check_column_linked_id(problems, table, f, "trip_id", feed.trips)
 
     # Check start_time and end_time
     time_cols = ["start_time", "end_time"]
@@ -923,16 +896,14 @@ def check_frequencies(
 
     # Check exact_times
     v = lambda x: x in range(2)
-    problems = check_column(
-        problems, table, f, "exact_times", v, column_required=False
-    )
+    problems = check_column(problems, table, f, "exact_times", v, column_required=False)
 
     return format_problems(problems, as_df=as_df)
 
 
 def check_routes(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.routes``.
     """
@@ -977,9 +948,7 @@ def check_routes(
         else:
             g = f.dropna(subset=["agency_id"])
             cond = ~g["agency_id"].isin(feed.agency["agency_id"])
-            problems = check_table(
-                problems, table, g, cond, "Undefined agency_id"
-            )
+            problems = check_table(problems, table, g, cond, "Undefined agency_id")
 
     # Check route_short_name and route_long_name
     for column in ["route_short_name", "route_long_name"]:
@@ -1035,7 +1004,7 @@ def check_routes(
 
 def check_shapes(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.shapes``.
     """
@@ -1107,7 +1076,7 @@ def check_shapes(
 
 def check_stops(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.stops``.
     """
@@ -1253,7 +1222,7 @@ def check_stops(
 
 def check_stop_times(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.stop_times``.
     """
@@ -1273,9 +1242,7 @@ def check_stop_times(
         problems = check_for_invalid_columns(problems, table, f)
 
     # Check trip_id
-    problems = check_column_linked_id(
-        problems, table, f, "trip_id", feed.trips
-    )
+    problems = check_column_linked_id(problems, table, f, "trip_id", feed.trips)
 
     # Check arrival_time and departure_time
     v = lambda x: pd.isna(x) or valid_time(x)
@@ -1327,9 +1294,7 @@ def check_stop_times(
         )
 
     # Check stop_id
-    problems = check_column_linked_id(
-        problems, table, f, "stop_id", feed.stops
-    )
+    problems = check_column_linked_id(problems, table, f, "stop_id", feed.stops)
 
     # Check for duplicated (trip_id, stop_sequence) pairs
     cond = f[["trip_id", "stop_sequence"]].dropna().duplicated()
@@ -1345,9 +1310,7 @@ def check_stop_times(
     # Check pickup_type and drop_off_type
     for col in ["pickup_type", "drop_off_type"]:
         v = lambda x: x in range(4)
-        problems = check_column(
-            problems, table, f, col, v, column_required=False
-        )
+        problems = check_column(problems, table, f, col, v, column_required=False)
 
     # Check if shape_dist_traveled decreases on a trip
     if "shape_dist_traveled" in f.columns:
@@ -1374,9 +1337,7 @@ def check_stop_times(
 
     # Check timepoint
     v = lambda x: x in range(2)
-    problems = check_column(
-        problems, table, f, "timepoint", v, column_required=False
-    )
+    problems = check_column(problems, table, f, "timepoint", v, column_required=False)
 
     if include_warnings:
         # Check for duplicated (trip_id, departure_time) pairs
@@ -1395,7 +1356,7 @@ def check_stop_times(
 
 def check_transfers(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.transfers``.
     """
@@ -1437,7 +1398,7 @@ def check_transfers(
 
 def check_trips(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
-) -> List:
+) -> list:
     """
     Analog of :func:`check_agency` for ``feed.trips``.
     """
@@ -1460,9 +1421,7 @@ def check_trips(
     problems = check_column_id(problems, table, f, "trip_id")
 
     # Check route_id
-    problems = check_column_linked_id(
-        problems, table, f, "route_id", feed.routes
-    )
+    problems = check_column_linked_id(problems, table, f, "route_id", feed.routes)
 
     # Check service_id
     g = pd.DataFrame()
@@ -1492,9 +1451,7 @@ def check_trips(
     # Check wheelchair_accessible and bikes_allowed
     v = lambda x: x in range(3)
     for column in ["wheelchair_accessible", "bikes_allowed"]:
-        problems = check_column(
-            problems, table, f, column, v, column_required=False
-        )
+        problems = check_column(problems, table, f, column, v, column_required=False)
 
     # Check for trips with no stop times
     if include_warnings:
@@ -1509,7 +1466,7 @@ def check_trips(
 
 def validate(
     feed: "Feed", *, as_df: bool = True, include_warnings: bool = True
-) -> Union[List, DataFrame]:
+) -> Union[list, DataFrame]:
     """
     Check whether the given feed satisfies the GTFS.
 
@@ -1576,9 +1533,7 @@ def validate(
         "check_trips",
     ]
     for checker in checkers:
-        problems.extend(
-            globals()[checker](feed, include_warnings=include_warnings)
-        )
+        problems.extend(globals()[checker](feed, include_warnings=include_warnings))
 
     # Check calendar/calendar_dates combo
     if feed.calendar is None and feed.calendar_dates is None:

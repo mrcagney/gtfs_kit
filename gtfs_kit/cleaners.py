@@ -1,7 +1,8 @@
 """
 Functions about cleaning feeds.
 """
-from typing import TYPE_CHECKING, Dict
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
@@ -169,7 +170,7 @@ def clean_route_short_names(feed: "Feed") -> "Feed":
 
 def build_aggregate_routes_dict(
     routes: pd.DataFrame, by: str = "route_short_name", route_id_prefix: str = "route_"
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Given a DataFrame of routes, group the routes by route short name, say,
     and assign new route IDs using the given prefix.
@@ -236,7 +237,7 @@ def aggregate_routes(
 
 def build_aggregate_stops_dict(
     stops: pd.DataFrame, by: str = "stop_code", stop_id_prefix: str = "stop_"
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     Given a DataFrame of stops, group the stops by stop code, say,
     and assign new stop IDs using the given prefix.

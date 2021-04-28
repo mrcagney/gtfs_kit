@@ -4,3 +4,5 @@
     entry: black
     language: python
     types: [python]
+-   id: nbstripout
+    name: nbstripout
