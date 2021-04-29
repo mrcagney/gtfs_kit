@@ -1,6 +1,11 @@
 Changes
 =======
 
+5.1.1, 2021-04-30
+-----------------
+- Handled fare rules in ``aggregate_routes()`` and dropped mistaken transfers code block therein.
+
+
 5.1.0, 2021-04-29
 -----------------
 - Added support for Python 3.9 and dropped support for Python 3.6.

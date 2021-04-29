@@ -216,21 +216,21 @@ def aggregate_routes(
     routes = feed.routes
     nid_by_oid = build_aggregate_routes_dict(routes, by, route_id_prefix)
 
-    # Update to new route IDs
-    routes["route_id"] = routes["route_id"].map(lambda x: nid_by_oid[x])
+    # Update route IDs in routes
+    routes["route_id"] = routes.route_id.map(lambda x: nid_by_oid[x])
     routes = routes.groupby(by).first().reset_index()
     feed.routes = routes
 
-    # Update route IDs of trips
+    # Update route IDs in trips
     trips = feed.trips
-    trips["route_id"] = trips["route_id"].map(lambda x: nid_by_oid[x])
+    trips["route_id"] = trips.route_id.map(lambda x: nid_by_oid[x])
     feed.trips = trips
 
-    # Update route IDs of transfers
-    if feed.transfers is not None:
-        transfers = feed.transfers
-        transfers["route_id"] = transfers["route_id"].map(lambda x: nid_by_oid[x])
-        feed.transfers = transfers
+    # Update route IDs of fare rules
+    if feed.fare_rules is not None and "route_id" in feed.fare_rules.columns:
+        fr = feed.fare_rules
+        fr["route_id"] = fr.route_id.map(lambda x: nid_by_oid[x])
+        feed.fare_rules = fr
 
     return feed
 
