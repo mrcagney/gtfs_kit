@@ -356,9 +356,12 @@ def compute_feed_stats(
     - ``'peak_end_time'``: end time of first longest period during
       which the peak number of trips occurs on the date
     - ``'service_distance'``: sum of the service distances for the
-      active routes on the date
+      active routes on the date;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+      contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'service_duration'``: sum of the service durations for the
-      active routes on the date
+      active routes on the date; measured in hours
     - ``'service_speed'``: service_distance/service_duration on the
       date
 
@@ -438,9 +441,13 @@ def compute_feed_time_series(
     - ``'num_trip_ends'``: number of trips ending during the
       time period, ignoring the trips the end past midnight
     - ``'service_distance'``: distance traveled during the time
-      period by all trips active during the time period
+      period by all trips active during the time period;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+      contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'service_duration'``: duration traveled during the time
-      period by all trips active during the time period
+      period by all trips active during the time period;
+      measured in hours
     - ``'service_speed'``: ``service_distance/service_duration``
 
     Exclude dates that lie outside of the Feed's date range.
@@ -847,8 +854,8 @@ def compute_screen_line_counts(
     - ``'shape_id'``: shape ID of the trip
     - ``'screen_line_id'``: ID of the screen line as specified in ``screen_lines`` or as
       assigned after the fact.
-    - ``'crossing_distance'``: distance along the trip shape of the screen line
-      intersection
+    - ``'crossing_distance'``: distance (in the feed's distance units) along the trip
+      shape of the screen line intersection
       ``'crossing_time'``: time that the trip's vehicle crosses
       the scren line; one trip could cross multiple times
     - ``'crossing_direction'``: 1 or -1; 1 indicates trip travel from the

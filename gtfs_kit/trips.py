@@ -168,7 +168,9 @@ def compute_trip_stats(
     - ``'end_stop_id'``: stop ID of the last stop of the trip
     - ``'is_loop'``: 1 if the start and end stop are less than 400m apart and
       0 otherwise
-    - ``'distance'``: distance of the trip in ``feed.dist_units``;
+    - ``'distance'``: distance of the trip;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'duration'``: duration of the trip in hours
     - ``'speed'``: distance/duration
@@ -258,7 +260,11 @@ def compute_trip_stats(
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
-        m_to_dist = hp.get_convert_dist("m", feed.dist_units)
+        # Convert to km or mi
+        if hp.is_metric(feed.dist_units):
+            m_to_dist = hp.get_convert_dist("m", "km")
+        else:
+            m_to_dist = hp.get_convert_dist("m", "mi")
 
         def compute_dist(group):
             """

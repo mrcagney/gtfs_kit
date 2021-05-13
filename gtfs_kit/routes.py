@@ -70,11 +70,11 @@ def compute_route_stats_0(
     - ``'service_duration'``: total of the duration of each trip on
       the route in the given subset of trips; measured in hours
     - ``'service_distance'``: total of the distance traveled by each
-      trip on the route in the given subset of trips; measured in
-      whatever distance units are present in ``trip_stats_subset``;
+      trip on the route in the given subset of trips;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
-    - ``'service_speed'``: service_distance/service_duration;
-      measured in distance units per hour
+    - ``'service_speed'``: service_distance/service_duration
     - ``'mean_trip_distance'``: service_distance/num_trips
     - ``'mean_trip_duration'``: service_duration/num_trips
 
@@ -255,12 +255,13 @@ def compute_route_time_series_0(
       the time bin
     - ``num_trip_ends``: number of trips that end within the
       time bin, ignoring trips that end past midnight
-    - ``service_distance``: sum of the service duration accrued
+    - ``service_distance``: sum of the service distance accrued
+      during the time bin across all trips on the route;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+    - ``service_duration``: sum of the service duration accrued
       during the time bin across all trips on the route;
       measured in hours
-    - ``service_distance``: sum of the service distance accrued
-      during the time bin across all trips on the route; measured
-      in kilometers
     - ``service_speed``: ``service_distance/service_duration``
       for the route
 

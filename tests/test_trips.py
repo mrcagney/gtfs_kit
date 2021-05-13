@@ -106,6 +106,13 @@ def test_compute_trip_stats():
     )
     assert set(trip_stats.columns) == expect_cols
 
+    # Distance units should be correct
+    d1 = trip_stats.distance.iat[0]  # km
+    trip_stats_2 = compute_trip_stats(feed.convert_dist("ft"), route_ids=rids)
+    d2 = trip_stats_2.distance.iat[0]  # mi
+    f = get_convert_dist("km", "mi")
+    assert f(d1) == d2
+
     # Shapeless feeds should have null entries for distance column
     feed = cairns_shapeless.copy()
     trip_stats = compute_trip_stats(feed, route_ids=rids)

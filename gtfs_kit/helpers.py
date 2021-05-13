@@ -177,6 +177,14 @@ def get_peak_indices(times: list, counts: list) -> np.array:
     return max_runs[index]
 
 
+def is_metric(dist_units: str) -> bool:
+    """
+    Return True if the given distance units equals 'm' or 'km';
+    otherwise return False.
+    """
+    return dist_units in ["m", "km"]
+
+
 def get_convert_dist(
     dist_units_in: str, dist_units_out: str
 ) -> Callable[[float], float]:
