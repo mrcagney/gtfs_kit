@@ -115,6 +115,7 @@ class Feed(object):
         get_stop_times,
         append_dist_to_stop_times,
         get_start_and_end_times,
+        stop_times_to_geojson,
     )
     from .trips import (
         is_active_trip,

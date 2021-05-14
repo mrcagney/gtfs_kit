@@ -4,6 +4,7 @@ Changes
 5.1.2, 2021-??-??
 -----------------
 - Changed distance units in trip stats, route stats, and feed stats to kilometers if the feed's distance units are metric and to miles otherwise.
+- Added stop time information to stops when mapping trips with stops.
 
 
 5.1.1, 2021-04-30

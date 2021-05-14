@@ -57,3 +57,20 @@ def test_append_dist_to_stop_times():
         group = group.sort_values("stop_sequence")
         sdt = group.shape_dist_traveled.values.tolist()
         assert sdt == sorted(sdt)
+
+
+def test_stop_times_to_geojson():
+    feed = cairns.copy()
+    trip_ids = feed.trips.trip_id.unique()[:2]
+    collection = stop_times_to_geojson(feed, trip_ids)
+    assert isinstance(collection, dict)
+
+    n = (
+        feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
+        .drop_duplicates(subset=["trip_id", "stop_id"])
+        .shape[0]
+    )
+    assert len(collection["features"]) == n
+
+    with pytest.raises(ValueError):
+        stop_times_to_geojson(feed, ["bingo"])

@@ -440,6 +440,51 @@ def geometrize_trips(
     )
 
 
+# def trips_to_geojson(
+#     feed: "Feed",
+#     trip_ids: Optional[Iterable[str]] = None,
+#     *,
+#     include_stops: bool = False,
+# ) -> dict:
+#     """
+#     Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+#     The coordinates reference system is the default one for GeoJSON,
+#     namely WGS84.
+
+#     If ``include_stops``, then include the trip stops as Point features .
+#     If an iterable of trip IDs is given, then subset to those trips.
+#     If the subset is empty, then return a FeatureCollection with an empty list of
+#     features.
+#     If the Feed has no shapes, then raise a ValueError.
+#     If any of the given trip IDs are not found in the feed, then raise a ValueError.
+#     """
+#     if trip_ids is not None:
+#         D = set(trip_ids) - set(feed.trips.trip_id)
+#         if D:
+#             raise ValueError(f"Trip IDs {D} not found in feed.")
+
+#     # Get trips
+#     g = geometrize_trips(feed, trip_ids=trip_ids)
+#     if g.empty:
+#         collection = {"type": "FeatureCollection", "features": []}
+#     else:
+#         collection = json.loads(g.to_json())
+
+#     # Get stops if desired
+#     if include_stops:
+#         if trip_ids is not None:
+#             stop_ids = feed.stop_times.loc[
+#                 lambda x: x.trip_id.isin(trip_ids), "stop_id"
+#             ].unique()
+#         else:
+#             stop_ids = None
+
+#         stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+#         collection["features"].extend(stops_gj["features"])
+
+#     return hp.drop_feature_ids(collection)
+
+
 def trips_to_geojson(
     feed: "Feed",
     trip_ids: Optional[Iterable[str]] = None,
@@ -447,42 +492,33 @@ def trips_to_geojson(
     include_stops: bool = False,
 ) -> dict:
     """
-    Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+    Return a GeoJSON FeatureCollection of LineString features representing
+    all the Feed's trips.
     The coordinates reference system is the default one for GeoJSON,
     namely WGS84.
 
-    If ``include_stops``, then include the trip stops as Point features .
+    If ``include_stops``, then include the trip stops as Point features.
     If an iterable of trip IDs is given, then subset to those trips.
-    If the subset is empty, then return a FeatureCollection with an empty list of
-    features.
-    If the Feed has no shapes, then raise a ValueError.
     If any of the given trip IDs are not found in the feed, then raise a ValueError.
+    If the Feed has no shapes, then raise a ValueError.
     """
-    if trip_ids is not None:
-        D = set(trip_ids) - set(feed.trips.trip_id)
-        if D:
-            raise ValueError(f"Trip IDs {D} not found in feed.")
+    if trip_ids is None or not list(trip_ids):
+        trip_ids = feed.trips.trip_id
+
+    D = set(trip_ids) - set(feed.trips.trip_id)
+    if D:
+        raise ValueError(f"Trip IDs {D} not found in feed.")
 
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
-    if g.empty:
-        collection = {"type": "FeatureCollection", "features": []}
-    else:
-        collection = json.loads(g.to_json())
+    trips_gj = json.loads(g.to_json())
 
     # Get stops if desired
     if include_stops:
-        if trip_ids is not None:
-            stop_ids = feed.stop_times.loc[
-                lambda x: x.trip_id.isin(trip_ids), "stop_id"
-            ].unique()
-        else:
-            stop_ids = None
+        st_gj = feed.stop_times_to_geojson(trip_ids)
+        trips_gj["features"].extend(st_gj["features"])
 
-        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
-        collection["features"].extend(stops_gj["features"])
-
-    return hp.drop_feature_ids(collection)
+    return hp.drop_feature_ids(trips_gj)
 
 
 def map_trips(

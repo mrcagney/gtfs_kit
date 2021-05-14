@@ -196,7 +196,11 @@ def test_trips_to_geojson():
     assert len(gj["features"]) == n
 
     gj = trips_to_geojson(feed, trip_ids, include_stops=True)
-    k = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids), "stop_id"].nunique()
+    k = (
+        feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
+        .drop_duplicates(subset=["trip_id", "stop_id"])
+        .shape[0]
+    )
     assert len(gj["features"]) == n + k
 
     with pytest.raises(ValueError):
