@@ -1,7 +1,8 @@
 """
 Functions about shapes.
 """
-from typing import Optional, Iterable, Dict, TYPE_CHECKING
+from __future__ import annotations
+from typing import Optional, Iterable, TYPE_CHECKING
 import json
 
 import geopandas as gp
@@ -114,7 +115,13 @@ def ungeometrize_shapes_0(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
         )
 
     return pd.DataFrame(
-        F, columns=["shape_id", "shape_pt_sequence", "shape_pt_lon", "shape_pt_lat",],
+        F,
+        columns=[
+            "shape_id",
+            "shape_pt_sequence",
+            "shape_pt_lon",
+            "shape_pt_lat",
+        ],
     )
 
 
@@ -144,18 +151,18 @@ def geometrize_shapes(
 
 def build_geometry_by_shape(
     feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
-) -> Dict:
+) -> dict:
     """
     Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
     """
     return dict(
-        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=True)
+        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=use_utm)
         .filter(["shape_id", "geometry"])
         .values
     )
 
 
-def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -> Dict:
+def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -> dict:
     """
     Return a GeoJSON FeatureCollection of LineString features
     representing ``feed.shapes``.

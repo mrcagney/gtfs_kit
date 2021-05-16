@@ -1,6 +1,32 @@
 Changes
 =======
 
+5.1.2, 2021-??-??
+-----------------
+- Changed distance units in trip stats, route stats, and feed stats to kilometers if the feed's distance units are metric and to miles otherwise.
+- Added stop time information to stops when mapping trips with stops.
+
+
+5.1.1, 2021-04-30
+-----------------
+- Handled fare rules in ``aggregate_routes()`` and dropped mistaken transfers code block therein.
+
+
+5.1.0, 2021-04-29
+-----------------
+- Added support for Python 3.9 and dropped support for Python 3.6.
+
+
+5.0.2, 2020-10-16
+-----------------
+- Specified in more detail the Rtree dependency.
+
+
+5.0.1, 2020-10-08
+-----------------
+- Bugfix: properly set the ``use_utm`` flag in ``build_geometry_by_shape()`` and ``build_geometry_by_stop()``.
+
+
 5.0.0, 2020-06-16
 -----------------
 - Breaking change: refactored ``get_stops_in_polygon()`` to ``get_stops_in_area()``, which accepts a GeoDataFrame.

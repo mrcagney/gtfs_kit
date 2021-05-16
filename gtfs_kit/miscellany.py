@@ -1,8 +1,8 @@
 """
 Functions about miscellany.
 """
-from collections import OrderedDict
-from typing import List, Optional, TYPE_CHECKING
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
@@ -103,7 +103,7 @@ def describe(feed: "Feed", sample_date: Optional[str] = None) -> pd.DataFrame:
     """
     from . import calendar as cl
 
-    d = OrderedDict()
+    d = dict()
     dates = cl.get_dates(feed)
     d["agencies"] = feed.agency["agency_name"].tolist()
     d["timezone"] = feed.agency["agency_timezone"].iat[0]
@@ -142,7 +142,7 @@ def assess_quality(feed: "Feed") -> pd.DataFrame:
     This function is odd but useful for seeing roughly how broken a feed is
     This function is not a GTFS validator.
     """
-    d = OrderedDict()
+    d = dict()
 
     # Count duplicate route short names
     r = feed.routes
@@ -329,7 +329,7 @@ def compute_feed_stats_0(
 def compute_feed_stats(
     feed: "Feed",
     trip_stats: pd.DataFrame,
-    dates: List[str],
+    dates: list[str],
     *,
     split_route_types=False,
 ) -> pd.DataFrame:
@@ -356,9 +356,12 @@ def compute_feed_stats(
     - ``'peak_end_time'``: end time of first longest period during
       which the peak number of trips occurs on the date
     - ``'service_distance'``: sum of the service distances for the
-      active routes on the date
+      active routes on the date;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+      contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'service_duration'``: sum of the service durations for the
-      active routes on the date
+      active routes on the date; measured in hours
     - ``'service_speed'``: service_distance/service_duration on the
       date
 
@@ -413,7 +416,7 @@ def compute_feed_stats(
 def compute_feed_time_series(
     feed: "Feed",
     trip_stats: pd.DataFrame,
-    dates: List[str],
+    dates: list[str],
     freq: str = "5Min",
     *,
     split_route_types: bool = False,
@@ -438,9 +441,13 @@ def compute_feed_time_series(
     - ``'num_trip_ends'``: number of trips ending during the
       time period, ignoring the trips the end past midnight
     - ``'service_distance'``: distance traveled during the time
-      period by all trips active during the time period
+      period by all trips active during the time period;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+      contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'service_duration'``: duration traveled during the time
-      period by all trips active during the time period
+      period by all trips active during the time period;
+      measured in hours
     - ``'service_speed'``: ``service_distance/service_duration``
 
     Exclude dates that lie outside of the Feed's date range.
@@ -573,7 +580,7 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
     return feed
 
 
-def compute_bounds(feed: "Feed", stop_ids: Optional[List[str]] = None) -> np.array:
+def compute_bounds(feed: "Feed", stop_ids: Optional[list[str]] = None) -> np.array:
     """
     Return the bounding box (Numpy array [min longitude, min latitude, max longitude,
     max latitude]) of the given Feed's stops or of the subset of stops
@@ -585,10 +592,10 @@ def compute_bounds(feed: "Feed", stop_ids: Optional[List[str]] = None) -> np.arr
 
 
 def compute_convex_hull(
-    feed: "Feed", stop_ids: Optional[List[str]] = None
+    feed: "Feed", stop_ids: Optional[list[str]] = None
 ) -> sg.Polygon:
     """
-    Return a convex hull (Shapely Polygon) representing the convex hull of the given 
+    Return a convex hull (Shapely Polygon) representing the convex hull of the given
     Feed's stops or of the subset of stops specified by the given stop IDs.
     """
     from .stops import geometrize_stops
@@ -596,7 +603,7 @@ def compute_convex_hull(
     return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull
 
 
-def compute_centroid(feed: "Feed", stop_ids: Optional[List[str]] = None) -> sg.Point:
+def compute_centroid(feed: "Feed", stop_ids: Optional[list[str]] = None) -> sg.Point:
     """
     Return the centroid (Shapely Point) of the convex hull the given Feed's stops
     or of the subset of stops specified by the given stop IDs.
@@ -606,7 +613,7 @@ def compute_centroid(feed: "Feed", stop_ids: Optional[List[str]] = None) -> sg.P
     return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull.centroid
 
 
-def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
+def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
     """
     Build a new feed by restricting this one to only the stops,
     trips, shapes, etc. active on at least one of the given dates
@@ -624,7 +631,8 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
         trip_ids = []
     else:
         trip_ids = trip_activity.loc[
-            lambda x: x.filter(dates).sum(axis=1) > 0, "trip_id",
+            lambda x: x.filter(dates).sum(axis=1) > 0,
+            "trip_id",
         ]
 
     # Slice trips
@@ -684,7 +692,7 @@ def restrict_to_dates(feed: "Feed", dates: List[str]) -> "Feed":
     return feed
 
 
-def restrict_to_routes(feed: "Feed", route_ids: List[str]) -> "Feed":
+def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
     """
     Build a new feed by restricting this one to only the stops,
     trips, shapes, etc. used by the routes with the given list of
@@ -829,7 +837,7 @@ def restrict_to_area(feed: "Feed", area: gp.GeoDataFrame) -> "Feed":
 
 
 def compute_screen_line_counts(
-    feed: "Feed", screen_lines: gp.GeoDataFrame, dates: List[str]
+    feed: "Feed", screen_lines: gp.GeoDataFrame, dates: list[str]
 ) -> pd.DataFrame:
     """
     Find all the Feed trips active on the given YYYYMMDD dates whose shapes
@@ -846,8 +854,8 @@ def compute_screen_line_counts(
     - ``'shape_id'``: shape ID of the trip
     - ``'screen_line_id'``: ID of the screen line as specified in ``screen_lines`` or as
       assigned after the fact.
-    - ``'crossing_distance'``: distance along the trip shape of the screen line
-      intersection
+    - ``'crossing_distance'``: distance (in the feed's distance units) along the trip
+      shape of the screen line intersection
       ``'crossing_time'``: time that the trip's vehicle crosses
       the scren line; one trip could cross multiple times
     - ``'crossing_direction'``: 1 or -1; 1 indicates trip travel from the

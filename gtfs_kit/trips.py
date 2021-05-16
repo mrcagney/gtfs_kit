@@ -1,9 +1,9 @@
 """
 Functions about trips.
 """
-from collections import OrderedDict
+from __future__ import annotations
 import json
-from typing import Optional, Iterable, List, Dict, TYPE_CHECKING
+from typing import Optional, Iterable, TYPE_CHECKING
 
 import geopandas as gp
 import pandas as pd
@@ -105,7 +105,7 @@ def get_trips(
     return f
 
 
-def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
+def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     """
     Mark trip as active or inactive on the given dates (YYYYMMDD date strings)
     as computed by the function :func:`is_active_trip`.
@@ -136,7 +136,7 @@ def compute_trip_activity(feed: "Feed", dates: List[str]) -> pd.DataFrame:
     return f[["trip_id"] + list(dates)]
 
 
-def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
+def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
     """
     Given a list of dates (YYYYMMDD date strings), return the first date that has the
     maximum number of active trips.
@@ -148,7 +148,7 @@ def compute_busiest_date(feed: "Feed", dates: List[str]) -> str:
 
 def compute_trip_stats(
     feed: "Feed",
-    route_ids: Optional[List[str]] = None,
+    route_ids: Optional[list[str]] = None,
     *,
     compute_dist_from_shapes: bool = False,
 ) -> pd.DataFrame:
@@ -168,7 +168,9 @@ def compute_trip_stats(
     - ``'end_stop_id'``: stop ID of the last stop of the trip
     - ``'is_loop'``: 1 if the start and end stop are less than 400m apart and
       0 otherwise
-    - ``'distance'``: distance of the trip in ``feed.dist_units``;
+    - ``'distance'``: distance of the trip;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
     - ``'duration'``: duration of the trip in hours
     - ``'speed'``: distance/duration
@@ -228,7 +230,7 @@ def compute_trip_stats(
     g = f.groupby("trip_id")
 
     def my_agg(group):
-        d = OrderedDict()
+        d = dict()
         d["route_id"] = group["route_id"].iat[0]
         d["route_short_name"] = group["route_short_name"].iat[0]
         d["route_type"] = group["route_type"].iat[0]
@@ -258,7 +260,11 @@ def compute_trip_stats(
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
-        m_to_dist = hp.get_convert_dist("m", feed.dist_units)
+        # Convert to km or mi
+        if hp.is_metric(feed.dist_units):
+            m_to_dist = hp.get_convert_dist("m", "km")
+        else:
+            m_to_dist = hp.get_convert_dist("m", "mi")
 
         def compute_dist(group):
             """
@@ -321,7 +327,7 @@ def compute_trip_stats(
     return h.sort_values(["route_id", "direction_id", "start_time"])
 
 
-def locate_trips(feed: "Feed", date: str, times: List[str]) -> pd.DataFrame:
+def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
     """
     Return the positions of all trips active on the
     given date (YYYYMMDD date string) and times (HH:MM:SS time strings,
@@ -434,55 +440,91 @@ def geometrize_trips(
     )
 
 
+# def trips_to_geojson(
+#     feed: "Feed",
+#     trip_ids: Optional[Iterable[str]] = None,
+#     *,
+#     include_stops: bool = False,
+# ) -> dict:
+#     """
+#     Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+#     The coordinates reference system is the default one for GeoJSON,
+#     namely WGS84.
+
+#     If ``include_stops``, then include the trip stops as Point features .
+#     If an iterable of trip IDs is given, then subset to those trips.
+#     If the subset is empty, then return a FeatureCollection with an empty list of
+#     features.
+#     If the Feed has no shapes, then raise a ValueError.
+#     If any of the given trip IDs are not found in the feed, then raise a ValueError.
+#     """
+#     if trip_ids is not None:
+#         D = set(trip_ids) - set(feed.trips.trip_id)
+#         if D:
+#             raise ValueError(f"Trip IDs {D} not found in feed.")
+
+#     # Get trips
+#     g = geometrize_trips(feed, trip_ids=trip_ids)
+#     if g.empty:
+#         collection = {"type": "FeatureCollection", "features": []}
+#     else:
+#         collection = json.loads(g.to_json())
+
+#     # Get stops if desired
+#     if include_stops:
+#         if trip_ids is not None:
+#             stop_ids = feed.stop_times.loc[
+#                 lambda x: x.trip_id.isin(trip_ids), "stop_id"
+#             ].unique()
+#         else:
+#             stop_ids = None
+
+#         stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+#         collection["features"].extend(stops_gj["features"])
+
+#     return hp.drop_feature_ids(collection)
+
+
 def trips_to_geojson(
     feed: "Feed",
     trip_ids: Optional[Iterable[str]] = None,
     *,
     include_stops: bool = False,
-) -> Dict:
+) -> dict:
     """
-    Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
+    Return a GeoJSON FeatureCollection of LineString features representing
+    all the Feed's trips.
     The coordinates reference system is the default one for GeoJSON,
     namely WGS84.
 
-    If ``include_stops``, then include the trip stops as Point features .
+    If ``include_stops``, then include the trip stops as Point features.
     If an iterable of trip IDs is given, then subset to those trips.
-    If the subset is empty, then return a FeatureCollection with an empty list of
-    features.
-    If the Feed has no shapes, then raise a ValueError.
     If any of the given trip IDs are not found in the feed, then raise a ValueError.
+    If the Feed has no shapes, then raise a ValueError.
     """
-    if trip_ids is not None:
-        D = set(trip_ids) - set(feed.trips.trip_id)
-        if D:
-            raise ValueError(f"Trip IDs {D} not found in feed.")
+    if trip_ids is None or not list(trip_ids):
+        trip_ids = feed.trips.trip_id
+
+    D = set(trip_ids) - set(feed.trips.trip_id)
+    if D:
+        raise ValueError(f"Trip IDs {D} not found in feed.")
 
     # Get trips
     g = geometrize_trips(feed, trip_ids=trip_ids)
-    if g.empty:
-        collection = {"type": "FeatureCollection", "features": []}
-    else:
-        collection = json.loads(g.to_json())
+    trips_gj = json.loads(g.to_json())
 
     # Get stops if desired
     if include_stops:
-        if trip_ids is not None:
-            stop_ids = feed.stop_times.loc[
-                lambda x: x.trip_id.isin(trip_ids), "stop_id"
-            ].unique()
-        else:
-            stop_ids = None
+        st_gj = feed.stop_times_to_geojson(trip_ids)
+        trips_gj["features"].extend(st_gj["features"])
 
-        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
-        collection["features"].extend(stops_gj["features"])
-
-    return hp.drop_feature_ids(collection)
+    return hp.drop_feature_ids(trips_gj)
 
 
 def map_trips(
     feed: "Feed",
     trip_ids: Iterable[str],
-    color_palette: List[str] = cs.COLORS_SET2,
+    color_palette: list[str] = cs.COLORS_SET2,
     *,
     include_stops: bool = False,
     include_arrows: bool = False,

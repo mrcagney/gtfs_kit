@@ -1,8 +1,9 @@
 """
 Functions about calendar and calendar_dates.
 """
+from __future__ import annotations
 import dateutil.relativedelta as rd
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from . import helpers as hp
 
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
+def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
     """
     Return a list of YYYYMMDD date strings for which the given Feed is valid,
     which could be the empty list if the Feed has no calendar information.
@@ -35,9 +36,7 @@ def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
     start_date, end_date = min(dates), max(dates)
     start_date, end_date = map(hp.datestr_to_date, [start_date, end_date])
     num_days = (end_date - start_date).days
-    result = [
-        start_date + rd.relativedelta(days=+d) for d in range(num_days + 1)
-    ]
+    result = [start_date + rd.relativedelta(days=+d) for d in range(num_days + 1)]
 
     # Convert dates back to strings if required
     if not as_date_obj:
@@ -46,7 +45,7 @@ def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
     return result
 
 
-def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> List[str]:
+def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
     """
     Given a Feed and a positive integer ``k``,
     return a list of YYYYMMDD date strings corresponding to the kth Monday--Sunday week
@@ -79,7 +78,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> List[str]:
     return result
 
 
-def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
+def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
     """
     Return a list of YYYYMMDD date strings for the first Monday--Sunday
     week (or initial segment thereof) for which the given Feed is valid.
@@ -90,7 +89,7 @@ def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> List[str]:
     return get_week(feed, 1, as_date_obj=as_date_obj)
 
 
-def subset_dates(feed: "Feed", dates: List[str]) -> List[str]:
+def subset_dates(feed: "Feed", dates: list[str]) -> list[str]:
     """
     Given a Feed and a list of YYYYMMDD date strings,
     return the sublist of dates that lie in the Feed's dates

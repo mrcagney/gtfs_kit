@@ -42,10 +42,9 @@ class Feed(object):
     Primary instance attributes:
 
     - ``dist_units``: a string in :const:`.constants.DIST_UNITS`;
-      specifies the distance units to use when calculating various
-      stats, such as route service distance; should match the implicit
-      distance units of the ``shape_dist_traveled`` column values,
-      if present
+      specifies the distance units of the `shape_dist_traveled` column values,
+      if present; also effects whether to display trip and route stats in
+      metric or imperial units
     - ``agency``
     - ``stops``
     - ``routes``
@@ -116,6 +115,7 @@ class Feed(object):
         get_stop_times,
         append_dist_to_stop_times,
         get_start_and_end_times,
+        stop_times_to_geojson,
     )
     from .trips import (
         is_active_trip,

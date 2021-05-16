@@ -3,7 +3,7 @@ GTFS Kit
 .. image:: https://travis-ci.org/mrcagney/gtfs_kit.svg?branch=master
     :target: https://travis-ci.org/mrcagney/gtfs_kit
 
-GTFS Kit is a Python 3.6+ kit for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
+GTFS Kit is a Python 3.7+ kit for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
 It uses Pandas and Shapely to do the heavy lifting.
 
 This project supersedes `GTFSTK <https://github.com/mrcagney/gtfstk>`_.

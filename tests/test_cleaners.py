@@ -112,15 +112,19 @@ def test_aggregate_routes():
     # feed2 should have only one route ID
     assert feed2.routes.shape[0] == 1
 
-    # Feeds should have same trip data frames excluding
-    # route IDs
+    # Feeds should have same trip DataFrames excluding route IDs
     feed1.trips["route_id"] = feed2.trips["route_id"]
     assert almost_equal(feed1.trips, feed2.trips)
 
-    # Feeds should have equal attributes excluding
-    # routes and trips data frames
+    # Feeds should have same fare rules DataFrames excluding route IDs
+    feed1.fare_rules["route_id"] = feed2.fare_rules["route_id"]
+    assert almost_equal(feed1.fare_rules, feed2.fare_rules)
+
+    # Feeds should have equal attributes excluding routes, trips, and fare rules
+    # DataFrames
     feed2.routes = feed1.routes
     feed2.trips = feed1.trips
+    feed2.fare_rules = feed1.fare_rules
     assert feed1 == feed2
 
 
@@ -146,7 +150,7 @@ def test_aggregate_stops():
     assert almost_equal(feed1.stop_times, feed2.stop_times)
 
     # Feeds should have equal attributes excluding
-    # stops stop times data frames
+    # stops stop times DataFrames
     feed2.stops = feed1.stops
     feed2.stop_times = feed1.stop_times
     assert feed1 == feed2

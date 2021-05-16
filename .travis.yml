@@ -8,13 +8,13 @@ addons:
     - libspatialindex-dev
 language: python
 python:
-  - "3.6"
   - "3.7"
   - "3.8"
+  - "3.9"
 
 # Required for Python 3.8 to work:
 sudo: required
-dist: bionic
+dist: focal
 
 # Install dependencies
 before_install:

@@ -1,7 +1,9 @@
 """
 Functions about stop times.
 """
-from typing import Optional, List, TYPE_CHECKING
+from __future__ import annotations
+from typing import Optional, Iterable, TYPE_CHECKING
+import json
 
 import pandas as pd
 import numpy as np
@@ -44,7 +46,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
 
     Set the first distance to 0, the last to the length of the trip shape,
     and leave the remaining ones computed above.
-    Choose the longest increasing subsequence of that new set of 
+    Choose the longest increasing subsequence of that new set of
     distances and use them and their corresponding departure times to linearly
     interpolate the rest of the distances.
     """
@@ -127,7 +129,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     return new_feed
 
 
-def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> List[str]:
+def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> list[str]:
     """
     Return the first departure time and last arrival time
     (HH:MM:SS time strings) listed in ``feed.stop_times``, respectively.
@@ -135,3 +137,38 @@ def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> List[st
     """
     st = feed.get_stop_times(date)
     return (st["departure_time"].dropna().min(), st["arrival_time"].dropna().max())
+
+
+def stop_times_to_geojson(
+    feed: "Feed",
+    trip_ids: Optional[Iterable[str]] = None,
+) -> dict:
+    """
+    Return a GeoJSON FeatureCollection of Point features
+    representing all the trip-stop pairs in ``feed.stop_times``.
+    The coordinates reference system is the default one for GeoJSON,
+    namely WGS84.
+
+    For every trip, drop duplicate stop IDs within that trip.
+    In particular, a looping trip will lack its final stop.
+
+    If an iterable of trip IDs is given, then subset to those trips.
+    If some of the given trip IDs are not found in the feed, then raise a ValueError.
+    """
+    if trip_ids is None or not list(trip_ids):
+        trip_ids = feed.trips.trip_id
+
+    D = set(trip_ids) - set(feed.trips.trip_id)
+    if D:
+        raise ValueError(f"Trip IDs {D} not found in feed.")
+
+    st = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
+
+    g = (
+        feed.geometrize_stops(stop_ids=st.stop_id.unique())
+        .merge(st)
+        .sort_values(["trip_id", "stop_sequence"])
+        .drop_duplicates(subset=["trip_id", "stop_id"])
+    )
+
+    return hp.drop_feature_ids(json.loads(g.to_json()))

@@ -39,6 +39,14 @@ def test_datestr_to_date():
     assert datestr_to_date(date, inverse=True) == datestr
 
 
+def test_is_metric():
+    assert is_metric("m")
+    assert is_metric("km")
+    assert not is_metric("ft")
+    assert not is_metric("mi")
+    assert not is_metric("bingo")
+
+
 def test_get_convert_dist():
     di = "mi"
     do = "km"
