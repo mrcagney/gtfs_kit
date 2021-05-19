@@ -255,8 +255,14 @@ def compute_trip_stats(
 
     # Compute distance
     if hp.is_not_null(f, "shape_dist_traveled") and not compute_dist_from_shapes:
-        # Compute distances using shape_dist_traveled column
-        h["distance"] = g.apply(lambda group: group["shape_dist_traveled"].max())
+        # Compute distances using shape_dist_traveled column, converting to km or mi
+        if hp.is_metric(feed.dist_units):
+            convert_dist = hp.get_convert_dist(feed.dist_units, "km")
+        else:
+            convert_dist = hp.get_convert_dist(feed.dist_units, "mi")
+        h["distance"] = g.apply(
+            lambda group: convert_dist(group.shape_dist_traveled.max())
+        )
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
         geometry_by_shape = feed.build_geometry_by_shape(use_utm=True)
