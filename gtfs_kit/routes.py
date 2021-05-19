@@ -731,7 +731,7 @@ def geometrize_routes(
         crs = cs.WGS84
 
     return (
-        feed.geometrize_trips(trip_ids)
+        feed.geometrize_trips(trip_ids, use_utm=use_utm)
         .filter(["route_id", "direction_id", "geometry"])
         # GeoDataFrame disappears here
         .groupby(groupby_cols)

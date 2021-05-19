@@ -1,6 +1,11 @@
 Changes
 =======
 
+5.1.4, 2021-05-19
+-----------------
+- Bugfixed ``geometrize_routes(use_utm=True)`` to actually use UTM coordinates.
+
+
 5.1.3, 2021-05-19
 -----------------
 - Bugfixed distance units in trip stats when shape_dist_traveled is present.
