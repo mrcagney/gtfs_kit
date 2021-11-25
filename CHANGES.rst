@@ -1,6 +1,22 @@
 Changes
 =======
 
+5.1.4, 2021-05-19
+-----------------
+- Bugfixed ``geometrize_routes(use_utm=True)`` to actually use UTM coordinates.
+
+
+5.1.3, 2021-05-19
+-----------------
+- Bugfixed distance units in trip stats when shape_dist_traveled is present.
+
+
+5.1.2, 2021-05-17
+-----------------
+- Changed distance units in trip stats, route stats, and feed stats to kilometers if the feed's distance units are metric and to miles otherwise.
+- Added stop time information to stops when mapping trips with stops.
+
+
 5.1.1, 2021-04-30
 -----------------
 - Handled fare rules in ``aggregate_routes()`` and dropped mistaken transfers code block therein.

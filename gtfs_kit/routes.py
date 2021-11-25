@@ -70,11 +70,11 @@ def compute_route_stats_0(
     - ``'service_duration'``: total of the duration of each trip on
       the route in the given subset of trips; measured in hours
     - ``'service_distance'``: total of the distance traveled by each
-      trip on the route in the given subset of trips; measured in
-      whatever distance units are present in ``trip_stats_subset``;
+      trip on the route in the given subset of trips;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
-    - ``'service_speed'``: service_distance/service_duration;
-      measured in distance units per hour
+    - ``'service_speed'``: service_distance/service_duration
     - ``'mean_trip_distance'``: service_distance/num_trips
     - ``'mean_trip_duration'``: service_duration/num_trips
 
@@ -255,12 +255,13 @@ def compute_route_time_series_0(
       the time bin
     - ``num_trip_ends``: number of trips that end within the
       time bin, ignoring trips that end past midnight
-    - ``service_distance``: sum of the service duration accrued
+    - ``service_distance``: sum of the service distance accrued
+      during the time bin across all trips on the route;
+      measured in kilometers if ``feed.dist_units`` is metric;
+      otherwise measured in miles;
+    - ``service_duration``: sum of the service duration accrued
       during the time bin across all trips on the route;
       measured in hours
-    - ``service_distance``: sum of the service distance accrued
-      during the time bin across all trips on the route; measured
-      in kilometers
     - ``service_speed``: ``service_distance/service_duration``
       for the route
 
@@ -730,7 +731,7 @@ def geometrize_routes(
         crs = cs.WGS84
 
     return (
-        feed.geometrize_trips(trip_ids)
+        feed.geometrize_trips(trip_ids, use_utm=use_utm)
         .filter(["route_id", "direction_id", "geometry"])
         # GeoDataFrame disappears here
         .groupby(groupby_cols)
@@ -760,17 +761,16 @@ def routes_to_geojson(
     If the Feed has no shapes, then raise a ValueError.
     If any of the given route IDs are not found in the feed, then raise a ValueError.
     """
-    if route_ids is not None:
-        D = set(route_ids) - set(feed.routes.route_id)
-        if D:
-            raise ValueError(f"Route IDs {D} not found in feed.")
+    if route_ids is None or not list(route_ids):
+        route_ids = feed.routes.route_id
+
+    D = set(route_ids) - set(feed.routes.route_id)
+    if D:
+        raise ValueError(f"Route IDs {D} not found in feed.")
 
     # Get routes
     g = geometrize_routes(feed, route_ids=route_ids, split_directions=split_directions)
-    if g.empty:
-        collection = {"type": "FeatureCollection", "features": []}
-    else:
-        collection = json.loads(g.to_json())
+    collection = json.loads(g.to_json())
 
     # Get stops if desired
     if include_stops:
