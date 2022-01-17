@@ -92,13 +92,9 @@ def test_check_column_id():
 
 def test_check_column_linked_id():
     feed = sample.copy()
-    assert not check_column_linked_id(
-        [], "trips", feed.trips, "route_id", feed.routes
-    )
+    assert not check_column_linked_id([], "trips", feed.trips, "route_id", feed.routes)
     feed.trips["route_id"].iat[0] = "Hummus!"
-    assert check_column_linked_id(
-        [], "trips", feed.trips, "route_id", feed.routes
-    )
+    assert check_column_linked_id([], "trips", feed.trips, "route_id", feed.routes)
 
 
 def test_format_problems():
@@ -144,6 +140,39 @@ def test_check_agency():
         feed = sample.copy()
         feed.agency[col] = ""
         assert check_agency(feed)
+
+
+def test_check_attributions():
+    assert not check_attributions(sample)
+
+    feed = sample.copy()
+    del feed.attributions["organization_name"]
+    assert check_attributions(feed)
+
+    feed = sample.copy()
+    feed.attributions["route_id"] = "no such route ID"
+    # Can't have invalid route_id
+    assert check_attributions(feed)
+
+    feed = sample.copy()
+    feed.attributions["trip_id"] = "AB1"
+    # Can't have both route_id and trip_id present
+    assert check_attributions(feed)
+
+    feed = sample.copy()
+    feed.attributions["is_producer"] = 0
+    feed.attributions["is_operator"] = 0
+    feed.attributions["is_authority"] = 0
+    # Can't have all these be zero
+    assert check_attributions(feed)
+
+    for col in [
+        "attribution_url",
+        "attribution_email",
+    ]:
+        feed = sample.copy()
+        feed.attributions[col] = ""
+        assert check_attributions(feed)
 
 
 def test_check_calendar():
@@ -200,9 +229,7 @@ def test_check_calendar_dates():
     assert check_calendar_dates(feed, include_warnings=True)
 
     feed = sample.copy()
-    feed.calendar_dates = feed.calendar_dates.append(
-        feed.calendar_dates.iloc[0]
-    )
+    feed.calendar_dates = feed.calendar_dates.append(feed.calendar_dates.iloc[0])
     assert check_calendar_dates(feed)
 
     for col in ["date", "exception_type"]:
@@ -228,9 +255,7 @@ def test_check_fare_attributes():
     assert check_fare_attributes(feed, include_warnings=True)
 
     feed = sample.copy()
-    feed.fare_attributes = feed.fare_attributes.append(
-        feed.fare_attributes.iloc[0]
-    )
+    feed.fare_attributes = feed.fare_attributes.append(feed.fare_attributes.iloc[0])
     assert check_fare_attributes(feed)
 
     feed = sample.copy()
@@ -387,12 +412,8 @@ def test_check_routes():
     assert check_routes(feed)
 
     feed = sample.copy()
-    feed.routes["route_short_name"].iat[1] = feed.routes[
-        "route_short_name"
-    ].iat[0]
-    feed.routes["route_long_name"].iat[1] = feed.routes["route_long_name"].iat[
-        0
-    ]
+    feed.routes["route_short_name"].iat[1] = feed.routes["route_short_name"].iat[0]
+    feed.routes["route_long_name"].iat[1] = feed.routes["route_long_name"].iat[0]
     assert not check_routes(feed)
     assert check_routes(feed, include_warnings=True)
 
@@ -444,9 +465,7 @@ def test_check_shapes():
         assert check_shapes(feed1)
 
     feed1 = feed.copy()
-    feed1.shapes["shape_pt_sequence"].iat[1] = feed1.shapes[
-        "shape_pt_sequence"
-    ].iat[0]
+    feed1.shapes["shape_pt_sequence"].iat[1] = feed1.shapes["shape_pt_sequence"].iat[0]
     assert check_shapes(feed1)
 
     feed1 = feed.copy()
@@ -585,9 +604,7 @@ def test_check_stop_times():
     assert check_stop_times(feed)
 
     feed = sample.copy()
-    feed.stop_times["stop_sequence"].iat[1] = feed.stop_times[
-        "stop_sequence"
-    ].iat[0]
+    feed.stop_times["stop_sequence"].iat[1] = feed.stop_times["stop_sequence"].iat[0]
     assert check_stop_times(feed)
 
     for col in ["pickup_type", "drop_off_type"]:
@@ -605,9 +622,7 @@ def test_check_stop_times():
     assert check_stop_times(feed)
 
     feed = sample.copy()
-    feed.stop_times["departure_time"].iat[1] = feed.stop_times[
-        "departure_time"
-    ].iat[0]
+    feed.stop_times["departure_time"].iat[1] = feed.stop_times["departure_time"].iat[0]
     assert not check_stop_times(feed)
     assert check_stop_times(feed, include_warnings=True)
 
@@ -639,9 +654,7 @@ def test_check_transfers():
         "transfer_type",
         "min_transfer_time",
     ]
-    rows = [
-        [feed.stops["stop_id"].iat[0], feed.stops["stop_id"].iat[1], 2, 3600]
-    ]
+    rows = [[feed.stops["stop_id"].iat[0], feed.stops["stop_id"].iat[1], 2, 3600]]
     feed.transfers = pd.DataFrame(rows, columns=columns)
     assert not check_transfers(feed)
 

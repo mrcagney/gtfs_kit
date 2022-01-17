@@ -1,6 +1,12 @@
 Changes
 =======
 
+5.2.0, 2022-01-17
+-----------------
+- Added support for ``attributions.txt``.
+- Fixed ``aggregate_stops()`` docstring.
+
+
 5.1.4, 2021-05-19
 -----------------
 - Bugfixed ``geometrize_routes(use_utm=True)`` to actually use UTM coordinates.
