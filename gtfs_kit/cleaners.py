@@ -43,7 +43,9 @@ def clean_ids(feed: "Feed") -> "Feed":
         for column in cs.GTFS_REF.loc[cs.GTFS_REF["table"] == table, "column"]:
             if column in f.columns and column.endswith("_id"):
                 try:
-                    f[column] = f[column].str.strip().str.replace(r"\s+", "_")
+                    f[column] = (
+                        f[column].str.strip().str.replace(r"\s+", "_", regex=True)
+                    )
                     setattr(feed, table, f)
                 except AttributeError:
                     # Column is not of string type

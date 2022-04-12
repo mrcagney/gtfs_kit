@@ -1,6 +1,12 @@
 Changes
 =======
 
+5.2.1, 2022-04-12
+-----------------
+- Updated dependencies and removed version caps.
+- Updated README.
+
+
 5.2.0, 2022-01-17
 -----------------
 - Added support for ``attributions.txt``.
