@@ -122,7 +122,7 @@ def test_check_agency():
     assert check_agency(feed, include_warnings=True)
 
     feed = sample.copy()
-    feed.agency = feed.agency.append(feed.agency.iloc[0])
+    feed.agency = pd.concat([feed.agency, feed.agency.iloc[0]])
     assert check_agency(feed)
 
     feed = sample.copy()
@@ -228,10 +228,6 @@ def test_check_calendar_dates():
     assert not check_calendar_dates(feed)
     assert check_calendar_dates(feed, include_warnings=True)
 
-    feed = sample.copy()
-    feed.calendar_dates = feed.calendar_dates.append(feed.calendar_dates.iloc[0])
-    assert check_calendar_dates(feed)
-
     for col in ["date", "exception_type"]:
         feed = sample.copy()
         feed.calendar_dates[col].iat[0] = "5"
@@ -253,10 +249,6 @@ def test_check_fare_attributes():
     feed.fare_attributes["yo"] = 3
     assert not check_fare_attributes(feed)
     assert check_fare_attributes(feed, include_warnings=True)
-
-    feed = sample.copy()
-    feed.fare_attributes = feed.fare_attributes.append(feed.fare_attributes.iloc[0])
-    assert check_fare_attributes(feed)
 
     feed = sample.copy()
     feed.fare_attributes["currency_type"] = "jubjub"
@@ -356,10 +348,6 @@ def test_check_frequencies():
         feed = sample.copy()
         feed.frequencies[col] = "07:00:00"
         assert check_frequencies(feed)
-
-    feed = sample.copy()
-    feed.frequencies = feed.frequencies.append(feed.frequencies.iloc[0])
-    assert check_frequencies(feed)
 
     for col in ["headway_secs", "exact_times"]:
         feed = sample.copy()
