@@ -1,6 +1,12 @@
 Changes
 =======
 
+5.2.2, 2022-04-27
+-----------------
+- Fixed ``transfer_type`` range in ``validators.py``.
+  Was 0,...,4 but should have been 0,..,3.
+
+
 5.2.1, 2022-04-12
 -----------------
 - Updated dependencies and removed version caps.
