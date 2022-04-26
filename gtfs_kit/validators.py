@@ -1477,7 +1477,7 @@ def check_transfers(
         )
 
     # Check transfer_type
-    v = lambda x: pd.isna(x) or x in range(5)
+    v = lambda x: pd.isna(x) or x in range(4)
     problems = check_column(
         problems, table, f, "transfer_type", v, column_required=False
     )
