@@ -227,7 +227,7 @@ def test_compute_convex_hull():
     # A one-stop hull should be the stop
     stop_id = feed.stops.stop_id.iat[0]
     hull = compute_convex_hull(feed, [stop_id])
-    lon, lat = hull.coords[0]
+    lon, lat = np.array(hull.coords)[0]
     expect_lon, expect_lat = feed.stops.loc[
         lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
     ].values[0]
