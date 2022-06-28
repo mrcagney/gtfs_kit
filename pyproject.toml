@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gtfs_kit"
-version = "5.1.4"
-description = "A Python 3.7+ library for analyzing GTFS feeds."
+version = "5.2.3"
+description = "A Python 3.8+ library for analyzing GTFS feeds."
 authors = ["Alex Raichev <araichev@mrcagney.com>"]
 readme = "README.rst"
 license = "MIT"
@@ -10,29 +10,29 @@ documentation = "https://mrcagney.github.io/gtfs_kit_docs"
 exclude = ["tests", "docs"]
 
 [tool.poetry.dependencies]
-python = "^3.7 || ^3.8 || ^3.9"
-pandas = "<2"
-shapely = "<2"
-pycountry = "<20"
-utm = "<1"
-json2html = "<2"
-geopandas = "<1"
-rtree = "< 1"
-folium = "<1"
-requests = "<3"
+python = ">=3.8, <4"
+pandas = ">=1"
+shapely = ">=1"
+pycountry = ">=19"
+utm = ">=0"
+json2html = ">=1"
+geopandas = ">=0"
+rtree = ">=0"
+folium = ">=0"
+requests = ">=2"
 
 [tool.poetry.dev-dependencies]
 jupyter = "*"
-pytest = "<7"
-sphinx = "<4"
-pre-commit = "*"
-black = "=19.3b0"
-publish_sphinx_docs = "^1.0"
-matplotlib = "*"
-pytest-socket = "*"
-nbstripout = "^0.4.0"
+pytest = ">=6"
+sphinx = ">=3"
+pre-commit = ">=0"
+black = ">22"
+publish_sphinx_docs = ">=1.0"
+matplotlib = ">=1"
+pytest-socket = ">=0"
+nbstripout = ">=0.5"
 
 [build-system]
-requires = ["poetry>=0.12"]
+requires = ["poetry>=1"]
 build-backend = "poetry.masonry.api"
 

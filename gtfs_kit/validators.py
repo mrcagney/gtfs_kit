@@ -598,6 +598,101 @@ def check_agency(
     return format_problems(problems, as_df=as_df)
 
 
+def check_attributions(
+    feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
+) -> list:
+    """
+    Analog of :func:`check_agency` for ``feed.attributions``.
+    """
+    table = "attributions"
+    problems = []
+
+    # Preliminary checks
+    if feed.attributions is None:
+        return problems
+
+    f = feed.attributions.copy()
+    problems = check_for_required_columns(problems, table, f)
+    if problems:
+        return format_problems(problems, as_df=as_df)
+
+    if include_warnings:
+        problems = check_for_invalid_columns(problems, table, f)
+
+    # Check attribution_id
+    problems = check_column_id(
+        problems, table, f, "attribution_id", column_required=False
+    )
+
+    # Check agency_id
+    problems = check_column_linked_id(
+        problems, table, f, "agency_id", feed.agency, column_required=False
+    )
+
+    # Check route_id
+    problems = check_column_linked_id(
+        problems, table, f, "route_id", feed.routes, column_required=False
+    )
+
+    # Check trip_id
+    problems = check_column_linked_id(
+        problems, table, f, "trip_id", feed.trips, column_required=False
+    )
+
+    # Check combination of agency_id, route_id, trip_id
+    f["flag1"] = (
+        f.agency_id.notna().astype(int)
+        + f.route_id.notna().astype(int)
+        + f.trip_id.notna().astype(int)
+    )
+    cond = lambda x: x.flag1 > 1
+    problems = check_table(
+        problems,
+        table,
+        f,
+        cond,
+        "At most one of agency_id, route_id, trip_id can be given",
+    )
+
+    # Check organization_name
+    problems = check_column(problems, table, f, "organization_name", valid_str)
+
+    # Check is_producer, is_consumer, is_authority
+    v = lambda x: pd.isna(x) or x in range(2)
+    for col in ["is_producer", "is_operator", "is_authority"]:
+        problems = check_column(problems, table, f, col, v, column_required=False)
+
+    # Check combination of is_producer, is_consumer, is_authority
+    f["flag2"] = (
+        f.is_producer.fillna(0) + f.is_operator.fillna(0) + f.is_authority.fillna(0)
+    )
+    cond = lambda x: x.flag2 < 1
+    problems = check_table(
+        problems,
+        table,
+        f,
+        cond,
+        "At least one of is_producer, is_operator, or is_authority must be 1",
+    )
+
+    # Check attribution_url
+    problems = check_column(
+        problems, table, f, "attribution_url", valid_url, column_required=False
+    )
+
+    # Check attribution_email
+    problems = check_column(
+        problems, table, f, "attribution_email", valid_email, column_required=False
+    )
+
+    # Check attribution_phone
+    problems = check_column(
+        problems, table, f, "attribution_phon", valid_str, column_required=False
+    )
+
+    return format_problems(problems, as_df=as_df)
+
+
 def check_calendar(
     feed: "Feed", *, as_df: bool = False, include_warnings: bool = False
 ) -> list:
@@ -1382,7 +1477,7 @@ def check_transfers(
         )
 
     # Check transfer_type
-    v = lambda x: pd.isna(x) or x in range(5)
+    v = lambda x: pd.isna(x) or x in range(4)
     problems = check_column(
         problems, table, f, "transfer_type", v, column_required=False
     )
@@ -1519,6 +1614,7 @@ def validate(
     # Check for invalid columns and check the required tables
     checkers = [
         "check_agency",
+        "check_attributions",
         "check_calendar",
         "check_calendar_dates",
         "check_fare_attributes",

@@ -43,7 +43,9 @@ def clean_ids(feed: "Feed") -> "Feed":
         for column in cs.GTFS_REF.loc[cs.GTFS_REF["table"] == table, "column"]:
             if column in f.columns and column.endswith("_id"):
                 try:
-                    f[column] = f[column].str.strip().str.replace(r"\s+", "_")
+                    f[column] = (
+                        f[column].str.strip().str.replace(r"\s+", "_", regex=True)
+                    )
                     setattr(feed, table, f)
                 except AttributeError:
                     # Column is not of string type
@@ -268,7 +270,7 @@ def aggregate_stops(
     feed: "Feed", by: str = "stop_code", stop_id_prefix: str = "stop_"
 ) -> "Feed":
     """
-    Aggregate routes by route short name, say, and assign new route IDs using the
+    Aggregate stops by stop code, say, and assign new stop IDs using the
     given prefix.
 
     More specifically, create new stop IDs with the function

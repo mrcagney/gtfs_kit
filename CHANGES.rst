@@ -1,6 +1,29 @@
 Changes
 =======
 
+5.2.3, 2022-06-28
+-----------------
+- Upgraded to Python 3.10 and updated dependencies.
+
+
+5.2.2, 2022-04-27
+-----------------
+- Fixed ``transfer_type`` range in ``validators.py``.
+  Was 0,...,4 but should have been 0,..,3.
+
+
+5.2.1, 2022-04-12
+-----------------
+- Updated dependencies and removed version caps.
+- Updated README.
+
+
+5.2.0, 2022-01-17
+-----------------
+- Added support for ``attributions.txt``.
+- Fixed ``aggregate_stops()`` docstring.
+
+
 5.1.4, 2021-05-19
 -----------------
 - Bugfixed ``geometrize_routes(use_utm=True)`` to actually use UTM coordinates.

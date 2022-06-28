@@ -1,0 +1,2 @@
+attribution_id,agency_id,route_id,trip_id,organization_name,is_producer,is_operator,is_authority,attribution_url,attribution_email,attribution_phone
+bingo,DTA,,,bongo,1,,,,,

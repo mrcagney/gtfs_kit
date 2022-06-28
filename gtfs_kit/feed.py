@@ -58,6 +58,7 @@ class Feed(object):
     - ``frequencies``
     - ``transfers``
     - ``feed_info``
+    - ``attributions``
 
     There are also a few secondary instance attributes that are derived
     from the primary attributes and are automatically updated when the
@@ -187,6 +188,7 @@ class Feed(object):
         frequencies: Optional[DataFrame] = None,
         transfers: Optional[DataFrame] = None,
         feed_info: Optional[DataFrame] = None,
+        attributions: Optional[DataFrame] = None,
     ):
         """
         Assume that every non-None input is a DataFrame,
@@ -337,7 +339,7 @@ class Feed(object):
     def write(self, path: Path, ndigits: int = 6) -> None:
         """
         Write this Feed to the given path.
-        If the path end in '.zip', then write the feed as a zip archive.
+        If the path ends in '.zip', then write the feed as a zip archive.
         Otherwise assume the path is a directory, and write the feed as a
         collection of CSV files to that directory, creating the directory
         if it does not exist.

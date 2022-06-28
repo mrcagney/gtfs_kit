@@ -584,11 +584,9 @@ def geometrize_stops_0(
     ``'stop_lat'``.
     """
     g = (
-        stops.assign(
-            geometry=lambda x: [sg.Point(p) for p in x[["stop_lon", "stop_lat"]].values]
-        )
+        stops.assign(geometry=gp.points_from_xy(x=stops.stop_lon, y=stops.stop_lat))
         .drop(["stop_lon", "stop_lat"], axis=1)
-        .pipe(lambda x: gp.GeoDataFrame(x, crs=cs.WGS84))
+        .pipe(gp.GeoDataFrame, crs=cs.WGS84)
     )
 
     if use_utm:
