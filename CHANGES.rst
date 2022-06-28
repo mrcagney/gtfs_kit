@@ -1,6 +1,11 @@
 Changes
 =======
 
+5.2.3, 2022-06-28
+-----------------
+- Upgraded to Python 3.10 and updated dependencies.
+
+
 5.2.2, 2022-04-27
 -----------------
 - Fixed ``transfer_type`` range in ``validators.py``.

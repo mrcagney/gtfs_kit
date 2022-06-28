@@ -77,18 +77,22 @@ def geometrize_shapes_0(
 
     If ``use_utm``, then use local UTM coordinates for the geometries.
     """
-    f = shapes.copy().sort_values(["shape_id", "shape_pt_sequence"])
 
     def my_agg(group):
         d = {}
         d["geometry"] = sg.LineString(group[["shape_pt_lon", "shape_pt_lat"]].values)
         return pd.Series(d)
 
-    g = f.groupby("shape_id").apply(my_agg).reset_index()
-    g = gp.GeoDataFrame(g, crs=cs.WGS84)
+    g = (
+        shapes.sort_values(["shape_id", "shape_pt_sequence"])
+        .groupby("shape_id", sort=False)
+        .apply(my_agg)
+        .reset_index()
+        .pipe(gp.GeoDataFrame, crs=cs.WGS84)
+    )
 
     if use_utm:
-        lat, lon = f[["shape_pt_lat", "shape_pt_lon"]].values[0]
+        lat, lon = shapes[["shape_pt_lat", "shape_pt_lon"]].values[0]
         crs = hp.get_utm_crs(lat, lon)
         g = g.to_crs(crs)
 
@@ -190,7 +194,7 @@ def get_shapes_intersecting_geometry(
     geometry: sg.base.BaseGeometry,
     shapes_g: Optional[gp.GeoDataFrame] = None,
     *,
-    geometrized: bool = False
+    geometrized: bool = False,
 ) -> pd.DataFrame:
     """
     Return the subset of ``feed.shapes`` that contains all shapes that
