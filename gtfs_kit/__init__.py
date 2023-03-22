@@ -12,4 +12,4 @@ from .validators import *
 from .feed import *
 
 
-__version__ = "5.2.3"
+__version__ = "5.2.4"

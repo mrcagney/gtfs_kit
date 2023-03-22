@@ -1,6 +1,6 @@
-# Run this job on pushes to `main`, and for pull requests. If you don't specify
-# `branches: [main], then this actions runs _twice_ on pull requests, which is
-# annoying.
+# Run this job on pushes to `master`, and for pull requests.
+# If you don't specify `branches: [master], then this actions runs _twice_ on
+# pull requests, which is annoying.
 
 on:
   push:
