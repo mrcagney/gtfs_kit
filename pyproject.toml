@@ -21,18 +21,24 @@ rtree = ">=0"
 folium = ">=0"
 requests = ">=2"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 jupyter = "*"
 pytest = ">=6"
 sphinx = ">=3"
 pre-commit = ">=0"
-black = ">22"
-publish_sphinx_docs = ">=1.0"
 matplotlib = ">=1"
 pytest-socket = ">=0"
+black = ">22"
 nbstripout = ">=0.5"
+ruff = ">=0.0.257"
+publish_sphinx_docs = ">=1.0"
 
 [build-system]
 requires = ["poetry>=1"]
 build-backend = "poetry.masonry.api"
 
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "serial",
+]

@@ -23,7 +23,7 @@ Authors
 
 Documentation
 =============
-Documentation is built via Sphinx from the source code in the ``docs`` directory then published to Gitlab Pages at `mrcagney.gitlab.io/gtfs_kit_docs <https://mrcagney.gitlab.io/gtfs_kit_docs>`_.
+Documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `mrcagney.github.io/gtfs_kit_docs <https://mrcagney.github.io/gtfs_kit_docs>`_.
 
 
 Notes

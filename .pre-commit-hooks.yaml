@@ -1,8 +1,6 @@
--   id: black
-    name: black
-    description: 'Black: The uncompromising Python code formatter'
-    entry: black
-    language: python
-    types: [python]
--   id: nbstripout
-    name: nbstripout
+- id: nbstripout
+  name: nbstripout
+- id: black
+  name: black
+- id: ruff
+  name: ruff
