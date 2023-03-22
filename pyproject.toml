@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gtfs_kit"
-version = "5.2.3"
+version = "5.2.4"
 description = "A Python 3.8+ library for analyzing GTFS feeds."
 authors = ["Alex Raichev <araichev@mrcagney.com>"]
 readme = "README.rst"
@@ -42,3 +42,8 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "serial",
 ]
+
+[tool.ruff]
+# Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+select = ["E", "F"]
+ignore = ["F403"]
