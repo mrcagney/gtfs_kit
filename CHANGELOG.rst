@@ -1,6 +1,11 @@
 Changelog
 =========
 
+5.2.5, 2023-04-26
+-----------------
+- Updated dependencies.
+- Updated ``compute_screen_line_counts`` for Shapely >=2.
+
 5.2.4, 2023-03-22
 -----------------
 - Updated dependencies and pre-commit hooks.

@@ -3,6 +3,7 @@ monkeytype.sqlite
 notebooks/prototyping.ipynb
 
 # Byte-compiled / optimized / DLL files
+.ruff_cache/
 __pycache__/
 .mypy_cache/
 *.py[cod]
