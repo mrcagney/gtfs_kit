@@ -12,7 +12,7 @@ exclude = ["tests", "docs"]
 [tool.poetry.dependencies]
 python = ">=3.8, <4"
 pandas = ">=1"
-shapely = ">=1"
+shapely = ">=1.8"
 pycountry = ">=19"
 utm = ">=0"
 json2html = ">=1"
