@@ -1,6 +1,12 @@
 Changelog
 =========
 
+5.2.6, 2023-05-30
+-----------------
+- Bugfixed ``geometrize_routes``, addressing `Issue 1 <https://github.com/mrcagney/gtfs_kit/issues/1>`_.
+- Removed star imports from tests.
+- Updated dependencies.
+
 5.2.5, 2023-04-26
 -----------------
 - Updated dependencies.

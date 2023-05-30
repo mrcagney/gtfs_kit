@@ -1,5 +1,3 @@
-import functools as ft
-
 from .context import gtfs_kit, cairns
 from gtfs_kit import calendar as gkc
 from gtfs_kit import helpers as hp
@@ -12,7 +10,7 @@ def test_get_dates():
         d1 = "20140526"
         d2 = "20141228"
         if as_date_obj:
-            d1, d2 = ft.map(hp.datestr_to_date, [d1, d2])
+            d1, d2 = map(hp.datestr_to_date, [d1, d2])
             assert len(dates) == (d2 - d1).days + 1
         assert dates[0] == d1
         assert dates[-1] == d2
@@ -34,7 +32,7 @@ def test_get_week():
         d1 = "20140526"
         d2 = "20140601"
         if as_date_obj:
-            d1, d2 = ft.map(hp.datestr_to_date, [d1, d2])
+            d1, d2 = map(hp.datestr_to_date, [d1, d2])
             assert len(dates) == (d2 - d1).days + 1
         assert dates[0] == d1
         assert dates[-1] == d2
@@ -47,7 +45,7 @@ def test_get_first_week():
         d1 = "20140526"
         d2 = "20140601"
         if as_date_obj:
-            d1, d2 = ft.map(hp.datestr_to_date, [d1, d2])
+            d1, d2 = map(hp.datestr_to_date, [d1, d2])
             assert len(dates) == (d2 - d1).days + 1
         assert dates[0] == d1
         assert dates[-1] == d2
