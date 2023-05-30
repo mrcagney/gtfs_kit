@@ -721,7 +721,7 @@ def geometrize_routes(
 
     def merge_lines(group):
         d = {}
-        d["geometry"] = so.linemerge(group.geometry.tolist())
+        d["geometry"] = so.linemerge(group["geometry"].tolist())
         return pd.Series(d)
 
     return (
