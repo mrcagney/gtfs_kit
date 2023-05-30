@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gtfs_kit"
-version = "5.2.5"
+version = "5.2.6"
 description = "A Python 3.8+ library for analyzing GTFS feeds."
 authors = ["Alex Raichev <araichev@mrcagney.com>"]
 readme = "README.rst"
@@ -14,7 +14,7 @@ python = ">=3.8, <4"
 pandas = ">=1"
 shapely = ">=1.8"
 pycountry = ">=19"
-utm = ">=0"
+utm = ">=0.6"
 json2html = ">=1"
 geopandas = ">=0"
 rtree = ">=0"
@@ -22,7 +22,7 @@ folium = ">=0"
 requests = ">=2"
 
 [tool.poetry.group.dev.dependencies]
-jupyter = "*"
+jupyter = ">=1"
 pytest = ">=6"
 sphinx = ">=3"
 pre-commit = ">=0"
@@ -46,4 +46,4 @@ markers = [
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 select = ["E", "F"]
-ignore = ["F403"]
+ignore = ["E501", "F401", "F403"]

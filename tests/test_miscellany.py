@@ -1,5 +1,4 @@
 import pytest
-
 import pandas as pd
 from pandas.testing import assert_series_equal
 import numpy as np
@@ -7,17 +6,18 @@ import shapely.geometry as sg
 import geopandas as gp
 
 from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
-from gtfs_kit import *
+from gtfs_kit import miscellany as gkm
+from gtfs_kit import shapes as gks
 
 
 def test_summarize():
     feed = sample.copy()
 
     with pytest.raises(ValueError):
-        summarize(feed, "bad_table")
+        gkm.summarize(feed, "bad_table")
 
     for table in [None, "stops"]:
-        f = summarize(feed, table)
+        f = gkm.summarize(feed, table)
         assert isinstance(f, pd.DataFrame)
         expect_cols = {
             "table",
@@ -34,14 +34,14 @@ def test_summarize():
 
 def test_describe():
     feed = sample.copy()  # No distances here
-    a = describe(feed)
+    a = gkm.describe(feed)
     assert isinstance(a, pd.DataFrame)
     assert set(a.columns) == set(["indicator", "value"])
 
 
 def test_assess_quality():
     feed = sample.copy()  # No distances here
-    a = assess_quality(feed)
+    a = gkm.assess_quality(feed)
     assert isinstance(a, pd.DataFrame)
     assert set(a.columns) == set(["indicator", "value"])
 
@@ -49,16 +49,16 @@ def test_assess_quality():
 def test_convert_dist():
     # Test with no distances
     feed1 = cairns.copy()  # No distances here
-    feed2 = convert_dist(feed1, "mi")
+    feed2 = gkm.convert_dist(feed1, "mi")
     assert feed2.dist_units == "mi"
 
     # Test with distances and identity conversion
-    feed1 = append_dist_to_shapes(feed1)
-    feed2 = convert_dist(feed1, feed1.dist_units)
+    feed1 = gks.append_dist_to_shapes(feed1)
+    feed2 = gkm.convert_dist(feed1, feed1.dist_units)
     assert feed1 == feed2
 
     # Test with proper conversion
-    feed2 = convert_dist(feed1, "m")
+    feed2 = gkm.convert_dist(feed1, "m")
     assert_series_equal(
         feed2.shapes["shape_dist_traveled"] / 1000, feed1.shapes["shape_dist_traveled"]
     )
@@ -69,7 +69,9 @@ def test_compute_feed_stats_0():
     trip_stats = cairns_trip_stats
     feed.routes.route_type.iat[0] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = compute_feed_stats_0(feed, trip_stats, split_route_types=split_route_types)
+        f = gkm.compute_feed_stats_0(
+            feed, trip_stats, split_route_types=split_route_types
+        )
         # Should be a data frame
         assert isinstance(f, pd.core.frame.DataFrame)
         # Should contain the correct columns
@@ -98,7 +100,7 @@ def test_compute_feed_stats():
     trip_stats = cairns_trip_stats
     feed.routes.route_type.iat[0] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = compute_feed_stats(
+        f = gkm.compute_feed_stats(
             feed, trip_stats, dates, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -126,7 +128,7 @@ def test_compute_feed_stats():
         assert set(f.columns) == expect_cols
 
         # Empty dates should yield empty DataFrame
-        f = compute_feed_stats(
+        f = gkm.compute_feed_stats(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty
@@ -139,7 +141,7 @@ def test_compute_feed_time_series():
     trip_stats = cairns_trip_stats
 
     for split_route_types in [True, False]:
-        f = compute_feed_time_series(
+        f = gkm.compute_feed_time_series(
             feed, trip_stats, dates, freq="12H", split_route_types=split_route_types
         )
 
@@ -171,7 +173,7 @@ def test_compute_feed_time_series():
         assert f.shape[0] == 2 * 3
 
         # Empty check
-        f = compute_feed_time_series(
+        f = gkm.compute_feed_time_series(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty
@@ -182,11 +184,11 @@ def test_create_shapes():
     # Remove a trip shape
     trip_id = "CNS2014-CNS_MUL-Weekday-00-4165878"
     feed1.trips.loc[feed1.trips["trip_id"] == trip_id, "shape_id"] = np.nan
-    feed2 = create_shapes(feed1)
+    feed2 = gkm.create_shapes(feed1)
     # Should create only 1 new shape
     assert len(set(feed2.shapes["shape_id"]) - set(feed1.shapes["shape_id"])) == 1
 
-    feed2 = create_shapes(feed1, all_trips=True)
+    feed2 = gkm.create_shapes(feed1, all_trips=True)
     # Number of shapes should equal number of unique stop sequences
     st = feed1.stop_times.sort_values(["trip_id", "stop_sequence"])
     stop_seqs = set(
@@ -197,7 +199,7 @@ def test_create_shapes():
 
 def test_compute_bounds():
     feed = cairns.copy()
-    minlon, minlat, maxlon, maxlat = compute_bounds(feed)
+    minlon, minlat, maxlon, maxlat = gkm.compute_bounds(feed)
     # Bounds should be in the ball park
     assert 145 < minlon < 146
     assert 145 < maxlon < 146
@@ -206,7 +208,7 @@ def test_compute_bounds():
 
     # A one-stop bounds should be the stop
     stop_id = feed.stops.stop_id.iat[0]
-    minlon, minlat, maxlon, maxlat = compute_bounds(feed, [stop_id])
+    minlon, minlat, maxlon, maxlat = gkm.compute_bounds(feed, [stop_id])
     expect_lon, expect_lat = feed.stops.loc[
         lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
     ].values[0]
@@ -218,7 +220,7 @@ def test_compute_bounds():
 
 def test_compute_convex_hull():
     feed = cairns.copy()
-    hull = compute_convex_hull(feed)
+    hull = gkm.compute_convex_hull(feed)
     assert isinstance(hull, sg.Polygon)
     # Hull should encompass all stops
     m = sg.MultiPoint(feed.stops[["stop_lon", "stop_lat"]].values)
@@ -226,7 +228,7 @@ def test_compute_convex_hull():
 
     # A one-stop hull should be the stop
     stop_id = feed.stops.stop_id.iat[0]
-    hull = compute_convex_hull(feed, [stop_id])
+    hull = gkm.compute_convex_hull(feed, [stop_id])
     lon, lat = np.array(hull.coords)[0]
     expect_lon, expect_lat = feed.stops.loc[
         lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
@@ -237,17 +239,17 @@ def test_compute_convex_hull():
 
 def test_compute_centroid():
     feed = cairns.copy()
-    centroid = compute_centroid(feed)
+    centroid = gkm.compute_centroid(feed)
     assert isinstance(centroid, sg.Point)
     # Centroid should lie within bounds
     lon, lat = centroid.coords[0]
-    bounds = compute_bounds(feed)
+    bounds = gkm.compute_bounds(feed)
     assert bounds[0] < lon < bounds[2]
     assert bounds[1] < lat < bounds[3]
 
     # A one-stop centroid should be the stop
     stop_id = feed.stops.stop_id.iat[0]
-    centroid = compute_centroid(feed, [stop_id])
+    centroid = gkm.compute_centroid(feed, [stop_id])
     lon, lat = centroid.coords[0]
     expect_lon, expect_lat = feed.stops.loc[
         lambda x: x.stop_id == stop_id, ["stop_lon", "stop_lat"]
@@ -259,7 +261,7 @@ def test_compute_centroid():
 def test_restrict_to_dates():
     feed1 = cairns.copy()
     dates = feed1.get_first_week()[6:]
-    feed2 = restrict_to_dates(feed1, dates)
+    feed2 = gkm.restrict_to_dates(feed1, dates)
     # Should have correct agency
     assert feed2.agency.equals(feed1.agency)
     # Should have correct dates
@@ -275,7 +277,7 @@ def test_restrict_to_dates():
 
     # Try again with date out of range
     dates = ["20180101"]
-    feed2 = restrict_to_dates(feed1, dates)
+    feed2 = gkm.restrict_to_dates(feed1, dates)
     assert feed2.agency.equals(feed1.agency)
     assert feed2.trips.empty
     assert feed2.routes.empty
@@ -287,7 +289,7 @@ def test_restrict_to_dates():
 def test_restrict_to_routes():
     feed1 = cairns.copy()
     route_ids = feed1.routes["route_id"][:2].tolist()
-    feed2 = restrict_to_routes(feed1, route_ids)
+    feed2 = gkm.restrict_to_routes(feed1, route_ids)
     # Should have correct routes
     assert set(feed2.routes["route_id"]) == set(route_ids)
     # Should have correct trips
@@ -304,7 +306,7 @@ def test_restrict_to_routes():
 def test_restrict_to_area():
     feed1 = cairns.copy()
     area = gp.read_file(DATA_DIR / "cairns_square_stop_750070.geojson")
-    feed2 = restrict_to_area(feed1, area)
+    feed2 = gkm.restrict_to_area(feed1, area)
     # Should have correct routes
     rsns = ["120", "120N"]
     assert set(feed2.routes["route_short_name"]) == set(rsns)
@@ -328,7 +330,7 @@ def test_compute_screen_line_counts():
     # Load screen line
     path = DATA_DIR / "cairns_screen_lines.geojson"
     screen_lines = gp.read_file(path)
-    f = compute_screen_line_counts(feed, screen_lines, dates)
+    f = gkm.compute_screen_line_counts(feed, screen_lines, dates)
 
     # Should have correct columns
     expect_cols = {
@@ -351,5 +353,5 @@ def test_compute_screen_line_counts():
     assert f.date.unique().tolist() == cairns_dates
 
     # Empty check
-    f = compute_screen_line_counts(feed, screen_lines, [])
+    f = gkm.compute_screen_line_counts(feed, screen_lines, [])
     assert f.empty
