@@ -3,13 +3,13 @@ import pandas as pd
 import numpy as np
 
 from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
-from gtfs_kit import *
+from gtfs_kit import stop_times as gks
 
 
 def test_get_stop_times():
     feed = cairns.copy()
     date = cairns_dates[0]
-    f = get_stop_times(feed, date)
+    f = gks.get_stop_times(feed, date)
     # Should be a data frame
     assert isinstance(f, pd.core.frame.DataFrame)
     # Should have a reasonable shape
@@ -21,8 +21,8 @@ def test_get_stop_times():
 def test_get_start_and_end_times():
     feed = cairns.copy()
     date = cairns_dates[0]
-    st = get_stop_times(feed, date)
-    times = get_start_and_end_times(feed, date)
+    st = gks.get_stop_times(feed, date)
+    times = gks.get_start_and_end_times(feed, date)
     # Should be strings
     for t in times:
         assert isinstance(t, str)
@@ -30,11 +30,11 @@ def test_get_start_and_end_times():
         assert t in st[["departure_time", "arrival_time"]].values.flatten()
 
     # Should get null times in some cases
-    times = get_start_and_end_times(feed, "19690711")
+    times = gks.get_start_and_end_times(feed, "19690711")
     for t in times:
         assert pd.isnull(t)
     feed.stop_times["departure_time"] = np.nan
-    times = get_start_and_end_times(feed)
+    times = gks.get_start_and_end_times(feed)
     assert pd.isnull(times[0])
 
 
@@ -42,7 +42,7 @@ def test_get_start_and_end_times():
 def test_append_dist_to_stop_times():
     feed1 = cairns.copy()
     st1 = feed1.stop_times
-    feed2 = append_dist_to_stop_times(feed1)
+    feed2 = gks.append_dist_to_stop_times(feed1)
     st2 = feed2.stop_times
 
     # Check that colums of st2 equal the columns of st1 plus
@@ -62,7 +62,7 @@ def test_append_dist_to_stop_times():
 def test_stop_times_to_geojson():
     feed = cairns.copy()
     trip_ids = feed.trips.trip_id.unique()[:2]
-    collection = stop_times_to_geojson(feed, trip_ids)
+    collection = gks.stop_times_to_geojson(feed, trip_ids)
     assert isinstance(collection, dict)
 
     n = (
@@ -73,4 +73,4 @@ def test_stop_times_to_geojson():
     assert len(collection["features"]) == n
 
     with pytest.raises(ValueError):
-        stop_times_to_geojson(feed, ["bingo"])
+        gks.stop_times_to_geojson(feed, ["bingo"])
