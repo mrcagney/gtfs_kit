@@ -7,7 +7,7 @@ import geopandas as gp
 import folium as fl
 
 from .context import gtfs_kit, cairns, cairns_shapeless, cairns_dates, cairns_trip_stats
-from gtfs_kit import routes as gkr
+from .context.gtfs_kit import routes as gkr
 
 
 @pytest.mark.slow
