@@ -12,7 +12,10 @@ from .context import (
     cairns_dates,
     cairns_trip_stats,
 )
-from gtfs_kit import *
+from gtfs_kit import trips as gkt
+from gtfs_kit import calendar as gkc
+from gtfs_kit import helpers as gkh
+from gtfs_kit import stop_times as gks
 
 
 def test_is_active_trip():
@@ -20,20 +23,20 @@ def test_is_active_trip():
     trip_id = "CNS2014-CNS_MUL-Weekday-00-4165878"
     date1 = "20140526"
     date2 = "20120322"
-    assert is_active_trip(feed, trip_id, date1)
-    assert not is_active_trip(feed, trip_id, date2)
+    assert gkt.is_active_trip(feed, trip_id, date1)
+    assert not gkt.is_active_trip(feed, trip_id, date2)
 
     trip_id = "CNS2014-CNS_MUL-Sunday-00-4165971"
     date1 = "20140601"
     date2 = "20120602"
-    assert is_active_trip(feed, trip_id, date1)
-    assert not is_active_trip(feed, trip_id, date2)
+    assert gkt.is_active_trip(feed, trip_id, date1)
+    assert not gkt.is_active_trip(feed, trip_id, date2)
 
 
 def test_get_trips():
     feed = cairns.copy()
     date = cairns_dates[0]
-    trips1 = get_trips(feed, date)
+    trips1 = gkt.get_trips(feed, date)
     # Should be a data frame
     assert isinstance(trips1, pd.core.frame.DataFrame)
     # Should have the correct shape
@@ -42,7 +45,7 @@ def test_get_trips():
     # Should have correct columns
     assert set(trips1.columns) == set(feed.trips.columns)
 
-    trips2 = get_trips(feed, date, "07:30:00")
+    trips2 = gkt.get_trips(feed, date, "07:30:00")
     # Should be a data frame
     assert isinstance(trips2, pd.core.frame.DataFrame)
     # Should have the correct shape
@@ -54,8 +57,8 @@ def test_get_trips():
 
 def test_compute_trip_activity():
     feed = cairns.copy()
-    dates = get_first_week(feed)
-    trips_activity = compute_trip_activity(feed, dates)
+    dates = gkc.get_first_week(feed)
+    trips_activity = gkt.compute_trip_activity(feed, dates)
     # Should be a data frame
     assert isinstance(trips_activity, pd.core.frame.DataFrame)
     # Should have the correct shape
@@ -67,8 +70,8 @@ def test_compute_trip_activity():
 
 def test_compute_busiest_date():
     feed = cairns.copy()
-    dates = get_first_week(feed)[:1]
-    date = compute_busiest_date(feed, dates + ["999"])
+    dates = gkc.get_first_week(feed)[:1]
+    date = gkt.compute_busiest_date(feed, dates + ["999"])
     # Busiest day should lie in first week
     assert date in dates
 
@@ -77,7 +80,7 @@ def test_compute_trip_stats():
     feed = cairns.copy()
     n = 3
     rids = feed.routes.route_id.loc[:n]
-    trip_stats = compute_trip_stats(feed, route_ids=rids)
+    trip_stats = gkt.compute_trip_stats(feed, route_ids=rids)
 
     # Should be a data frame with the correct number of rows
     trip_subset = feed.trips.loc[lambda x: x["route_id"].isin(rids)].copy()
@@ -108,14 +111,14 @@ def test_compute_trip_stats():
 
     # Distance units should be correct
     d1 = trip_stats.distance.iat[0]  # km
-    trip_stats_2 = compute_trip_stats(feed.convert_dist("ft"), route_ids=rids)
+    trip_stats_2 = gkt.compute_trip_stats(feed.convert_dist("ft"), route_ids=rids)
     d2 = trip_stats_2.distance.iat[0]  # mi
-    f = get_convert_dist("km", "mi")
+    f = gkh.get_convert_dist("km", "mi")
     assert np.allclose(f(d1), d2)
 
     # Shapeless feeds should have null entries for distance column
     feed = cairns_shapeless.copy()
-    trip_stats = compute_trip_stats(feed, route_ids=rids)
+    trip_stats = gkt.compute_trip_stats(feed, route_ids=rids)
     assert len(trip_stats["distance"].unique()) == 1
     assert np.isnan(trip_stats["distance"].unique()[0])
 
@@ -128,7 +131,7 @@ def test_compute_trip_stats():
     # should give ``direction_id`` column in stats with all NaNs
     feed = cairns.copy()
     del feed.trips["direction_id"]
-    trip_stats = compute_trip_stats(feed, route_ids=rids)
+    trip_stats = gkt.compute_trip_stats(feed, route_ids=rids)
     assert set(trip_stats.columns) == expect_cols
     assert trip_stats.direction_id.isnull().all()
 
@@ -136,7 +139,7 @@ def test_compute_trip_stats():
     # should give ``shape_id`` column in stats with all NaNs
     feed = cairns.copy()
     del feed.trips["shape_id"]
-    trip_stats = compute_trip_stats(feed, route_ids=rids)
+    trip_stats = gkt.compute_trip_stats(feed, route_ids=rids)
     assert set(trip_stats.columns) == expect_cols
     assert trip_stats.shape_id.isnull().all()
 
@@ -144,12 +147,11 @@ def test_compute_trip_stats():
 @pytest.mark.slow
 def test_locate_trips():
     feed = cairns.copy()
-    trip_stats = cairns_trip_stats
-    feed = append_dist_to_stop_times(feed)
+    feed = gks.append_dist_to_stop_times(feed)
     date = cairns_dates[0]
     times = ["08:00:00"]
-    f = locate_trips(feed, date, times)
-    g = get_trips(feed, date, times[0])
+    f = gkt.locate_trips(feed, date, times)
+    g = gkt.get_trips(feed, date, times[0])
     # Should be a data frame
     assert isinstance(f, pd.core.frame.DataFrame)
     # Should have the correct number of rows
@@ -173,29 +175,29 @@ def test_locate_trips():
     feed = cairns_shapeless.copy()
     del feed.trips["shape_id"]
     with pytest.raises(ValueError):
-        locate_trips(feed, date, times)
+        gkt.locate_trips(feed, date, times)
 
 
 def test_geometrize_trips():
     feed = cairns.copy()
     trip_ids = feed.trips.trip_id.loc[:1]
-    g = geometrize_trips(feed, trip_ids, use_utm=True)
+    g = gkt.geometrize_trips(feed, trip_ids, use_utm=True)
     assert isinstance(g, gp.GeoDataFrame)
     assert g.shape[0] == len(trip_ids)
-    assert g.crs != WGS84
+    assert g.crs != "epsg:4326"
 
     with pytest.raises(ValueError):
-        geometrize_trips(cairns_shapeless)
+        gkt.geometrize_trips(cairns_shapeless)
 
 
 def test_trips_to_geojson():
     feed = cairns.copy()
     trip_ids = feed.trips.trip_id.loc[:1]
     n = len(trip_ids)
-    gj = trips_to_geojson(feed, trip_ids)
+    gj = gkt.trips_to_geojson(feed, trip_ids)
     assert len(gj["features"]) == n
 
-    gj = trips_to_geojson(feed, trip_ids, include_stops=True)
+    gj = gkt.trips_to_geojson(feed, trip_ids, include_stops=True)
     k = (
         feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
         .drop_duplicates(subset=["trip_id", "stop_id"])
@@ -204,14 +206,14 @@ def test_trips_to_geojson():
     assert len(gj["features"]) == n + k
 
     with pytest.raises(ValueError):
-        trips_to_geojson(cairns_shapeless)
+        gkt.trips_to_geojson(cairns_shapeless)
 
     with pytest.raises(ValueError):
-        trips_to_geojson(cairns, trip_ids=["bingo"])
+        gkt.trips_to_geojson(cairns, trip_ids=["bingo"])
 
 
 def test_map_trips():
     feed = cairns.copy()
     tids = feed.trips["trip_id"].values[:2]
-    m = map_trips(feed, tids, include_stops=True)
+    m = gkt.map_trips(feed, tids, include_stops=True)
     assert isinstance(m, fl.Map)

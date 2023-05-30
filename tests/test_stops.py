@@ -9,6 +9,7 @@ import folium as fl
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_dates
 from gtfs_kit import stops as gks
+from gtfs_kit import calendar as gkc
 
 
 def test_compute_stop_stats_0():
@@ -137,7 +138,7 @@ def test_get_stops():
 
 def test_compute_stop_activity():
     feed = cairns.copy()
-    dates = gks.get_first_week(feed)
+    dates = gkc.get_first_week(feed)
     stop_activity = gks.compute_stop_activity(feed, dates)
     # Should be a data frame
     assert isinstance(stop_activity, pd.core.frame.DataFrame)
