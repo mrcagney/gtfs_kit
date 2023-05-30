@@ -1,9 +1,9 @@
 from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy as np
 
-from .context import sample
-from .context.gtfs_kit import cleaners as gkc
-from .context.gtfs_kit import helpers as hp
+from .context import sample, gtfs_kit
+from gtfs_kit import cleaners as gkc
+from gtfs_kit import helpers as hp
 
 
 def test_clean_column_names():
@@ -148,7 +148,7 @@ def test_aggregate_stops():
 
     # Feeds should have same stop times, excluding stop IDs
     feed1.stop_times["stop_id"] = feed2.stop_times.stop_id
-    assert gkc.almost_equal(feed1.stop_times, feed2.stop_times)
+    assert hp.almost_equal(feed1.stop_times, feed2.stop_times)
 
     # Feeds should have equal attributes excluding
     # stops stop times DataFrames

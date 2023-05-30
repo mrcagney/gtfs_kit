@@ -1,8 +1,8 @@
 import functools as ft
 
-from .context import cairns
-from .context.gtfs_kit import calendar as gkc
-from .context.gtfs_kit import helpers as hp
+from .context import gtfs_kit, cairns
+from gtfs_kit import calendar as gkc
+from gtfs_kit import helpers as hp
 
 
 def test_get_dates():

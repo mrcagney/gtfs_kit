@@ -46,4 +46,4 @@ markers = [
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 select = ["E", "F"]
-ignore = ["E501", "F403"]
+ignore = ["E501", "F401"]
