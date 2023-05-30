@@ -1,14 +1,14 @@
-import pytest
 import itertools
 
+import pytest
+import numpy as np
 import pandas as pd
 from pandas.testing import assert_frame_equal
 import geopandas as gp
 import folium as fl
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_dates
-from gtfs_kit import *
-from gtfs_kit import geometrize_stops_0, ungeometrize_stops_0
+from gtfs_kit import stops as gks
 
 
 def test_compute_stop_stats_0():
@@ -20,12 +20,12 @@ def test_compute_stop_stats_0():
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_stop_stats_0(
+                gks.compute_stop_stats_0(
                     feed.stop_times, feed.trips, split_directions=split_directions
                 )
             continue
 
-        stops_stats = compute_stop_stats_0(
+        stops_stats = gks.compute_stop_stats_0(
             feed.stop_times, feed.trips, split_directions=split_directions
         )
         # Should be a data frame
@@ -52,7 +52,7 @@ def test_compute_stop_stats_0():
         assert get_stops == expect_stops
 
     # Empty check
-    stats = compute_stop_stats_0(feed.stop_times, pd.DataFrame())
+    stats = gks.compute_stop_stats_0(feed.stop_times, pd.DataFrame())
     assert stats.empty
 
 
@@ -66,15 +66,15 @@ def test_compute_stop_time_series_0():
         if split_directions and feed.trips.direction_id.isnull().all():
             # Should raise an error
             with pytest.raises(ValueError):
-                compute_stop_time_series_0(
+                gks.compute_stop_time_series_0(
                     feed.stop_times, feed.trips, split_directions=split_directions
                 )
             continue
 
-        ss = compute_stop_stats_0(
+        ss = gks.compute_stop_stats_0(
             feed.stop_times, feed.trips, split_directions=split_directions
         )
-        sts = compute_stop_time_series_0(
+        sts = gks.compute_stop_time_series_0(
             feed.stop_times, feed.trips, freq="1H", split_directions=split_directions
         )
 
@@ -101,7 +101,7 @@ def test_compute_stop_time_series_0():
                 assert get == expect
 
     # Empty check
-    stops_ts = compute_stop_time_series_0(
+    stops_ts = gks.compute_stop_time_series_0(
         feed.stop_times, pd.DataFrame(), freq="1H", split_directions=split_directions
     )
     assert stops_ts.empty
@@ -113,13 +113,13 @@ def test_get_stops():
     trip_ids = feed.trips.trip_id.loc[:1]
     route_ids = feed.routes.route_id.loc[:1]
     frames = [
-        get_stops(feed),
-        get_stops(feed, date=date),
-        get_stops(feed, trip_ids=trip_ids),
-        get_stops(feed, route_ids=route_ids),
-        get_stops(feed, date=date, trip_ids=trip_ids),
-        get_stops(feed, date=date, route_ids=route_ids),
-        get_stops(feed, date=date, trip_ids=trip_ids, route_ids=route_ids),
+        gks.get_stops(feed),
+        gks.get_stops(feed, date=date),
+        gks.get_stops(feed, trip_ids=trip_ids),
+        gks.get_stops(feed, route_ids=route_ids),
+        gks.get_stops(feed, date=date, trip_ids=trip_ids),
+        gks.get_stops(feed, date=date, route_ids=route_ids),
+        gks.get_stops(feed, date=date, trip_ids=trip_ids, route_ids=route_ids),
     ]
     for f in frames:
         # Should be a data frame
@@ -137,8 +137,8 @@ def test_get_stops():
 
 def test_compute_stop_activity():
     feed = cairns.copy()
-    dates = get_first_week(feed)
-    stop_activity = compute_stop_activity(feed, dates)
+    dates = gks.get_first_week(feed)
+    stop_activity = gks.compute_stop_activity(feed, dates)
     # Should be a data frame
     assert isinstance(stop_activity, pd.core.frame.DataFrame)
     # Should have the correct shape
@@ -154,7 +154,7 @@ def test_compute_stop_stats():
     n = 3
     sids = feed.stops.stop_id.loc[:n]
     for split_directions in [True, False]:
-        f = compute_stop_stats(
+        f = gks.compute_stop_stats(
             feed, dates, stop_ids=sids, split_directions=split_directions
         )
 
@@ -163,7 +163,7 @@ def test_compute_stop_stats():
 
         # Should contain the correct stops
         get = set(f["stop_id"].values)
-        g = get_stops(feed, date=dates[0]).loc[lambda x: x["stop_id"].isin(sids)]
+        g = gks.get_stops(feed, date=dates[0]).loc[lambda x: x["stop_id"].isin(sids)]
         expect = set(g["stop_id"].values)
         assert get == expect
 
@@ -188,7 +188,7 @@ def test_compute_stop_stats():
         f.date.tolist() == cairns_dates
 
         # Empty dates should yield empty DataFrame
-        f = compute_stop_stats(feed, [], split_directions=split_directions)
+        f = gks.compute_stop_stats(feed, [], split_directions=split_directions)
         assert f.empty
 
 
@@ -202,7 +202,7 @@ def test_build_zero_stop_time_series():
             expect_names = ["indicator", "stop_id"]
             expect_shape = (2, feed.stops.shape[0])
 
-        f = build_zero_stop_time_series(
+        f = gks.build_zero_stop_time_series(
             feed, split_directions=split_directions, freq="12H"
         )
 
@@ -219,10 +219,10 @@ def test_compute_stop_time_series():
     sids = feed.stops.stop_id.loc[:n]
 
     for split_directions in [True, False]:
-        s = compute_stop_stats(
+        s = gks.compute_stop_stats(
             feed, dates, stop_ids=sids, split_directions=split_directions
         )
-        ts = compute_stop_time_series(
+        ts = gks.compute_stop_time_series(
             feed, dates, stop_ids=sids, freq="12H", split_directions=split_directions
         )
 
@@ -244,7 +244,7 @@ def test_compute_stop_time_series():
         assert ts.index.name == "datetime"
 
         # Each stop should have a correct total trip count
-        if split_directions == False:
+        if not split_directions:
             sg = s.groupby("stop_id")
             for stop in s.stop_id.values:
                 get = ts["num_trips"][stop].sum()
@@ -254,7 +254,7 @@ def test_compute_stop_time_series():
                 assert get <= expect
 
         # Empty dates should yield empty DataFrame
-        ts = compute_stop_time_series(feed, [], split_directions=split_directions)
+        ts = gks.compute_stop_time_series(feed, [], split_directions=split_directions)
         assert ts.empty
 
 
@@ -262,7 +262,7 @@ def test_build_stop_timetable():
     feed = cairns.copy()
     stop_id = feed.stops["stop_id"].values[0]
     dates = cairns_dates + ["20010101"]
-    f = build_stop_timetable(feed, stop_id, dates)
+    f = gks.build_stop_timetable(feed, stop_id, dates)
 
     # Should be a data frame
     assert isinstance(f, pd.core.frame.DataFrame)
@@ -275,13 +275,13 @@ def test_build_stop_timetable():
     assert f.date.unique().tolist() == cairns_dates
 
     # Empty check
-    f = build_stop_timetable(feed, stop_id, [])
+    f = gks.build_stop_timetable(feed, stop_id, [])
     assert f.empty
 
 
 def test_geometrize_stops_0():
     stops = cairns.stops.copy()
-    geo_stops = geometrize_stops_0(stops, use_utm=True)
+    geo_stops = gks.geometrize_stops_0(stops, use_utm=True)
     # Should be a GeoDataFrame
     assert isinstance(geo_stops, gp.GeoDataFrame)
     # Should have the correct shape
@@ -296,8 +296,8 @@ def test_geometrize_stops_0():
 
 def test_ungeometrize_stops_0():
     stops = cairns.stops.copy()
-    geo_stops = geometrize_stops_0(stops)
-    stops2 = ungeometrize_stops_0(geo_stops)
+    geo_stops = gks.geometrize_stops_0(stops)
+    stops2 = gks.ungeometrize_stops_0(geo_stops)
     # Test columns are correct
     assert set(stops2.columns) == set(stops.columns)
     # Data frames should be equal after sorting columns
@@ -306,13 +306,13 @@ def test_ungeometrize_stops_0():
 
 
 def test_geometrize_stops():
-    g_1 = geometrize_stops(cairns, use_utm=True)
-    g_2 = geometrize_stops_0(cairns.stops, use_utm=True)
+    g_1 = gks.geometrize_stops(cairns, use_utm=True)
+    g_2 = gks.geometrize_stops_0(cairns.stops, use_utm=True)
     assert g_1.equals(g_2)
 
 
 def test_build_geometry_by_stop():
-    d = build_geometry_by_stop(cairns)
+    d = gks.build_geometry_by_stop(cairns)
     assert isinstance(d, dict)
     assert len(d) == cairns.stops.stop_id.nunique()
 
@@ -320,23 +320,23 @@ def test_build_geometry_by_stop():
 def test_stops_to_geojson():
     feed = cairns.copy()
     stop_ids = feed.stops.stop_id.unique()[:2]
-    collection = stops_to_geojson(feed, stop_ids)
+    collection = gks.stops_to_geojson(feed, stop_ids)
     assert isinstance(collection, dict)
     assert len(collection["features"]) == len(stop_ids)
 
     with pytest.raises(ValueError):
-        stops_to_geojson(feed, ["bingo"])
+        gks.stops_to_geojson(feed, ["bingo"])
 
 
 def test_get_stops_in_area():
     feed = cairns.copy()
     area = gp.read_file(DATA_DIR / "cairns_square_stop_750070.geojson")
-    stops = get_stops_in_area(feed, area)
+    stops = gks.get_stops_in_area(feed, area)
     expect_stop_ids = ["750070"]
     assert stops["stop_id"].values == expect_stop_ids
 
 
 def test_map_stops():
     feed = cairns.copy()
-    m = map_stops(feed, feed.stops.stop_id.iloc[:5])
+    m = gks.map_stops(feed, feed.stops.stop_id.iloc[:5])
     assert isinstance(m, fl.Map)
