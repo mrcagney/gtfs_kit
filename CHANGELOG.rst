@@ -1,6 +1,10 @@
 Changelog
 =========
 
+5.2.7, 2023-06-06
+-----------------
+- Bugfixed ``get_peak_indices``, addressing `Issue 2 <https://github.com/mrcagney/gtfs_kit/issues/2>`_.
+
 5.2.6, 2023-05-30
 -----------------
 - Bugfixed ``geometrize_routes``, addressing `Issue 1 <https://github.com/mrcagney/gtfs_kit/issues/1>`_.
