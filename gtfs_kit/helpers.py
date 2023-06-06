@@ -56,7 +56,7 @@ def timestr_to_seconds(
             result = int(hours) * 3600 + int(mins) * 60 + int(seconds)
             if mod24:
                 result %= 24 * 3600
-        except:
+        except Exception:
             result = np.nan
     else:
         try:
@@ -66,7 +66,7 @@ def timestr_to_seconds(
             hours, remainder = divmod(seconds, 3600)
             mins, secs = divmod(remainder, 60)
             result = f"{hours:02d}:{mins:02d}:{secs:02d}"
-        except:
+        except Exception:
             result = np.nan
     return result
 
@@ -80,7 +80,7 @@ def timestr_mod24(timestr: str) -> int:
         hours, mins, secs = [int(x) for x in timestr.split(":")]
         hours %= 24
         result = f"{hours:02d}:{mins:02d}:{secs:02d}"
-    except:
+    except Exception:
         result = None
     return result
 
@@ -98,12 +98,12 @@ def weekday_to_str(
     if not inverse:
         try:
             return s[weekday]
-        except:
+        except Exception:
             return
     else:
         try:
             return s.index(weekday)
-        except:
+        except Exception:
             return
 
 
@@ -167,14 +167,32 @@ def get_peak_indices(times: list, counts: list) -> np.array:
     the first longest time period such that for all i <= x < j,
     counts[x] is the max of counts.
     Assume times and counts have the same nonzero length.
+
+    Examples::
+
+        >>> times = [0, 10, 20, 30, 31, 32, 40]
+        >>> counts = [7, 1, 2, 7, 7, 1, 2]
+        >>> get_peak_indices(times, counts)
+        array([0, 1])
+
+        >>> counts = [0, 0, 0]
+        >>> times = [18000, 21600, 28800]
+        >>> get_peak_indices(times, counts)
+        array([0, 3])
+
     """
     max_runs = get_max_runs(counts)
 
     def get_duration(a):
         return times[a[1]] - times[a[0]]
 
-    index = np.argmax(np.apply_along_axis(get_duration, 1, max_runs))
-    return max_runs[index]
+    if len(max_runs) == 1:
+        result = max_runs[0]
+    else:
+        index = np.argmax(np.apply_along_axis(get_duration, 1, max_runs))
+        result = max_runs[index]
+
+    return result
 
 
 def is_metric(dist_units: str) -> bool:
@@ -577,7 +595,7 @@ def longest_subsequence(
         # update existing subsequence of length j or extend the longest
         try:
             lastoflength[j] = i
-        except:
+        except Exception:
             lastoflength.append(i)
         # remember element before seq[i] in the subsequence
         predecessor.append(lastoflength[j - 1] if j > 0 else None)
