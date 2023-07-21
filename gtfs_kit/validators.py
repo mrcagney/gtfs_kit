@@ -640,19 +640,20 @@ def check_attributions(
     )
 
     # Check combination of agency_id, route_id, trip_id
-    f["flag1"] = (
-        f.agency_id.notna().astype(int)
-        + f.route_id.notna().astype(int)
-        + f.trip_id.notna().astype(int)
-    )
-    cond = lambda x: x.flag1 > 1
-    problems = check_table(
-        problems,
-        table,
-        f,
-        cond,
-        "At most one of agency_id, route_id, trip_id can be given",
-    )
+    if {"agency_id", "route_id", "trip_id"} <= set(f.columns):
+        f["flag1"] = (
+            f["agency_id"].notna().astype(int)
+            + f["route_id"].notna().astype(int)
+            + f["trip_id"].notna().astype(int)
+        )
+        cond = lambda x: x.flag1 > 1
+        problems = check_table(
+            problems,
+            table,
+            f,
+            cond,
+            "At most one of agency_id, route_id, trip_id can be given",
+        )
 
     # Check organization_name
     problems = check_column(problems, table, f, "organization_name", valid_str)
@@ -663,17 +664,20 @@ def check_attributions(
         problems = check_column(problems, table, f, col, v, column_required=False)
 
     # Check combination of is_producer, is_consumer, is_authority
-    f["flag2"] = (
-        f.is_producer.fillna(0) + f.is_operator.fillna(0) + f.is_authority.fillna(0)
-    )
-    cond = lambda x: x.flag2 < 1
-    problems = check_table(
-        problems,
-        table,
-        f,
-        cond,
-        "At least one of is_producer, is_operator, or is_authority must be 1",
-    )
+    if {"is_producer", "is_operator", "is_authority"} <= set(f.columns):
+        f["flag2"] = (
+            f["is_producer"].fillna(0)
+            + f["is_operator"].fillna(0)
+            + f["is_authority"].fillna(0)
+        )
+        cond = lambda x: x.flag2 < 1
+        problems = check_table(
+            problems,
+            table,
+            f,
+            cond,
+            "At least one of is_producer, is_operator, or is_authority must be 1",
+        )
 
     # Check attribution_url
     problems = check_column(
