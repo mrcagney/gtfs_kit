@@ -1,6 +1,12 @@
 Changelog
 =========
 
+5.2.8, 2023-07-21
+-----------------
+- Bugfixed the ``check_attributions()`` validator.
+- Changed ``compute_route_stats_0`` to ignore trips of zero duration, thereby addressing a different aspect of `Issue 2 <https://github.com/mrcagney/gtfs_kit/issues/2>`_.
+- Updated dependencies.
+
 5.2.7, 2023-06-06
 -----------------
 - Bugfixed ``get_peak_indices``, addressing `Issue 2 <https://github.com/mrcagney/gtfs_kit/issues/2>`_.
