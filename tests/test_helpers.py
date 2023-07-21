@@ -84,6 +84,18 @@ def test_get_peak_indices():
     expect = [0, 1]
     assert_array_equal(get, expect)
 
+    counts = [0, 1, 0]
+    times = [18000, 21600, 28800]
+    get = gkh.get_peak_indices(times, counts)
+    expect = [1, 2]
+    assert_array_equal(get, expect)
+
+    counts = [0, 0, 0]
+    times = [18000, 21600, 28800]
+    get = gkh.get_peak_indices(times, counts)
+    expect = [0, 3]
+    assert_array_equal(get, expect)
+
 
 def test_almost_equal():
     f = pd.DataFrame([[1, 2], [3, 4]], columns=["a", "b"])

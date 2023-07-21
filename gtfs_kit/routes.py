@@ -31,6 +31,8 @@ def compute_route_stats_0(
     Compute stats for the given subset of trips stats (of the form output by the
     function :func:`.trips.compute_trip_stats`).
 
+    Ignore trips with zero duration, because they are defunct.
+
     If ``split_directions``, then separate the stats by trip direction (0 or 1).
     Use the headway start and end times to specify the time period for computing
     headway stats.
@@ -94,8 +96,10 @@ def compute_route_stats_0(
     if trip_stats_subset.empty:
         return pd.DataFrame()
 
+    # Remove defunct trips
+    f = trip_stats_subset.loc[lambda x: x["duration"] > 0].copy()
+
     # Convert trip start and end times to seconds to ease calculations below
-    f = trip_stats_subset.copy()
     f[["start_time", "end_time"]] = f[["start_time", "end_time"]].applymap(
         hp.timestr_to_seconds
     )
