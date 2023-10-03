@@ -1,7 +1,7 @@
 Changelog
 =========
 
-6.0.0, 2023-MM-DD
+6.0.0, 2023-10-03
 -----------------
 - Changed keywords in ``map_trips()`` and ``map_routes()`` because i keep remembering them wrong.
 
