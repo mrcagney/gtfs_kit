@@ -1,6 +1,10 @@
 Changelog
 =========
 
+6.0.0, 2023-10-03
+-----------------
+- Changed keywords in ``map_trips()`` and ``map_routes()`` because i keep remembering them wrong.
+
 5.2.8, 2023-07-21
 -----------------
 - Bugfixed the ``check_attributions()`` validator.

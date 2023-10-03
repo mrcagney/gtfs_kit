@@ -790,7 +790,7 @@ def map_routes(
     route_ids: Iterable[str],
     color_palette: list[str] = cs.COLORS_SET2,
     *,
-    include_stops: bool = False,
+    show_stops: bool = False,
 ):
     """
     Return a Folium map showing the given routes and (optionally)
@@ -810,7 +810,7 @@ def map_routes(
     # Create a feature group for each route and add it to the map
     for i, route_id in enumerate(route_ids):
         collection = feed.routes_to_geojson(
-            route_ids=[route_id], include_stops=include_stops
+            route_ids=[route_id], include_stops=show_stops
         )
 
         # Use route short name for group name if possible; otherwise use route ID

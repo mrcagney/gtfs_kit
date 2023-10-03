@@ -390,5 +390,5 @@ def test_routes_to_geojson():
 def test_map_routes():
     feed = cairns.copy()
     rids = feed.routes.route_id.loc[:1]
-    m = gkr.map_routes(feed, rids, include_stops=True)
+    m = gkr.map_routes(feed, rids, show_stops=True)
     assert isinstance(m, fl.Map)
