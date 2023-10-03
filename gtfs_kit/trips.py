@@ -446,51 +446,6 @@ def geometrize_trips(
     )
 
 
-# def trips_to_geojson(
-#     feed: "Feed",
-#     trip_ids: Optional[Iterable[str]] = None,
-#     *,
-#     include_stops: bool = False,
-# ) -> dict:
-#     """
-#     Return a GeoJSON FeatureCollection of LineString features representing the Feed's trips.
-#     The coordinates reference system is the default one for GeoJSON,
-#     namely WGS84.
-
-#     If ``include_stops``, then include the trip stops as Point features .
-#     If an iterable of trip IDs is given, then subset to those trips.
-#     If the subset is empty, then return a FeatureCollection with an empty list of
-#     features.
-#     If the Feed has no shapes, then raise a ValueError.
-#     If any of the given trip IDs are not found in the feed, then raise a ValueError.
-#     """
-#     if trip_ids is not None:
-#         D = set(trip_ids) - set(feed.trips.trip_id)
-#         if D:
-#             raise ValueError(f"Trip IDs {D} not found in feed.")
-
-#     # Get trips
-#     g = geometrize_trips(feed, trip_ids=trip_ids)
-#     if g.empty:
-#         collection = {"type": "FeatureCollection", "features": []}
-#     else:
-#         collection = json.loads(g.to_json())
-
-#     # Get stops if desired
-#     if include_stops:
-#         if trip_ids is not None:
-#             stop_ids = feed.stop_times.loc[
-#                 lambda x: x.trip_id.isin(trip_ids), "stop_id"
-#             ].unique()
-#         else:
-#             stop_ids = None
-
-#         stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
-#         collection["features"].extend(stops_gj["features"])
-
-#     return hp.drop_feature_ids(collection)
-
-
 def trips_to_geojson(
     feed: "Feed",
     trip_ids: Optional[Iterable[str]] = None,
@@ -532,14 +487,14 @@ def map_trips(
     trip_ids: Iterable[str],
     color_palette: list[str] = cs.COLORS_SET2,
     *,
-    include_stops: bool = False,
-    include_arrows: bool = False,
+    show_stops: bool = False,
+    show_direction: bool = False,
 ):
     """
     Return a Folium map showing the given trips and (optionally)
     their stops.
     If any of the given trip IDs are not found in the feed, then raise a ValueError.
-    If ``include_arrows``, then use the Folium plugin PolyLineTextPath to draw arrows
+    If ``include_direction``, then use the Folium plugin PolyLineTextPath to draw arrows
     on each trip polyline indicating its direction of travel; this fails to work in some
     browsers, such as Brave 0.68.132.
     """
@@ -555,7 +510,7 @@ def map_trips(
 
     # Create a feature group for each route and add it to the map
     for i, trip_id in enumerate(trip_ids):
-        collection = trips_to_geojson(feed, [trip_id], include_stops=include_stops)
+        collection = trips_to_geojson(feed, [trip_id], include_stops=show_stops)
 
         group = fl.FeatureGroup(name=f"Trip {trip_id}")
         color = colors[i]
@@ -586,7 +541,7 @@ def map_trips(
                 path.add_to(group)
                 bboxes.append(sg.box(*sg.shape(f["geometry"]).bounds))
 
-                if include_arrows:
+                if show_direction:
                     # Direction arrows, assuming, as GTFS does, that
                     # trip direction equals LineString direction
                     fp.PolyLineTextPath(

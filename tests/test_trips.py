@@ -215,5 +215,5 @@ def test_trips_to_geojson():
 def test_map_trips():
     feed = cairns.copy()
     tids = feed.trips["trip_id"].values[:2]
-    m = gkt.map_trips(feed, tids, include_stops=True)
+    m = gkt.map_trips(feed, tids, show_stops=True)
     assert isinstance(m, fl.Map)
