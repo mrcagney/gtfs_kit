@@ -1,5 +1,8 @@
 Changelog
 =========
+6.0.1, 2024-01-30
+-----------------
+- Fixed a new GeoPandas 'set geometry' error.
 
 6.0.0, 2023-10-03
 -----------------

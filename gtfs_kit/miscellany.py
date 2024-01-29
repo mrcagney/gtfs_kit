@@ -935,7 +935,7 @@ def compute_screen_line_counts(
             }
             records.append(record)
 
-    g = gp.GeoDataFrame.from_records(records)
+    g = gp.GeoDataFrame.from_records(records).set_geometry("geometry")
     g.crs = crs
 
     # Get distance (in meters) of each intersection point along shape
