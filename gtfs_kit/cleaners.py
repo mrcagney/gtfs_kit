@@ -54,6 +54,31 @@ def clean_ids(feed: "Feed") -> "Feed":
     return feed
 
 
+def extend_id(feed: "Feed", id_col: str, extension: str, prefix=True) -> "Feed":
+    """
+    Add a prefix or suffix to a certain id.
+    This can be helpful to make ids unique across multiple GTFS feeds.
+    """
+    feed = feed.copy()
+
+    for table in cs.GTFS_REF["table"].unique():
+        t = getattr(feed, table)
+        if t is None:
+            continue
+        for column in cs.GTFS_REF.loc[cs.GTFS_REF["table"] == table, "column"]:
+            if column in t.columns and column == id_col:
+                try:
+                    t[column] = (
+                        extension + t[column] if prefix else t[column] + extension
+                    )
+                    setattr(feed, table, t)
+                except AttributeError:
+                    # Column is not of string type
+                    continue
+
+    return feed
+
+
 def clean_times(feed: "Feed") -> "Feed":
     """
     In the given Feed, convert H:MM:SS time strings to HH:MM:SS time
