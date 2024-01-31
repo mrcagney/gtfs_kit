@@ -1,7 +1,7 @@
 from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy as np
 
-from .context import sample, gtfs_kit
+from .context import sample, gtfs_kit, pytest
 from gtfs_kit import cleaners as gkc
 from gtfs_kit import helpers as hp
 
@@ -41,6 +41,9 @@ def test_extend_id():
     f3 = gkc.extend_id(f2, "route_id", "_suffix", prefix=False)
     assert f3.routes.route_id.str.endswith("_suffix").all()
     assert len(f3.trips.set_index("route_id").loc["prefix_AAMV_suffix"]) == 4
+
+    with pytest.raises(ValueError):
+        gkc.extend_id(f2, "direction_id", "_suffix", prefix=False)
 
 
 def test_clean_times():
