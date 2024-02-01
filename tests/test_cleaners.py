@@ -1,7 +1,7 @@
 from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy as np
 
-from .context import sample, gtfs_kit
+from .context import sample, gtfs_kit, pytest
 from gtfs_kit import cleaners as gkc
 from gtfs_kit import helpers as hp
 
@@ -24,10 +24,26 @@ def test_clean_ids():
     f1.routes.loc[0, "route_id"] = "  ho   ho ho "
     f2 = gkc.clean_ids(f1)
     expect_rid = "ho_ho_ho"
-    f2.routes.loc[0, "route_id"] == expect_rid
+    assert f2.routes.loc[0, "route_id"] == expect_rid
 
     f3 = gkc.clean_ids(f2)
-    f3 == f2
+    assert f3 == f2
+
+
+def test_extend_id():
+    f1 = sample.copy()
+    assert len(f1.trips.set_index("route_id").loc["AAMV"]) == 4
+
+    f2 = gkc.extend_id(f1, "route_id", "prefix_")
+    assert f2.routes.route_id.str.startswith("prefix_").all()
+    assert len(f2.trips.set_index("route_id").loc["prefix_AAMV"]) == 4
+
+    f3 = gkc.extend_id(f2, "route_id", "_suffix", prefix=False)
+    assert f3.routes.route_id.str.endswith("_suffix").all()
+    assert len(f3.trips.set_index("route_id").loc["prefix_AAMV_suffix"]) == 4
+
+    with pytest.raises(ValueError):
+        gkc.extend_id(f2, "direction_id", "_suffix", prefix=False)
 
 
 def test_clean_times():
