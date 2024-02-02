@@ -163,6 +163,7 @@ class Feed(object):
     )
     from .cleaners import (
         clean_ids,
+        extend_id,
         clean_times,
         clean_route_short_names,
         drop_zombies,
@@ -287,7 +288,7 @@ class Feed(object):
         for table in cs.GTFS_REF["table"].unique():
             try:
                 d[table] = getattr(self, table).head(5)
-            except:
+            except Exception:
                 d[table] = None
         d["dist_units"] = self.dist_units
 

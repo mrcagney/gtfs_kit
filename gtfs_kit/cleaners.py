@@ -54,6 +54,31 @@ def clean_ids(feed: "Feed") -> "Feed":
     return feed
 
 
+def extend_id(feed: "Feed", id_col: str, extension: str, *, prefix=True) -> "Feed":
+    """
+    Add a prefix (if ``prefix``) or a suffix (otherwise) to all values of column
+    ``id_col`` across all tables of this Feed.
+    This can be helpful when preparing to merge multiple GTFS feeds with colliding
+    route IDs, say.
+
+    Raises a ValueError if ``id_col`` values can't have strings added to them,
+    e.g. if ``id_col`` is 'direction_id'.
+    """
+    feed = feed.copy()
+
+    for table in cs.GTFS_REF.loc[lambda x: x["column"] == id_col, "table"].unique():
+        t = getattr(feed, table)
+        if t is None:
+            continue
+        try:
+            t[id_col] = extension + t[id_col] if prefix else t[id_col] + extension
+            setattr(feed, table, t)
+        except Exception as e:
+            raise ValueError(e)
+
+    return feed
+
+
 def clean_times(feed: "Feed") -> "Feed":
     """
     In the given Feed, convert H:MM:SS time strings to HH:MM:SS time

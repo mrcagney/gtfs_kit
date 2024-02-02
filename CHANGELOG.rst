@@ -1,5 +1,10 @@
 Changelog
 =========
+
+6.1.0, 2024-02-02
+-----------------
+- Added ``cleaners.extend_id`` function.
+
 6.0.1, 2024-01-30
 -----------------
 - Fixed a new GeoPandas 'set geometry' error.
