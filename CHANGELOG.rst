@@ -3,7 +3,7 @@ Changelog
 
 6.1.0, 2024-02-02
 -----------------
-- Added ``cleaners.extend_id`` function.
+- Added ``cleaners.extend_id`` function in response to `Pull Request 7 <https://github.com/mrcagney/gtfs_kit/pull/7>`_.
 
 6.0.1, 2024-01-30
 -----------------
@@ -100,19 +100,19 @@ Changelog
 
 4.0.2, 2020-05-07
 -----------------
-- Fixed a CRS deprecation warning as requested in `pull request 5 <https://github.com/mrcagney/gtfs_kit/pull/5>`_.
+- Fixed a CRS deprecation warning as requested in `Pull Request 5 <https://github.com/mrcagney/gtfs_kit/pull/5>`_.
 - Changed ``get_utm_crs()`` to output an EPSG CRS string, e.g. "EPSG:32655", instead of a PROJ4 definition string. Did this under the recommendation of the `GeoPandas docs <https://geopandas.org/projections.html#manually-specifying-the-crs>`_.
 - Fixed CRS mismatch warning in ``compute_screen_line_counts()``.
 - Updated dependencies and included Python 3.8 support.
 
 4.0.1, 2020-04-24
 -----------------
-- Bugfix: got ``read_feed()`` working on Windows thanks to `pull request 4 <https://github.com/mrcagney/gtfs_kit/pull/4>`_.
+- Bugfix: got ``read_feed()`` working on Windows thanks to `Pull Request 4 <https://github.com/mrcagney/gtfs_kit/pull/4>`_.
 
 4.0.0, 2020-03-06
 -----------------
 - Breaking changes: renamed ``list_gtfs()`` to ``list_feed()``, ``read_gtfs()`` to ``read_feed()``, and ``write_gtfs()`` to ``write()`` and made it a Feed method.
-- Made ``read_feed()`` accept URLs as requested in `pull request 3 <https://github.com/mrcagney/gtfs_kit/pull/3>`_.
+- Made ``read_feed()`` accept URLs as requested in `Pull Request 3 <https://github.com/mrcagney/gtfs_kit/pull/3>`_.
 
 3.0.1, 2020-01-16
 -----------------
