@@ -1,6 +1,7 @@
 """
 Functions about trips.
 """
+
 from __future__ import annotations
 import json
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -21,7 +22,9 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
+def is_active_trip(
+    feed: "Feed", trip_id: str, date: str, weekday_str: str | None = None
+) -> bool:
     """
     Return ``True`` if the ``feed.calendar`` or ``feed.calendar_dates``
     says that the trip runs on the given date (YYYYMMDD date string);
@@ -41,7 +44,8 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     caldg = feed._calendar_dates_g
     if caldg is not None:
         if (service, date) in caldg.groups:
-            et = caldg.get_group((service, date))["exception_type"].iat[0]
+            # et = caldg.get_group((service, date))["exception_type"].iat[0]
+            et = feed._calendar_dates_i.at[service, date]
             if et == 1:
                 return True
             else:
@@ -51,7 +55,13 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     cali = feed._calendar_i
     if cali is not None:
         if service in cali.index:
-            weekday_str = hp.weekday_to_str(hp.datestr_to_date(date).weekday())
+            weekday_str = (
+                hp.weekday_to_str(hp.datestr_to_date(date).weekday())
+                if weekday_str is None
+                else weekday_str
+            )
+            # s = cali.loc[service]  # FIXME funny enough - this "optimization" is way slower than the original code
+            # if (s["start_date"] <= date <= s["end_date"]) and s[weekday_str] == 1:
             if (
                 cali.at[service, "start_date"] <= date <= cali.at[service, "end_date"]
                 and cali.at[service, weekday_str] == 1
@@ -128,10 +138,17 @@ def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     if not dates:
         return pd.DataFrame()
 
+    # avoid costly repeated calculation of weekday within is_active_trip
+    date2weekday = {
+        date: hp.weekday_to_str(hp.datestr_to_date(date).weekday()) for date in dates
+    }
+
     f = feed.trips.copy()
     for date in dates:
         f[date] = f["trip_id"].map(
-            lambda trip_id: int(feed.is_active_trip(trip_id, date))
+            lambda trip_id: int(
+                feed.is_active_trip(trip_id, date, weekday_str=date2weekday[date])
+            )
         )
     return f[["trip_id"] + list(dates)]
 

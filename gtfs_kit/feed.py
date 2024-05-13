@@ -16,6 +16,7 @@ parameter in the method signatures.
 Ignore that extra parameter; it refers to the Feed instance,
 usually called ``self`` and usually hidden automatically by Sphinx.
 """
+
 from pathlib import Path
 import tempfile
 import shutil
@@ -277,6 +278,9 @@ class Feed(object):
             self._calendar_dates_g = self._calendar_dates.groupby(
                 ["service_id", "date"]
             )
+            self._calendar_dates_i = val.set_index(["service_id", "date"])[
+                "exception_type"
+            ]
         else:
             self._calendar_dates_g = None
 
