@@ -102,7 +102,7 @@ def clean_times(feed: "Feed") -> "Feed":
     for table, columns in tables_and_columns:
         f = getattr(feed, table)
         if f is not None:
-            f[columns] = f[columns].applymap(reformat)
+            f[columns] = f[columns].apply(lambda x: x.map(reformat))
         setattr(feed, table, f)
 
     return feed
