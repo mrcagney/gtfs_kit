@@ -1,6 +1,7 @@
 """
 Functions about trips.
 """
+
 from __future__ import annotations
 import json
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -326,8 +327,8 @@ def compute_trip_stats(
     # Reset index and compute final stats
     h = h.reset_index()
     h["speed"] = h["distance"] / h["duration"]
-    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].applymap(
-        lambda x: hp.timestr_to_seconds(x, inverse=True)
+    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].apply(
+        lambda x: x.map(lambda t: hp.timestr_to_seconds(t, inverse=True))
     )
 
     return h.sort_values(["route_id", "direction_id", "start_time"])
@@ -546,7 +547,7 @@ def map_trips(
                     # trip direction equals LineString direction
                     fp.PolyLineTextPath(
                         path,
-                        "        \u27A4        ",
+                        "        \u27a4        ",
                         repeat=True,
                         offset=5.5,
                         attributes={"fill": color, "font-size": "18"},

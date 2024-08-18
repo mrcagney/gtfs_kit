@@ -1,6 +1,7 @@
 """
 Functions about miscellany.
 """
+
 from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
@@ -259,8 +260,8 @@ def compute_feed_stats_0(
     stop_times = feed.stop_times.copy()
 
     # Convert timestrings to seconds for quicker calculations
-    ts[["start_time", "end_time"]] = ts[["start_time", "end_time"]].applymap(
-        hp.timestr_to_seconds
+    ts[["start_time", "end_time"]] = ts[["start_time", "end_time"]].apply(
+        lambda x: x.map(hp.timestr_to_seconds)
     )
 
     if split_route_types:
@@ -319,8 +320,8 @@ def compute_feed_stats_0(
 
     # Convert seconds back to timestrings
     times = ["peak_start_time", "peak_end_time"]
-    stats[times] = stats[times].applymap(
-        lambda t: hp.timestr_to_seconds(t, inverse=True)
+    stats[times] = stats[times].apply(
+        lambda x: x.map(lambda t: hp.timestr_to_seconds(t, inverse=True))
     )
 
     return stats
@@ -907,9 +908,8 @@ def compute_screen_line_counts(
     # Get intersection points of shapes and screen lines
     g0 = (
         # Only keep shapes that intersect screen lines to reduce computations
-        gp.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
-            screen_lines, on="screen_line_id"
-        )
+        gp.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"]))
+        .merge(screen_lines, on="screen_line_id")
         # Compute intersection points
         .assign(
             int_point=lambda x: gp.GeoSeries(x["geometry_x"], crs=crs).intersection(
@@ -973,7 +973,8 @@ def compute_screen_line_counts(
     st = (
         feed.trips.loc[lambda x: x["shape_id"].isin(h.index)]
         # Merge in route short names and stop times
-        .merge(feed.routes[["route_id", "route_short_name"]]).merge(feed.stop_times)
+        .merge(feed.routes[["route_id", "route_short_name"]])
+        .merge(feed.stop_times)
         # Keep only non-NaN departure times
         .loc[lambda x: x["departure_time"].notna()]
         # Convert to seconds past midnight

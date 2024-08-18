@@ -1,6 +1,7 @@
 """
 Functions about stops.
 """
+
 from __future__ import annotations
 from collections import Counter
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -127,8 +128,8 @@ def compute_stop_stats_0(
     result = g.apply(compute_stop_stats).reset_index()
 
     # Convert start and end times to time strings
-    result[["start_time", "end_time"]] = result[["start_time", "end_time"]].applymap(
-        lambda x: hp.timestr_to_seconds(x, inverse=True)
+    result[["start_time", "end_time"]] = result[["start_time", "end_time"]].apply(
+        lambda x: x.map(lambda t: hp.timestr_to_seconds(t, inverse=True))
     )
 
     return result
@@ -304,7 +305,7 @@ def compute_stop_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     # Pandas won't allow me to simply return g[dates].max().reset_index().
     # I get ``TypeError: unorderable types: datetime.date() < str()``.
     # So here's a workaround.
-    for (i, date) in enumerate(dates):
+    for i, date in enumerate(dates):
         if i == 0:
             f = g[date].max().reset_index()
         else:

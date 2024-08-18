@@ -1,6 +1,7 @@
 """
 Functions about routes.
 """
+
 from __future__ import annotations
 from typing import Optional, Iterable, TYPE_CHECKING
 import json
@@ -100,8 +101,8 @@ def compute_route_stats_0(
     f = trip_stats_subset.loc[lambda x: x["duration"] > 0].copy()
 
     # Convert trip start and end times to seconds to ease calculations below
-    f[["start_time", "end_time"]] = f[["start_time", "end_time"]].applymap(
-        hp.timestr_to_seconds
+    f[["start_time", "end_time"]] = f[["start_time", "end_time"]].apply(
+        lambda x: x.map(hp.timestr_to_seconds)
     )
 
     headway_start = hp.timestr_to_seconds(headway_start_time)
@@ -228,9 +229,10 @@ def compute_route_stats_0(
     g["mean_trip_duration"] = g["service_duration"] / g["num_trips"]
 
     # Convert route times to time strings
-    g[["start_time", "end_time", "peak_start_time", "peak_end_time"]] = g[
-        ["start_time", "end_time", "peak_start_time", "peak_end_time"]
-    ].applymap(lambda x: hp.timestr_to_seconds(x, inverse=True))
+    time_columns = ["start_time", "end_time", "peak_start_time", "peak_end_time"]
+    g[time_columns] = g[time_columns].apply(
+        lambda x: x.map(lambda t: hp.timestr_to_seconds(t, inverse=True))
+    )
 
     return g
 
@@ -355,7 +357,9 @@ def compute_route_time_series_0(
     def F(x):
         return (hp.timestr_to_seconds(x) // 60) % (24 * 60)
 
-    tss[["start_index", "end_index"]] = tss[["start_time", "end_time"]].applymap(F)
+    tss[["start_index", "end_index"]] = tss[["start_time", "end_time"]].apply(
+        lambda x: x.map(F)
+    )
     routes = sorted(set(tss["route_id"].values))
 
     # Bin each trip according to its start and end time and weight
@@ -714,7 +718,8 @@ def geometrize_routes(
     trip_ids = (
         feed.trips.loc[lambda x: x.route_id.isin(route_ids)]
         # Drop unnecessary duplicate shapes
-        .drop_duplicates(subset="shape_id").loc[:, "trip_id"]
+        .drop_duplicates(subset="shape_id")
+        .loc[:, "trip_id"]
     )
 
     # Combine shape LineStrings within route and direction
