@@ -63,12 +63,12 @@ jobs:
       #----------------------------------------------
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
+        run: poetry lock --no-update && poetry install --no-interaction --no-root
       #----------------------------------------------
       # install your root project, if required
       #----------------------------------------------
-      - name: Install library
-        run: poetry install --no-interaction
+      # - name: Install library
+      #   run: poetry install --no-interaction
       #----------------------------------------------
       #    add matrix specifics and run test suite
       #----------------------------------------------
