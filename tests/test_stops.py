@@ -76,7 +76,7 @@ def test_compute_stop_time_series_0():
             feed.stop_times, feed.trips, split_directions=split_directions
         )
         sts = gks.compute_stop_time_series_0(
-            feed.stop_times, feed.trips, freq="1H", split_directions=split_directions
+            feed.stop_times, feed.trips, freq="1h", split_directions=split_directions
         )
 
         # Should be a data frame
@@ -103,7 +103,7 @@ def test_compute_stop_time_series_0():
 
     # Empty check
     stops_ts = gks.compute_stop_time_series_0(
-        feed.stop_times, pd.DataFrame(), freq="1H", split_directions=split_directions
+        feed.stop_times, pd.DataFrame(), freq="1h", split_directions=split_directions
     )
     assert stops_ts.empty
 
@@ -204,7 +204,7 @@ def test_build_zero_stop_time_series():
             expect_shape = (2, feed.stops.shape[0])
 
         f = gks.build_zero_stop_time_series(
-            feed, split_directions=split_directions, freq="12H"
+            feed, split_directions=split_directions, freq="12h"
         )
 
         assert isinstance(f, pd.core.frame.DataFrame)
@@ -224,7 +224,7 @@ def test_compute_stop_time_series():
             feed, dates, stop_ids=sids, split_directions=split_directions
         )
         ts = gks.compute_stop_time_series(
-            feed, dates, stop_ids=sids, freq="12H", split_directions=split_directions
+            feed, dates, stop_ids=sids, freq="12h", split_directions=split_directions
         )
 
         # Should be a data frame

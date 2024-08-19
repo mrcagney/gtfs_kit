@@ -142,7 +142,7 @@ def test_compute_feed_time_series():
 
     for split_route_types in [True, False]:
         f = gkm.compute_feed_time_series(
-            feed, trip_stats, dates, freq="12H", split_route_types=split_route_types
+            feed, trip_stats, dates, freq="12h", split_route_types=split_route_types
         )
 
         # Should have correct column level names

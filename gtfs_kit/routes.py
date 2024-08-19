@@ -1,6 +1,7 @@
 """
 Functions about routes.
 """
+
 from __future__ import annotations
 from typing import Optional, Iterable, TYPE_CHECKING
 import json
@@ -100,7 +101,7 @@ def compute_route_stats_0(
     f = trip_stats_subset.loc[lambda x: x["duration"] > 0].copy()
 
     # Convert trip start and end times to seconds to ease calculations below
-    f[["start_time", "end_time"]] = f[["start_time", "end_time"]].applymap(
+    f[["start_time", "end_time"]] = f[["start_time", "end_time"]].map(
         hp.timestr_to_seconds
     )
 
@@ -230,7 +231,7 @@ def compute_route_stats_0(
     # Convert route times to time strings
     g[["start_time", "end_time", "peak_start_time", "peak_end_time"]] = g[
         ["start_time", "end_time", "peak_start_time", "peak_end_time"]
-    ].applymap(lambda x: hp.timestr_to_seconds(x, inverse=True))
+    ].map(lambda x: hp.timestr_to_seconds(x, inverse=True))
 
     return g
 
@@ -355,7 +356,7 @@ def compute_route_time_series_0(
     def F(x):
         return (hp.timestr_to_seconds(x) // 60) % (24 * 60)
 
-    tss[["start_index", "end_index"]] = tss[["start_time", "end_time"]].applymap(F)
+    tss[["start_index", "end_index"]] = tss[["start_time", "end_time"]].map(F)
     routes = sorted(set(tss["route_id"].values))
 
     # Bin each trip according to its start and end time and weight
@@ -674,8 +675,8 @@ def build_route_timetable(
         # Groupby trip ID and sort groups by their minimum departure time.
         # For some reason NaN departure times mess up the transform below.
         # So temporarily fill NaN departure times as a workaround.
-        f["dt"] = f["departure_time"].fillna(method="ffill")
-        f["min_dt"] = f.groupby("trip_id")["dt"].transform(min)
+        f["dt"] = f["departure_time"].ffill()
+        f["min_dt"] = f.groupby("trip_id")["dt"].transform("min")
         frames.append(f)
 
     f = pd.concat(frames)

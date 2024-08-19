@@ -207,11 +207,17 @@ def test_check_calendar():
         "friday",
         "saturday",
         "sunday",
+    ]:
+        feed = sample.copy()
+        feed.calendar[col].iat[0] = -1
+        assert gkv.check_calendar(feed)
+
+    for col in [
         "start_date",
         "end_date",
     ]:
         feed = sample.copy()
-        feed.calendar[col].iat[0] = "5"
+        feed.calendar[col].iat[0] = "bingo"
         assert gkv.check_calendar(feed)
 
 
@@ -231,10 +237,13 @@ def test_check_calendar_dates():
     assert not gkv.check_calendar_dates(feed)
     assert gkv.check_calendar_dates(feed, include_warnings=True)
 
-    for col in ["date", "exception_type"]:
-        feed = sample.copy()
-        feed.calendar_dates[col].iat[0] = "5"
-        assert gkv.check_calendar_dates(feed)
+    feed = sample.copy()
+    feed.calendar_dates["date"].iat[0] = "5"
+    assert gkv.check_calendar_dates(feed)
+
+    feed = sample.copy()
+    feed.calendar_dates["exception_type"].iat[0] = -13
+    assert gkv.check_calendar_dates(feed)
 
 
 def test_check_fare_attributes():
@@ -604,7 +613,7 @@ def test_check_stop_times():
         assert gkv.check_stop_times(feed)
 
     feed = sample.copy()
-    feed.stop_times["shape_dist_traveled"] = 1
+    feed.stop_times["shape_dist_traveled"] = 1.0
     feed.stop_times["shape_dist_traveled"].iat[1] = 0.9
     assert gkv.check_stop_times(feed)
 

@@ -1,6 +1,7 @@
 """
 Functions about stops.
 """
+
 from __future__ import annotations
 from collections import Counter
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -127,7 +128,7 @@ def compute_stop_stats_0(
     result = g.apply(compute_stop_stats).reset_index()
 
     # Convert start and end times to time strings
-    result[["start_time", "end_time"]] = result[["start_time", "end_time"]].applymap(
+    result[["start_time", "end_time"]] = result[["start_time", "end_time"]].map(
         lambda x: hp.timestr_to_seconds(x, inverse=True)
     )
 
@@ -304,7 +305,7 @@ def compute_stop_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     # Pandas won't allow me to simply return g[dates].max().reset_index().
     # I get ``TypeError: unorderable types: datetime.date() < str()``.
     # So here's a workaround.
-    for (i, date) in enumerate(dates):
+    for i, date in enumerate(dates):
         if i == 0:
             f = g[date].max().reset_index()
         else:
@@ -688,9 +689,6 @@ def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: dict = STOP_STY
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron")
 
-    # Create a feature group for the stops and add it to the map
-    group = fl.FeatureGroup(name="Stops")
-
     # Add stops to feature group
     stops = feed.stops.loc[lambda x: x.stop_id.isin(stop_ids)].fillna("n/a")
 
@@ -716,18 +714,6 @@ def map_stops(feed: "Feed", stop_ids: Iterable[str], stop_style: dict = STOP_STY
         callback=callback,
         disableClusteringAtZoom=14,
     ).add_to(my_map)
-
-    # for prop in stops.to_dict(orient="records"):
-    #     # Add stop
-    #     lon = prop["stop_lon"]
-    #     lat = prop["stop_lat"]
-    #     fl.CircleMarker(
-    #         location=[lat, lon],
-    #         popup=fl.Popup(hp.make_html(prop)),
-    #         **stop_style,
-    #     ).add_to(group)
-
-    # group.add_to(my_map)
 
     # Fit map to stop bounds
     bounds = [

@@ -1,6 +1,7 @@
 """
 Functions about trips.
 """
+
 from __future__ import annotations
 import json
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -326,7 +327,7 @@ def compute_trip_stats(
     # Reset index and compute final stats
     h = h.reset_index()
     h["speed"] = h["distance"] / h["duration"]
-    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].applymap(
+    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].map(
         lambda x: hp.timestr_to_seconds(x, inverse=True)
     )
 
