@@ -1,6 +1,10 @@
 Changelog
 =========
 
+6.X.X, 2024-??-??
+-----------------
+- Changed grouped DataFrame ``feed._calendar_dates_g`` to indexed DataFrame ``feed._calendar_dates_i`` for consistency with ``feed._calendar_i`` and slight speedup in fucttion ``trips.is_active_trip``.
+
 6.1.0, 2024-02-02
 -----------------
 - Added ``cleaners.extend_id`` function in response to `Pull Request 7 <https://github.com/mrcagney/gtfs_kit/pull/7>`_.

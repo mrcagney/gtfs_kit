@@ -145,7 +145,7 @@ FEED_ATTRS_1 = [
 ]
 
 #: Secondary feed attributes; derived from primary ones
-FEED_ATTRS_2 = ["_trips_i", "_calendar_i", "_calendar_dates_g"]
+FEED_ATTRS_2 = ["_trips_i", "_calendar_i", "_calendar_dates_i"]
 
 #:
 FEED_ATTRS = FEED_ATTRS_1 + FEED_ATTRS_2

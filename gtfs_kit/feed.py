@@ -269,16 +269,16 @@ class Feed(object):
     @calendar_dates.setter
     def calendar_dates(self, val):
         """
-        Update ``self._calendar_dates_g``
+        Update ``self._calendar_dates_i``
         if ``self.calendar_dates`` changes.
         """
         self._calendar_dates = val
         if val is not None and not val.empty:
-            self._calendar_dates_g = self._calendar_dates.groupby(
+            self._calendar_dates_i = self._calendar_dates.set_index(
                 ["service_id", "date"]
             )
         else:
-            self._calendar_dates_g = None
+            self._calendar_dates_i = None
 
     def __str__(self):
         """
