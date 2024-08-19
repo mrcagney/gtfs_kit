@@ -82,7 +82,7 @@ def test_compute_route_time_series_0():
 
         rs = gkr.compute_route_stats_0(ts, split_directions=split_directions)
         rts = gkr.compute_route_time_series_0(
-            ts, split_directions=split_directions, freq="H"
+            ts, split_directions=split_directions, freq="h"
         )
 
         # Should be a data frame of the correct shape
@@ -106,7 +106,7 @@ def test_compute_route_time_series_0():
 
     # Empty check
     rts = gkr.compute_route_time_series_0(
-        pd.DataFrame(), split_directions=split_directions, freq="1H"
+        pd.DataFrame(), split_directions=split_directions, freq="1h"
     )
     assert rts.empty
 
@@ -201,7 +201,7 @@ def test_build_zero_route_time_series():
             expect_shape = (2, 6 * feed.routes.shape[0])
 
         f = gkr.build_zero_route_time_series(
-            feed, split_directions=split_directions, freq="12H"
+            feed, split_directions=split_directions, freq="12h"
         )
 
         assert isinstance(f, pd.core.frame.DataFrame)
@@ -226,7 +226,7 @@ def test_compute_route_time_series():
             trip_stats_subset,
             dates,
             split_directions=split_directions,
-            freq="12H",
+            freq="12h",
         )
 
         # Should be a data frame of the correct shape

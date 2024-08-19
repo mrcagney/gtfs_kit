@@ -1,6 +1,7 @@
 """
 Functions about trips.
 """
+
 from __future__ import annotations
 import json
 from typing import Optional, Iterable, TYPE_CHECKING
@@ -38,10 +39,10 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
     """
     service = feed._trips_i.at[trip_id, "service_id"]
     # Check feed._calendar_dates_g.
-    caldg = feed._calendar_dates_g
-    if caldg is not None:
-        if (service, date) in caldg.groups:
-            et = caldg.get_group((service, date))["exception_type"].iat[0]
+    caldi = feed._calendar_dates_i
+    if caldi is not None:
+        if (service, date) in caldi.index:
+            et = caldi.at[(service, date), "exception_type"]
             if et == 1:
                 return True
             else:
@@ -326,7 +327,7 @@ def compute_trip_stats(
     # Reset index and compute final stats
     h = h.reset_index()
     h["speed"] = h["distance"] / h["duration"]
-    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].applymap(
+    h[["start_time", "end_time"]] = h[["start_time", "end_time"]].map(
         lambda x: hp.timestr_to_seconds(x, inverse=True)
     )
 

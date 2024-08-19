@@ -1,6 +1,7 @@
 """
 Functions about cleaning feeds.
 """
+
 from __future__ import annotations
 from typing import TYPE_CHECKING
 
@@ -102,7 +103,7 @@ def clean_times(feed: "Feed") -> "Feed":
     for table, columns in tables_and_columns:
         f = getattr(feed, table)
         if f is not None:
-            f[columns] = f[columns].applymap(reformat)
+            f[columns] = f[columns].map(reformat)
         setattr(feed, table, f)
 
     return feed

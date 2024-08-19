@@ -138,20 +138,20 @@ def test_get_active_trips_df():
 
 
 def test_downsample():
-    ts = cairns.compute_route_time_series(cairns_trip_stats, cairns_dates, freq="6H")
-    f = gkh.downsample(ts, "6H")
+    ts = cairns.compute_route_time_series(cairns_trip_stats, cairns_dates, freq="6h")
+    f = gkh.downsample(ts, "6h")
     assert ts.equals(f)
 
-    f = gkh.downsample(ts, "12H")
+    f = gkh.downsample(ts, "12h")
     assert f.shape[0] == ts.shape[0] / 2
-    assert pd.tseries.frequencies.to_offset(f.index.freq) == "12H"
+    assert pd.tseries.frequencies.to_offset(f.index.freq) == "12h"
 
 
 def test_unstack_time_series():
     dates = cairns_dates
     for split_directions in [True, False]:
         f = cairns.compute_stop_time_series(
-            dates, freq="12H", split_directions=split_directions
+            dates, freq="12h", split_directions=split_directions
         )
         g = gkh.unstack_time_series(f)
         expect_cols = {"datetime", "indicator", "value", "stop_id"}
@@ -166,7 +166,7 @@ def test_restack_time_series():
     dates = cairns_dates
     for split_directions in [True, False]:
         f = cairns.compute_stop_time_series(
-            dates, freq="12H", split_directions=split_directions
+            dates, freq="12h", split_directions=split_directions
         )
         g = gkh.restack_time_series(gkh.unstack_time_series(f))
         assert set(g.columns) == set(f.columns)

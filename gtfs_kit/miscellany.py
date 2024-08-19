@@ -1,6 +1,7 @@
 """
 Functions about miscellany.
 """
+
 from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
@@ -259,7 +260,7 @@ def compute_feed_stats_0(
     stop_times = feed.stop_times.copy()
 
     # Convert timestrings to seconds for quicker calculations
-    ts[["start_time", "end_time"]] = ts[["start_time", "end_time"]].applymap(
+    ts[["start_time", "end_time"]] = ts[["start_time", "end_time"]].map(
         hp.timestr_to_seconds
     )
 
@@ -319,9 +320,7 @@ def compute_feed_stats_0(
 
     # Convert seconds back to timestrings
     times = ["peak_start_time", "peak_end_time"]
-    stats[times] = stats[times].applymap(
-        lambda t: hp.timestr_to_seconds(t, inverse=True)
-    )
+    stats[times] = stats[times].map(lambda t: hp.timestr_to_seconds(t, inverse=True))
 
     return stats
 

@@ -1,6 +1,7 @@
 """
 Functions useful across modules.
 """
+
 from __future__ import annotations
 import datetime as dt
 from typing import Optional, Union, Callable
@@ -493,7 +494,7 @@ def restack_time_series(unstacked_time_series: pd.DataFrame) -> pd.DataFrame:
     if g.index.size > 1:
         hours = (g.index[1] - g.index[0]).components.hours
         if hours != 0:
-            freq = f"{hours}H"
+            freq = f"{hours}h"
         else:
             freq = "D"
     else:
