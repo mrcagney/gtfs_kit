@@ -1,9 +1,10 @@
 Changelog
 =========
 
-6.2.0, 2024-??-??
+7.0.0, 2024-??-??
 -----------------
 - Switched from Poetry to UV for project management.
+- Breaking change: removed ``geometrize_stops`` function and moved its functionality into ``get_stops``. Did the same for ``get_shapes``, ``get_trips``, and ``get_routes``.
 
 6.1.1, 2024-08-19
 -----------------

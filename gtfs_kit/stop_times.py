@@ -1,6 +1,7 @@
 """
 Functions about stop times.
 """
+
 from __future__ import annotations
 from typing import Optional, Iterable, TYPE_CHECKING
 import json
@@ -155,6 +156,8 @@ def stop_times_to_geojson(
     If an iterable of trip IDs is given, then subset to those trips.
     If some of the given trip IDs are not found in the feed, then raise a ValueError.
     """
+    from .stops import get_stops
+
     if trip_ids is None or not list(trip_ids):
         trip_ids = feed.trips.trip_id
 
@@ -165,7 +168,8 @@ def stop_times_to_geojson(
     st = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)]
 
     g = (
-        feed.geometrize_stops(stop_ids=st.stop_id.unique())
+        get_stops(feed, as_gdf=True)
+        .loc[lambda x: x["stop_id"].isin(st["stop_id"].unique())]
         .merge(st)
         .sort_values(["trip_id", "stop_sequence"])
         .drop_duplicates(subset=["trip_id", "stop_id"])

@@ -1,6 +1,7 @@
 """
 Functions about shapes.
 """
+
 from __future__ import annotations
 from typing import Optional, Iterable, TYPE_CHECKING
 import json
@@ -66,7 +67,7 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
     return feed
 
 
-def geometrize_shapes_0(
+def geometrize_shapes(
     shapes: pd.DataFrame, *, use_utm: bool = False
 ) -> gp.GeoDataFrame:
     """
@@ -99,9 +100,9 @@ def geometrize_shapes_0(
     return g
 
 
-def ungeometrize_shapes_0(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_shapes(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
     """
-    The inverse of :func:`geometrize_shapes_0`.
+    The inverse of :func:`geometrize_shapes`.
 
     If ``shapes_g`` is in UTM coordinates (has a UTM CRS property),
     then convert those UTM coordinates back to WGS84 coordinates,
@@ -129,57 +130,57 @@ def ungeometrize_shapes_0(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
     )
 
 
-def geometrize_shapes(
-    feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
-) -> gp.GeoDataFrame:
+def get_shapes(
+    feed: "Feed", *, as_gdf: bool = False, use_utm: bool = False
+) -> gp.DataFrame | None:
     """
-    Given a Feed instance, convert its shapes DataFrame to a GeoDataFrame of
-    LineStrings and return the result, which will no longer have the columns
-    ``'shape_pt_sequence'``, ``'shape_pt_lon'``, ``'shape_pt_lat'``, and
-    ``'shape_dist_traveled'``.
-
-    If an iterable of shape IDs is given, then subset to those shapes.
-    If the Feed has no shapes, then raise a ValueError.
-    If ``use_utm``, then use local UTM coordinates for the geometries.
+    Get the shapes DataFrame for the given feed, which could be ``None``.
+    If ``as_gdf``, then return it as GeoDataFrame with a 'geometry' column
+    of linestrings and no 'shape_pt_sequence', 'shape_pt_lon', 'shape_pt_lat',
+    'shape_dist_traveled' columns.
+    The GeoDataFrame will have a UTM CRS if ``use_utm``; otherwise it will have a
+    WGS84 CRS.
     """
-    if feed.shapes is None:
-        raise ValueError("This Feed has no shapes.")
-
-    if shape_ids is not None:
-        shapes = feed.shapes.loc[lambda x: x.shape_id.isin(shape_ids)]
-    else:
-        shapes = feed.shapes
-
-    return geometrize_shapes_0(shapes, use_utm=use_utm)
+    f = feed.shapes
+    if f is not None and as_gdf:
+        f = geometrize_shapes(f, use_utm=use_utm)
+    return f
 
 
 def build_geometry_by_shape(
-    feed: "Feed", shape_ids: Optional[Iterable[str]] = None, *, use_utm: bool = False
+    feed: "Feed", shape_ids: Iterable[str] | None = None, *, use_utm: bool = False
 ) -> dict:
     """
-    Return a dictionary of the form <shape ID> -> <Shapely LineString representing shape>.
+    Return a dictionary of the form
+    <shape ID> -> <Shapely LineString representing shape>.
+    If the Feed has no shapes, then return the empty dictionary.
+    If ``use_utm``, then use local UTM coordinates; otherwise, use WGS84 coordinates.
     """
-    return dict(
-        geometrize_shapes(feed, shape_ids=shape_ids, use_utm=use_utm)
-        .filter(["shape_id", "geometry"])
-        .values
-    )
+    if feed.shapes is None:
+        return dict()
+
+    g = get_shapes(feed, as_gdf=True, use_utm=use_utm)
+    if shape_ids is not None:
+        g = g.loc[lambda x: x["shape_id"].isin(shape_ids)]
+    return dict(g[["shape_id", "geometry"]].values)
 
 
-def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -> dict:
+def shapes_to_geojson(feed: "Feed", shape_ids: Iterable[str] | None = None) -> dict:
     """
     Return a GeoJSON FeatureCollection of LineString features
     representing ``feed.shapes``.
+    If the Feed has no shapes, then the features will be an empty list.
     The coordinates reference system is the default one for GeoJSON,
     namely WGS84.
 
     If an iterable of shape IDs is given, then subset to those shapes.
     If the subset is empty, then return a FeatureCollection with an empty list of
     features.
-    If the Feed has no shapes, then raise a ValueError.
     """
-    g = geometrize_shapes(feed, shape_ids=shape_ids)
-    if g.empty:
+    g = get_shapes(feed, as_gdf=True)
+    if shape_ids is not None:
+        g = g.loc[lambda x: x["shape_id"].isin(shape_ids)]
+    if g is None or g.empty:
         result = {
             "type": "FeatureCollection",
             "features": [],
@@ -192,30 +193,34 @@ def shapes_to_geojson(feed: "Feed", shape_ids: Optional[Iterable[str]] = None) -
 def get_shapes_intersecting_geometry(
     feed: "Feed",
     geometry: sg.base.BaseGeometry,
-    shapes_g: Optional[gp.GeoDataFrame] = None,
+    shapes_g: gp.GeoDataFrame | None = None,
     *,
-    geometrized: bool = False,
-) -> pd.DataFrame:
+    as_gdf: bool = False,
+) -> pd.DataFrame | None:
     """
-    Return the subset of ``feed.shapes`` that contains all shapes that
-    intersect the given Shapely geometry, e.g. a Polygon or LineString.
+    If the Feed has no shapes, then return None.
+    Otherwise, return the subset of ``feed.shapes`` that contains all shapes that
+    intersect the given Shapely WGS84 geometry, e.g. a Polygon or LineString.
 
-    If ``geometrized``, then return the shapes as a GeoDataFrame.
+    If ``as_gdf``, then return the shapes as a GeoDataFrame.
     Specifying ``shapes_g`` will skip the first step of the
     algorithm, namely, geometrizing ``feed.shapes``.
     """
+    if feed.shapes is None:
+        return None
+
     if shapes_g is not None:
-        f = shapes_g.copy()
+        g = shapes_g.copy()
     else:
-        f = geometrize_shapes(feed)
+        g = get_shapes(feed, as_gdf=True)
 
-    cols = f.columns
-    f["hit"] = f["geometry"].intersects(geometry)
-    f = f.loc[lambda x: x.hit].filter(cols)
+    cols = g.columns
+    g["hit"] = g["geometry"].intersects(geometry)
+    g = g.loc[lambda x: x["hit"]].filter(cols)
 
-    if geometrized:
-        result = f
+    if as_gdf:
+        result = g
     else:
-        result = ungeometrize_shapes_0(f)
+        result = ungeometrize_shapes(g)
 
     return result

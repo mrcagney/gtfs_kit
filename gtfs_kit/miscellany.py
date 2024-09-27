@@ -579,37 +579,47 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
     return feed
 
 
-def compute_bounds(feed: "Feed", stop_ids: Optional[list[str]] = None) -> np.array:
+def compute_bounds(feed: "Feed", stop_ids: list[str] | None = None) -> np.array:
     """
     Return the bounding box (Numpy array [min longitude, min latitude, max longitude,
     max latitude]) of the given Feed's stops or of the subset of stops
     specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).total_bounds
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.total_bounds
 
 
-def compute_convex_hull(
-    feed: "Feed", stop_ids: Optional[list[str]] = None
-) -> sg.Polygon:
+def compute_convex_hull(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Polygon:
     """
     Return a convex hull (Shapely Polygon) representing the convex hull of the given
     Feed's stops or of the subset of stops specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.union_all().convex_hull
 
 
-def compute_centroid(feed: "Feed", stop_ids: Optional[list[str]] = None) -> sg.Point:
+def compute_centroid(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Point:
     """
     Return the centroid (Shapely Point) of the convex hull the given Feed's stops
     or of the subset of stops specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull.centroid
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.union_all().convex_hull.centroid
 
 
 def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
@@ -881,12 +891,14 @@ def compute_screen_line_counts(
         4. Use that interpolated time as the crossing time of the trip vehicle.
 
     """
+    from .shapes import get_shapes
+
     dates = feed.subset_dates(dates)
     if not dates:
         return pd.DataFrame()
 
     # Get shapes as GeoDataFrame
-    shapes_g = feed.geometrize_shapes(use_utm=True)
+    shapes_g = get_shapes(feed, as_gdf=True, use_utm=True)
 
     # Convert screen lines to UTM
     crs = shapes_g.crs

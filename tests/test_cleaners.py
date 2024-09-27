@@ -1,7 +1,8 @@
 from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy as np
+import pytest
 
-from .context import sample, gtfs_kit, pytest
+from .context import sample, gtfs_kit
 from gtfs_kit import cleaners as gkc
 from gtfs_kit import helpers as hp
 

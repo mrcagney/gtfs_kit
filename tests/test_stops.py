@@ -3,6 +3,7 @@ import itertools
 import pytest
 import numpy as np
 import pandas as pd
+import geopandas as gpd
 from pandas.testing import assert_frame_equal
 import geopandas as gp
 import folium as fl
@@ -134,6 +135,14 @@ def test_get_stops():
     assert frames[0].shape[0] <= frames[1].shape[0]
     assert frames[2].shape[0] <= frames[4].shape[0]
     assert frames[4].shape == frames[6].shape
+
+    g = gks.get_stops(feed, as_gdf=True)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.crs == "epsg:4326"
+
+    g = gks.get_stops(feed, as_gdf=True, use_utm=True)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.crs != "epsg:4326"
 
 
 def test_compute_stop_activity():
@@ -280,9 +289,9 @@ def test_build_stop_timetable():
     assert f.empty
 
 
-def test_geometrize_stops_0():
+def test_geometrize_stops():
     stops = cairns.stops.copy()
-    geo_stops = gks.geometrize_stops_0(stops, use_utm=True)
+    geo_stops = gks.geometrize_stops(stops, use_utm=True)
     # Should be a GeoDataFrame
     assert isinstance(geo_stops, gp.GeoDataFrame)
     # Should have the correct shape
@@ -295,21 +304,15 @@ def test_geometrize_stops_0():
     assert set(geo_stops.columns) == expect_cols
 
 
-def test_ungeometrize_stops_0():
+def test_ungeometrize_stops():
     stops = cairns.stops.copy()
-    geo_stops = gks.geometrize_stops_0(stops)
-    stops2 = gks.ungeometrize_stops_0(geo_stops)
+    geo_stops = gks.geometrize_stops(stops)
+    stops2 = gks.ungeometrize_stops(geo_stops)
     # Test columns are correct
     assert set(stops2.columns) == set(stops.columns)
     # Data frames should be equal after sorting columns
     cols = sorted(stops.columns)
     assert_frame_equal(stops2[cols], stops[cols])
-
-
-def test_geometrize_stops():
-    g_1 = gks.geometrize_stops(cairns, use_utm=True)
-    g_2 = gks.geometrize_stops_0(cairns.stops, use_utm=True)
-    assert g_1.equals(g_2)
 
 
 def test_build_geometry_by_stop():

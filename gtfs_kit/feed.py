@@ -16,6 +16,7 @@ parameter in the method signatures.
 Ignore that extra parameter; it refers to the Feed instance,
 usually called ``self`` and usually hidden automatically by Sphinx.
 """
+
 from pathlib import Path
 import tempfile
 import shutil
@@ -100,13 +101,14 @@ class Feed(object):
         get_shapes_intersecting_geometry,
     )
     from .stops import (
+        geometrize_stops,
+        ungeometrize_stops,
         get_stops,
         compute_stop_activity,
         compute_stop_stats,
         build_zero_stop_time_series,
         compute_stop_time_series,
         build_stop_timetable,
-        geometrize_stops,
         build_geometry_by_stop,
         stops_to_geojson,
         get_stops_in_area,
@@ -125,7 +127,6 @@ class Feed(object):
         compute_busiest_date,
         compute_trip_stats,
         locate_trips,
-        geometrize_trips,
         trips_to_geojson,
         map_trips,
     )
