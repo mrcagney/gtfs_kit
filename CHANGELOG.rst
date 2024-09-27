@@ -1,6 +1,10 @@
 Changelog
 =========
 
+6.2.0, 2024-??-??
+-----------------
+- Switched from Poetry to UV for project management.
+
 6.1.1, 2024-08-19
 -----------------
 - Changed grouped DataFrame ``feed._calendar_dates_g`` to indexed DataFrame ``feed._calendar_dates_i`` for consistency with ``feed._calendar_i`` and slight speedup in fucttion ``trips.is_active_trip``.
