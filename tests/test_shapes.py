@@ -7,6 +7,7 @@ import shapely.geometry as sg
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import shapes as gks
+from gtfs_kit import constants as cs
 
 
 def test_append_dist_to_shapes():
@@ -29,9 +30,10 @@ def test_append_dist_to_shapes():
 
 def test_geometrize_shapes():
     shapes = cairns.shapes.copy()
-    geo_shapes = gks.geometrize_shapes(shapes, use_utm=True)
+    geo_shapes = gks.geometrize_shapes(shapes)
     # Should be a GeoDataFrame
     assert isinstance(geo_shapes, gpd.GeoDataFrame)
+    assert geo_shapes.crs == cs.WGS84
     # Should have the correct shape
     assert geo_shapes.shape[0] == shapes["shape_id"].nunique()
     assert geo_shapes.shape[1] == shapes.shape[1] - 2
@@ -61,7 +63,7 @@ def test_ungeometrize_shapes():
 
 def test_get_shapes():
     g = gks.get_shapes(cairns, as_gdf=True)
-    assert g.crs == "epsg:4326"
+    assert g.crs == cs.WGS84
     assert set(g.columns) == {"shape_id", "geometry"}
     assert gks.get_shapes(cairns_shapeless, as_gdf=True) is None
 

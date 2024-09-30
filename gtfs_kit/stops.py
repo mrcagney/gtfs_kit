@@ -4,10 +4,10 @@ Functions about stops.
 
 from __future__ import annotations
 from collections import Counter
-from typing import Optional, Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 import json
 
-import geopandas as gp
+import geopandas as gpd
 import pandas as pd
 import numpy as np
 import folium as fl
@@ -31,16 +31,16 @@ STOP_STYLE = {
 }
 
 
-def geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gp.GeoDataFrame:
+def geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDataFrame:
     """
     Given a stops DataFrame, convert it to a GeoPandas GeoDataFrame of Points
     and return the result, which will no longer have the columns ``'stop_lon'`` and
     ``'stop_lat'``.
     """
     g = (
-        stops.assign(geometry=gp.points_from_xy(x=stops.stop_lon, y=stops.stop_lat))
+        stops.assign(geometry=gpd.points_from_xy(x=stops.stop_lon, y=stops.stop_lat))
         .drop(["stop_lon", "stop_lat"], axis=1)
-        .pipe(gp.GeoDataFrame, crs=cs.WGS84)
+        .pipe(gpd.GeoDataFrame, crs=cs.WGS84)
     )
 
     if use_utm:
@@ -51,7 +51,7 @@ def geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gp.GeoDat
     return g
 
 
-def ungeometrize_stops(stops_g: gp.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_stops(stops_g: gpd.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_stops`.
 
@@ -355,7 +355,7 @@ def compute_stop_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
 def compute_stop_stats(
     feed: "Feed",
     dates: list[str],
-    stop_ids: Optional[list[str]] = None,
+    stop_ids: list[str | None] = None,
     headway_start_time: str = "07:00:00",
     headway_end_time: str = "19:00:00",
     *,
@@ -481,7 +481,7 @@ def build_zero_stop_time_series(
 def compute_stop_time_series(
     feed: "Feed",
     dates: list[str],
-    stop_ids: Optional[list[str]] = None,
+    stop_ids: list[str | None] = None,
     freq: str = "5Min",
     *,
     split_directions: bool = False,
@@ -627,7 +627,7 @@ def build_geometry_by_stop(
     return dict(g.filter(["stop_id", "geometry"]).values)
 
 
-def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> dict:
+def stops_to_geojson(feed: "Feed", stop_ids: Iterable[str | None] = None) -> dict:
     """
     Return a GeoJSON FeatureCollection of Point features
     representing all the stops in ``feed.stops``.
@@ -651,14 +651,14 @@ def stops_to_geojson(feed: "Feed", stop_ids: Optional[Iterable[str]] = None) -> 
 
 def get_stops_in_area(
     feed: "Feed",
-    area: gp.GeoDataFrame,
+    area: gpd.GeoDataFrame,
 ) -> pd.DataFrame:
     """
     Return the subset of ``feed.stops`` that contains all stops that lie
     within the given GeoDataFrame of polygons.
     """
     return (
-        gp.sjoin(get_stops(feed, as_gdf=True), area.to_crs(cs.WGS84))
+        gpd.sjoin(get_stops(feed, as_gdf=True), area.to_crs(cs.WGS84))
         .filter(["stop_id"])
         .merge(feed.stops)
     )

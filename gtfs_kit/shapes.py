@@ -3,10 +3,10 @@ Functions about shapes.
 """
 
 from __future__ import annotations
-from typing import Optional, Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 import json
 
-import geopandas as gp
+import geopandas as gpd
 import pandas as pd
 import numpy as np
 import utm
@@ -69,7 +69,7 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
 
 def geometrize_shapes(
     shapes: pd.DataFrame, *, use_utm: bool = False
-) -> gp.GeoDataFrame:
+) -> gpd.GeoDataFrame:
     """
     Given a GTFS shapes DataFrame, convert it to a GeoDataFrame of LineStrings
     and return the result, which will no longer have the columns
@@ -89,7 +89,8 @@ def geometrize_shapes(
         .groupby("shape_id", sort=False)
         .apply(my_agg)
         .reset_index()
-        .pipe(gp.GeoDataFrame, crs=cs.WGS84)
+        .pipe(gpd.GeoDataFrame)
+        .set_crs(cs.WGS84)
     )
 
     if use_utm:
@@ -100,7 +101,7 @@ def geometrize_shapes(
     return g
 
 
-def ungeometrize_shapes(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
+def ungeometrize_shapes(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
     """
     The inverse of :func:`geometrize_shapes`.
 
@@ -132,7 +133,7 @@ def ungeometrize_shapes(shapes_g: gp.GeoDataFrame) -> pd.DataFrame:
 
 def get_shapes(
     feed: "Feed", *, as_gdf: bool = False, use_utm: bool = False
-) -> gp.DataFrame | None:
+) -> gpd.DataFrame | None:
     """
     Get the shapes DataFrame for the given feed, which could be ``None``.
     If ``as_gdf``, then return it as GeoDataFrame with a 'geometry' column
@@ -193,7 +194,7 @@ def shapes_to_geojson(feed: "Feed", shape_ids: Iterable[str] | None = None) -> d
 def get_shapes_intersecting_geometry(
     feed: "Feed",
     geometry: sg.base.BaseGeometry,
-    shapes_g: gp.GeoDataFrame | None = None,
+    shapes_g: gpd.GeoDataFrame | None = None,
     *,
     as_gdf: bool = False,
 ) -> pd.DataFrame | None:

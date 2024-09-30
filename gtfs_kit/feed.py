@@ -22,7 +22,6 @@ import tempfile
 import shutil
 from copy import deepcopy
 import zipfile
-from typing import Optional, Union
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -89,13 +88,13 @@ class Feed(object):
         build_zero_route_time_series,
         compute_route_time_series,
         build_route_timetable,
-        geometrize_routes,
         routes_to_geojson,
         map_routes,
     )
     from .shapes import (
         append_dist_to_shapes,
         geometrize_shapes,
+        get_shapes,
         build_geometry_by_shape,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
@@ -177,20 +176,20 @@ class Feed(object):
     def __init__(
         self,
         dist_units: str,
-        agency: Optional[DataFrame] = None,
-        stops: Optional[DataFrame] = None,
-        routes: Optional[DataFrame] = None,
-        trips: Optional[DataFrame] = None,
-        stop_times: Optional[DataFrame] = None,
-        calendar: Optional[DataFrame] = None,
-        calendar_dates: Optional[DataFrame] = None,
-        fare_attributes: Optional[DataFrame] = None,
-        fare_rules: Optional[DataFrame] = None,
-        shapes: Optional[DataFrame] = None,
-        frequencies: Optional[DataFrame] = None,
-        transfers: Optional[DataFrame] = None,
-        feed_info: Optional[DataFrame] = None,
-        attributions: Optional[DataFrame] = None,
+        agency: DataFrame | None = None,
+        stops: DataFrame | None = None,
+        routes: DataFrame | None = None,
+        trips: DataFrame | None = None,
+        stop_times: DataFrame | None = None,
+        calendar: DataFrame | None = None,
+        calendar_dates: DataFrame | None = None,
+        fare_attributes: DataFrame | None = None,
+        fare_rules: DataFrame | None = None,
+        shapes: DataFrame | None = None,
+        frequencies: DataFrame | None = None,
+        transfers: DataFrame | None = None,
+        feed_info: DataFrame | None = None,
+        attributions: DataFrame | None = None,
     ):
         """
         Assume that every non-None input is a DataFrame,
@@ -500,7 +499,7 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
     return feed
 
 
-def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
+def read_feed(path_or_url: Path | str, dist_units: str) -> "Feed":
     """
     Create a Feed instance from the given path or URL and given distance units.
     If the path exists, then call :func:`_read_feed_from_path`.

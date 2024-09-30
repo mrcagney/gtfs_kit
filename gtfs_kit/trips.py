@@ -4,9 +4,8 @@ Functions about trips.
 
 from __future__ import annotations
 import json
-from typing import Optional, Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 
-import geopandas as gp
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
@@ -78,6 +77,7 @@ def get_trips(
     that start on that date.
     If a time (HH:MM:SS string, possibly with HH > 23) is given in addition to a date,
     then further subset the result to trips in service at that time.
+
     If ``as_gdf`` and ``feed.shapes`` is not None, then return the trips as a
     GeoDataFrame whose 'geometry' column contains the trip's shape.
     The GeoDataFrame will have a local UTM CRS if ``use_utm``; otherwise it will have
@@ -124,6 +124,7 @@ def get_trips(
                 get_shapes(feed, as_gdf=True, use_utm=use_utm)
                 .filter(["shape_id", "geometry"])
                 .merge(f, how="right")
+                .filter(f.columns.tolist() + ["geometry"])
             )
 
     return f
@@ -172,7 +173,7 @@ def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
 
 def compute_trip_stats(
     feed: "Feed",
-    route_ids: Optional[list[str]] = None,
+    route_ids: list[str | None] = None,
     *,
     compute_dist_from_shapes: bool = False,
 ) -> pd.DataFrame:

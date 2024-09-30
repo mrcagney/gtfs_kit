@@ -3,12 +3,12 @@ Functions about miscellany.
 """
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
-import geopandas as gp
+import geopandas as gpd
 
 from . import helpers as hp
 from . import constants as cs
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def summarize(feed: "Feed", table: Optional[str] = None) -> pd.DataFrame:
+def summarize(feed: "Feed", table: str | None = None) -> pd.DataFrame:
     """
     Return a DataFrame summarizing all GTFS tables in the given feed
     or in the given table if specified.
@@ -89,7 +89,7 @@ def summarize(feed: "Feed", table: Optional[str] = None) -> pd.DataFrame:
     return f
 
 
-def describe(feed: "Feed", sample_date: Optional[str] = None) -> pd.DataFrame:
+def describe(feed: "Feed", sample_date: str | None = None) -> pd.DataFrame:
     """
     Return a DataFrame of various feed indicators and values,
     e.g. number of routes.
@@ -770,7 +770,7 @@ def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
     return feed
 
 
-def restrict_to_area(feed: "Feed", area: gp.GeoDataFrame) -> "Feed":
+def restrict_to_area(feed: "Feed", area: gpd.GeoDataFrame) -> "Feed":
     """
     Build a new feed by restricting this one to only the trips
     that have at least one stop intersecting the given GeoDataFrame of polygons,
@@ -846,7 +846,7 @@ def restrict_to_area(feed: "Feed", area: gp.GeoDataFrame) -> "Feed":
 
 
 def compute_screen_line_counts(
-    feed: "Feed", screen_lines: gp.GeoDataFrame, dates: list[str]
+    feed: "Feed", screen_lines: gpd.GeoDataFrame, dates: list[str]
 ) -> pd.DataFrame:
     """
     Find all the Feed trips active on the given YYYYMMDD dates whose shapes
@@ -918,13 +918,13 @@ def compute_screen_line_counts(
     # Get intersection points of shapes and screen lines
     g0 = (
         # Only keep shapes that intersect screen lines to reduce computations
-        gp.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
+        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
             screen_lines, on="screen_line_id"
         )
         # Compute intersection points
         .assign(
-            int_point=lambda x: gp.GeoSeries(x["geometry_x"], crs=crs).intersection(
-                gp.GeoSeries(x["geometry_y"], crs=crs)
+            int_point=lambda x: gpd.GeoSeries(x["geometry_x"], crs=crs).intersection(
+                gpd.GeoSeries(x["geometry_y"], crs=crs)
             )
         )
     )
@@ -946,7 +946,7 @@ def compute_screen_line_counts(
             }
             records.append(record)
 
-    g = gp.GeoDataFrame.from_records(records).set_geometry("geometry")
+    g = gpd.GeoDataFrame.from_records(records).set_geometry("geometry")
     g.crs = crs
 
     # Get distance (in meters) of each intersection point along shape

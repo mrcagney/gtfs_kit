@@ -3,7 +3,7 @@ Functions about stop times.
 """
 
 from __future__ import annotations
-from typing import Optional, Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 import json
 
 import pandas as pd
@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def get_stop_times(feed: "Feed", date: Optional[str] = None) -> pd.DataFrame:
+def get_stop_times(feed: "Feed", date: str | None = None) -> pd.DataFrame:
     """
     Return ``feed.stop_times``.
     If a date (YYYYMMDD date string) is given, then subset the result to only those
@@ -130,7 +130,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     return new_feed
 
 
-def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> list[str]:
+def get_start_and_end_times(feed: "Feed", date: str | None = None) -> list[str]:
     """
     Return the first departure time and last arrival time
     (HH:MM:SS time strings) listed in ``feed.stop_times``, respectively.
@@ -142,7 +142,7 @@ def get_start_and_end_times(feed: "Feed", date: Optional[str] = None) -> list[st
 
 def stop_times_to_geojson(
     feed: "Feed",
-    trip_ids: Optional[Iterable[str]] = None,
+    trip_ids: Iterable[str | None] = None,
 ) -> dict:
     """
     Return a GeoJSON FeatureCollection of Point features

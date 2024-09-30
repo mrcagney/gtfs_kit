@@ -12,6 +12,7 @@ from .context import (
     cairns_dates,
     cairns_trip_stats,
 )
+from gtfs_kit import constants as cs
 from gtfs_kit import trips as gkt
 from gtfs_kit import calendar as gkc
 from gtfs_kit import helpers as gkh
@@ -56,7 +57,7 @@ def test_get_trips():
 
     feed = cairns.copy()
     g = gkt.get_trips(feed, as_gdf=True)
-    assert g.crs == "epsg:4326"
+    assert g.crs == cs.WGS84
     assert g.shape[0] == feed.trips.shape[0]
     assert set(g.columns) == set(feed.trips.columns) | {"geometry"}
 

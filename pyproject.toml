@@ -1,6 +1,6 @@
 [project]
 name = "gtfs-kit"
-version = "6.1.1"
+version = "7.0.0"
 description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -27,6 +27,9 @@ Documentation = "https://mrcagney.github.io/gtfs_kit_docs"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.setuptools]
+packages = ["gtfs_kit"]
 
 [tool.uv]
 dev-dependencies = [
