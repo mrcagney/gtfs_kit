@@ -2,13 +2,13 @@ GTFS Kit
 ********
 .. image:: https://github.com/mrcagney/gtfs_kit/actions/workflows/test.yml/badge.svg
 
-GTFS Kit is a Python 3.9+ library for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
+GTFS Kit is a Python library for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
 It uses Pandas and Shapely to do the heavy lifting.
 
 
 Installation
 =============
-``poetry add gtfs_kit``.
+Install it from PyPI with UV, say, via ``uv add gtfs_kit``.
 
 
 Examples

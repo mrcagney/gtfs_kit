@@ -3,12 +3,12 @@ Functions about miscellany.
 """
 
 from __future__ import annotations
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
-import geopandas as gp
+import geopandas as gpd
 
 from . import helpers as hp
 from . import constants as cs
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def summarize(feed: "Feed", table: Optional[str] = None) -> pd.DataFrame:
+def summarize(feed: "Feed", table: str | None = None) -> pd.DataFrame:
     """
     Return a DataFrame summarizing all GTFS tables in the given feed
     or in the given table if specified.
@@ -89,7 +89,7 @@ def summarize(feed: "Feed", table: Optional[str] = None) -> pd.DataFrame:
     return f
 
 
-def describe(feed: "Feed", sample_date: Optional[str] = None) -> pd.DataFrame:
+def describe(feed: "Feed", sample_date: str | None = None) -> pd.DataFrame:
     """
     Return a DataFrame of various feed indicators and values,
     e.g. number of routes.
@@ -579,37 +579,47 @@ def create_shapes(feed: "Feed", *, all_trips: bool = False) -> "Feed":
     return feed
 
 
-def compute_bounds(feed: "Feed", stop_ids: Optional[list[str]] = None) -> np.array:
+def compute_bounds(feed: "Feed", stop_ids: list[str] | None = None) -> np.array:
     """
     Return the bounding box (Numpy array [min longitude, min latitude, max longitude,
     max latitude]) of the given Feed's stops or of the subset of stops
     specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).total_bounds
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.total_bounds
 
 
-def compute_convex_hull(
-    feed: "Feed", stop_ids: Optional[list[str]] = None
-) -> sg.Polygon:
+def compute_convex_hull(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Polygon:
     """
     Return a convex hull (Shapely Polygon) representing the convex hull of the given
     Feed's stops or of the subset of stops specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.union_all().convex_hull
 
 
-def compute_centroid(feed: "Feed", stop_ids: Optional[list[str]] = None) -> sg.Point:
+def compute_centroid(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Point:
     """
     Return the centroid (Shapely Point) of the convex hull the given Feed's stops
     or of the subset of stops specified by the given stop IDs.
     """
-    from .stops import geometrize_stops
+    from .stops import get_stops
 
-    return geometrize_stops(feed, stop_ids=stop_ids).unary_union.convex_hull.centroid
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
+
+    return g.union_all().convex_hull.centroid
 
 
 def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
@@ -760,7 +770,7 @@ def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
     return feed
 
 
-def restrict_to_area(feed: "Feed", area: gp.GeoDataFrame) -> "Feed":
+def restrict_to_area(feed: "Feed", area: gpd.GeoDataFrame) -> "Feed":
     """
     Build a new feed by restricting this one to only the trips
     that have at least one stop intersecting the given GeoDataFrame of polygons,
@@ -836,7 +846,7 @@ def restrict_to_area(feed: "Feed", area: gp.GeoDataFrame) -> "Feed":
 
 
 def compute_screen_line_counts(
-    feed: "Feed", screen_lines: gp.GeoDataFrame, dates: list[str]
+    feed: "Feed", screen_lines: gpd.GeoDataFrame, dates: list[str]
 ) -> pd.DataFrame:
     """
     Find all the Feed trips active on the given YYYYMMDD dates whose shapes
@@ -881,12 +891,14 @@ def compute_screen_line_counts(
         4. Use that interpolated time as the crossing time of the trip vehicle.
 
     """
+    from .shapes import get_shapes
+
     dates = feed.subset_dates(dates)
     if not dates:
         return pd.DataFrame()
 
     # Get shapes as GeoDataFrame
-    shapes_g = feed.geometrize_shapes(use_utm=True)
+    shapes_g = get_shapes(feed, as_gdf=True, use_utm=True)
 
     # Convert screen lines to UTM
     crs = shapes_g.crs
@@ -906,13 +918,13 @@ def compute_screen_line_counts(
     # Get intersection points of shapes and screen lines
     g0 = (
         # Only keep shapes that intersect screen lines to reduce computations
-        gp.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
+        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
             screen_lines, on="screen_line_id"
         )
         # Compute intersection points
         .assign(
-            int_point=lambda x: gp.GeoSeries(x["geometry_x"], crs=crs).intersection(
-                gp.GeoSeries(x["geometry_y"], crs=crs)
+            int_point=lambda x: gpd.GeoSeries(x["geometry_x"], crs=crs).intersection(
+                gpd.GeoSeries(x["geometry_y"], crs=crs)
             )
         )
     )
@@ -934,7 +946,7 @@ def compute_screen_line_counts(
             }
             records.append(record)
 
-    g = gp.GeoDataFrame.from_records(records).set_geometry("geometry")
+    g = gpd.GeoDataFrame.from_records(records).set_geometry("geometry")
     g.crs = crs
 
     # Get distance (in meters) of each intersection point along shape

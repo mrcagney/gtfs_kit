@@ -1,41 +1,49 @@
-[tool.poetry]
-name = "gtfs_kit"
-version = "6.1.1"
-description = "A Python 3.9+ library for analyzing GTFS feeds."
-authors = ["Alex Raichev <araichev@mrcagney.com>"]
+[project]
+name = "gtfs-kit"
+version = "7.0.0"
+description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
+requires-python = ">=3.10"
 license = "MIT"
-repository = "https://github.com/mrcagney/gtfs_kit"
-documentation = "https://mrcagney.github.io/gtfs_kit_docs"
-exclude = ["tests", "docs"]
+authors = [
+    { name = "Alexander Raichev", email = "araichev@mrcagney.com" },
+]
+dependencies = [
+    "shapely>=1.8",
+    "pycountry>=19",
+    "utm>=0.6",
+    "json2html>=1",
+    "geopandas>=1",
+    "rtree>=0",
+    "folium>=0",
+    "requests>=2",
+    "pandas>=2.2.2",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.9, <4"
-shapely = ">=1.8"
-pycountry = ">=19"
-utm = ">=0.6"
-json2html = ">=1"
-geopandas = ">=0"
-rtree = ">=0"
-folium = ">=0"
-requests = ">=2"
-pandas = ">=2.2.2"
-
-[tool.poetry.group.dev.dependencies]
-jupyter = ">=1"
-pytest = ">=6"
-sphinx = ">=3"
-pre-commit = ">=0"
-matplotlib = ">=1"
-pytest-socket = ">=0"
-black = ">22"
-nbstripout = ">=0.5"
-ruff = ">=0.0.257"
-publish_sphinx_docs = ">=1.0"
+[project.urls]
+Repository = "https://github.com/mrcagney/gtfs_kit"
+Documentation = "https://mrcagney.github.io/gtfs_kit_docs"
 
 [build-system]
-requires = ["poetry>=1"]
-build-backend = "poetry.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.setuptools]
+packages = ["gtfs_kit"]
+
+[tool.uv]
+dev-dependencies = [
+    "jupyter>=1",
+    "pytest>=6",
+    "sphinx>=3",
+    "pre-commit-uv>=0",
+    "matplotlib>=1",
+    "pytest-socket>=0",
+    "black>22",
+    "nbstripout>=0.5",
+    "ruff>=0.0.257",
+    "publish_sphinx_docs>=1.0",
+]
 
 [tool.pytest.ini_options]
 markers = [
@@ -43,7 +51,9 @@ markers = [
     "serial",
 ]
 
+
 [tool.ruff]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
-select = ["E", "F"]
-ignore = ["E501", "E731", "F401", "F403"]
+lint.select = ["E", "F"]
+lint.ignore = ["E501", "E731", "F401", "F403"]
+exclude = ["*.ipynb"]

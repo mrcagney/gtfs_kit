@@ -4,7 +4,7 @@ Functions useful across modules.
 
 from __future__ import annotations
 import datetime as dt
-from typing import Optional, Union, Callable
+from typing import Callable
 import copy
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
@@ -21,8 +21,8 @@ from . import constants as cs
 
 
 def datestr_to_date(
-    x: Union[dt.date, str], format_str: str = "%Y%m%d", *, inverse: bool = False
-) -> Union[str, dt.date]:
+    x: dt.date | str, format_str: str = "%Y%m%d", *, inverse: bool = False
+) -> str | dt.date:
     """
     Given a string ``x`` representing a date in the given format,
     convert it to a datetime.date object and return the result.
@@ -39,7 +39,7 @@ def datestr_to_date(
 
 
 def timestr_to_seconds(
-    x: Union[dt.date, str], *, inverse: bool = False, mod24: bool = False
+    x: dt.date | str, *, inverse: bool = False, mod24: bool = False
 ) -> int:
     """
     Given an HH:MM:SS time string ``x``, return the number of seconds
@@ -86,9 +86,7 @@ def timestr_mod24(timestr: str) -> int:
     return result
 
 
-def weekday_to_str(
-    weekday: Union[int, str], *, inverse: bool = False
-) -> Union[int, str]:
+def weekday_to_str(weekday: int | str, *, inverse: bool = False) -> int | str:
     """
     Given a weekday number (integer in the range 0, 1, ..., 6),
     return its corresponding weekday name as a lowercase string.
@@ -109,7 +107,7 @@ def weekday_to_str(
 
 
 def get_segment_length(
-    linestring: sg.LineString, p: sg.Point, q: Optional[sg.Point] = None
+    linestring: sg.LineString, p: sg.Point, q: sg.Point | None = None
 ) -> float:
     """
     Given a Shapely linestring and two Shapely points,
