@@ -1,7 +1,7 @@
 Introduction
 =============
 GTFS Kit is a Python library for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
-It uses Pandas and Shapely to do the heavy lifting.
+It uses Pandas and GeoPandas to do the heavy lifting.
 
 
 Authors
@@ -11,12 +11,12 @@ Authors
 
 Installation
 =============
-``poetry add gtfs_kit``.
+Install it from PyPI with UV, say, via ``uv add gtfs_kit``.
 
 
 Examples
 ========
-You can find examples in the Jupyter notebook ``notebooks/examples.ipynb``.
+In the Jupyter notebook ``notebooks/examples.ipynb``.
 
 
 Conventions
