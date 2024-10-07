@@ -1,6 +1,16 @@
 Changelog
 =========
 
+8.0.0, 2024-10-08
+-----------------
+- Breaking change: removed the UTM library, deleted ``helpers.get_utm_crs``, and used the GeoPandas version of the function instead.
+- Changed ``routes.map_routes`` to accept a list of route short names, instead of or in addition to a list of route IDs.
+
+7.0.0, 2024-09-30
+-----------------
+- Switched from Poetry to UV for project management.
+- Breaking change: removed ``geometrize_stops`` function and moved its functionality into ``get_stops``. Did a similar thing for ``get_shapes``, ``get_trips``, and ``get_routes``.
+
 6.1.1, 2024-08-19
 -----------------
 - Changed grouped DataFrame ``feed._calendar_dates_g`` to indexed DataFrame ``feed._calendar_dates_i`` for consistency with ``feed._calendar_i`` and slight speedup in fucttion ``trips.is_active_trip``.

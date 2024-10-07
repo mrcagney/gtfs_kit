@@ -3,10 +3,11 @@ import itertools
 import pytest
 import numpy as np
 import pandas as pd
-import geopandas as gp
+import geopandas as gpd
 import folium as fl
 
 from .context import gtfs_kit, cairns, cairns_shapeless, cairns_dates, cairns_trip_stats
+from gtfs_kit import constants as cs
 from gtfs_kit import routes as gkr
 
 
@@ -127,6 +128,95 @@ def test_get_routes():
     assert g.shape[1] == f.shape[1]
     # Should have correct columns
     assert set(g.columns) == set(feed.routes.columns)
+
+    # Test GDF options
+    feed = cairns.copy()
+    g = gkr.get_routes(feed, as_gdf=True, use_utm=True)
+    assert isinstance(g, gpd.GeoDataFrame)
+    assert g.crs != cs.WGS84
+
+    g = gkr.get_routes(feed, as_gdf=True, split_directions=True)
+    assert g.crs == cs.WGS84
+    assert (
+        g.shape[0]
+        == feed.trips[["route_id", "direction_id"]].drop_duplicates().shape[0]
+    )
+
+    with pytest.raises(ValueError):
+        gkr.get_routes(cairns_shapeless, as_gdf=True)
+
+    # Test written by Gilles Cuyaubere
+    feed = gtfs_kit.Feed(dist_units="km")
+    feed.agency = pd.DataFrame(
+        {"agency_id": ["agency_id_0"], "agency_name": ["agency_name_0"]}
+    )
+    feed.routes = pd.DataFrame(
+        {
+            "route_id": ["route_id_0"],
+            "agency_id": ["agency_id_0"],
+            "route_short_name": [None],
+            "route_long_name": ["route_long_name_0"],
+            "route_desc": [None],
+            "route_type": [1],
+            "route_url": [None],
+            "route_color": [None],
+            "route_text_color": [None],
+        }
+    )
+    feed.trips = pd.DataFrame(
+        {
+            "route_id": ["route_id_0"],
+            "service_id": ["service_id_0"],
+            "trip_id": ["trip_id_0"],
+            "trip_headsign": [None],
+            "trip_short_name": [None],
+            "direction_id": [None],
+            "block_id": [None],
+            "wheelchair_accessible": [None],
+            "bikes_allowed": [None],
+            "trip_desc": [None],
+            "shape_id": ["shape_id_0"],
+        }
+    )
+    feed.shapes = pd.DataFrame(
+        {
+            "shape_id": ["shape_id_0", "shape_id_0"],
+            "shape_pt_lon": [2.36, 2.37],
+            "shape_pt_lat": [48.82, 48.82],
+            "shape_pt_sequence": [0, 1],
+        }
+    )
+    feed.stops = pd.DataFrame(
+        {
+            "stop_id": ["stop_id_0", "stop_id_1"],
+            "stop_name": ["stop_name_0", "stop_name_1"],
+            "stop_desc": [None, None],
+            "stop_lat": [48.82, 48.82],
+            "stop_lon": [2.36, 2.37],
+            "zone_id": [None, None],
+            "stop_url": [None, None],
+            "location_type": [0, 0],
+            "parent_station": [None, None],
+            "wheelchair_boarding": [None, None],
+        }
+    )
+    feed.stop_times = pd.DataFrame(
+        {
+            "trip_id": ["trip_id_0", "trip_id_0"],
+            "arrival_time": ["11:40:00", "11:45:00"],
+            "departure_time": ["11:40:00", "11:45:00"],
+            "stop_id": ["stop_id_0", "stop_id_1"],
+            "stop_sequence": [0, 1],
+            "stop_time_desc": [None, None],
+            "pickup_type": [None, None],
+            "drop_off_type": [None, None],
+        }
+    )
+
+    g = gkr.get_routes(feed, as_gdf=True)
+    print(g)
+    print(feed.get_trips(as_gdf=True))
+    assert g.crs == cs.WGS84
 
 
 def test_compute_route_stats():
@@ -277,93 +367,6 @@ def test_build_route_timetable():
     assert f.empty
 
 
-def test_geometrize_routes():
-    feed = cairns.copy()
-    route_ids = feed.routes.route_id.loc[:1]
-    g = gkr.geometrize_routes(feed, route_ids, use_utm=True)
-    assert isinstance(g, gp.GeoDataFrame)
-    assert g.shape[0] == len(route_ids)
-    assert g.crs != "epsg:4326"
-
-    g = gkr.geometrize_routes(feed, route_ids, split_directions=True)
-    assert isinstance(g, gp.GeoDataFrame)
-    assert g.shape[0] == 2 * len(route_ids)
-
-    with pytest.raises(ValueError):
-        gkr.geometrize_routes(cairns_shapeless)
-
-    # Test from Gilles Cuyaubere
-    feed = gtfs_kit.Feed(dist_units="km")
-    feed.agency = pd.DataFrame(
-        {"agency_id": ["agency_id_0"], "agency_name": ["agency_name_0"]}
-    )
-    feed.routes = pd.DataFrame(
-        {
-            "route_id": ["route_id_0"],
-            "agency_id": ["agency_id_0"],
-            "route_short_name": [None],
-            "route_long_name": ["route_long_name_0"],
-            "route_desc": [None],
-            "route_type": [1],
-            "route_url": [None],
-            "route_color": [None],
-            "route_text_color": [None],
-        }
-    )
-    feed.trips = pd.DataFrame(
-        {
-            "route_id": ["route_id_0"],
-            "service_id": ["service_id_0"],
-            "trip_id": ["trip_id_0"],
-            "trip_headsign": [None],
-            "trip_short_name": [None],
-            "direction_id": [None],
-            "block_id": [None],
-            "wheelchair_accessible": [None],
-            "bikes_allowed": [None],
-            "trip_desc": [None],
-            "shape_id": ["shape_id_0"],
-        }
-    )
-    feed.shapes = pd.DataFrame(
-        {
-            "shape_id": ["shape_id_0", "shape_id_0"],
-            "shape_pt_lon": [2.36, 2.37],
-            "shape_pt_lat": [48.82, 48.82],
-            "shape_pt_sequence": [0, 1],
-        }
-    )
-    feed.stops = pd.DataFrame(
-        {
-            "stop_id": ["stop_id_0", "stop_id_1"],
-            "stop_name": ["stop_name_0", "stop_name_1"],
-            "stop_desc": [None, None],
-            "stop_lat": [48.82, 48.82],
-            "stop_lon": [2.36, 2.37],
-            "zone_id": [None, None],
-            "stop_url": [None, None],
-            "location_type": [0, 0],
-            "parent_station": [None, None],
-            "wheelchair_boarding": [None, None],
-        }
-    )
-    feed.stop_times = pd.DataFrame(
-        {
-            "trip_id": ["trip_id_0", "trip_id_0"],
-            "arrival_time": ["11:40:00", "11:45:00"],
-            "departure_time": ["11:40:00", "11:45:00"],
-            "stop_id": ["stop_id_0", "stop_id_1"],
-            "stop_sequence": [0, 1],
-            "stop_time_desc": [None, None],
-            "pickup_type": [None, None],
-            "drop_off_type": [None, None],
-        }
-    )
-
-    g = gkr.geometrize_routes(feed)
-    assert isinstance(g, gp.GeoDataFrame)
-
-
 def test_routes_to_geojson():
     feed = cairns.copy()
     route_ids = feed.routes.route_id.loc[:1]
@@ -389,6 +392,10 @@ def test_routes_to_geojson():
 
 def test_map_routes():
     feed = cairns.copy()
-    rids = feed.routes.route_id.loc[:1]
-    m = gkr.map_routes(feed, rids, show_stops=True)
+    rids = feed.routes["route_id"].iloc[:1]
+    rsns = feed.routes["route_short_name"].iloc[-2:]
+    m = gkr.map_routes(feed, route_ids=rids, route_short_names=rsns, show_stops=True)
     assert isinstance(m, fl.Map)
+
+    with pytest.raises(ValueError):
+        gkr.map_routes(feed)

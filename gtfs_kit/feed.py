@@ -16,12 +16,12 @@ parameter in the method signatures.
 Ignore that extra parameter; it refers to the Feed instance,
 usually called ``self`` and usually hidden automatically by Sphinx.
 """
+
 from pathlib import Path
 import tempfile
 import shutil
 from copy import deepcopy
 import zipfile
-from typing import Optional, Union
 
 import pandas as pd
 from pandas.core.frame import DataFrame
@@ -88,25 +88,26 @@ class Feed(object):
         build_zero_route_time_series,
         compute_route_time_series,
         build_route_timetable,
-        geometrize_routes,
         routes_to_geojson,
         map_routes,
     )
     from .shapes import (
         append_dist_to_shapes,
         geometrize_shapes,
+        get_shapes,
         build_geometry_by_shape,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
     )
     from .stops import (
+        geometrize_stops,
+        ungeometrize_stops,
         get_stops,
         compute_stop_activity,
         compute_stop_stats,
         build_zero_stop_time_series,
         compute_stop_time_series,
         build_stop_timetable,
-        geometrize_stops,
         build_geometry_by_stop,
         stops_to_geojson,
         get_stops_in_area,
@@ -125,7 +126,6 @@ class Feed(object):
         compute_busiest_date,
         compute_trip_stats,
         locate_trips,
-        geometrize_trips,
         trips_to_geojson,
         map_trips,
     )
@@ -176,20 +176,20 @@ class Feed(object):
     def __init__(
         self,
         dist_units: str,
-        agency: Optional[DataFrame] = None,
-        stops: Optional[DataFrame] = None,
-        routes: Optional[DataFrame] = None,
-        trips: Optional[DataFrame] = None,
-        stop_times: Optional[DataFrame] = None,
-        calendar: Optional[DataFrame] = None,
-        calendar_dates: Optional[DataFrame] = None,
-        fare_attributes: Optional[DataFrame] = None,
-        fare_rules: Optional[DataFrame] = None,
-        shapes: Optional[DataFrame] = None,
-        frequencies: Optional[DataFrame] = None,
-        transfers: Optional[DataFrame] = None,
-        feed_info: Optional[DataFrame] = None,
-        attributions: Optional[DataFrame] = None,
+        agency: DataFrame | None = None,
+        stops: DataFrame | None = None,
+        routes: DataFrame | None = None,
+        trips: DataFrame | None = None,
+        stop_times: DataFrame | None = None,
+        calendar: DataFrame | None = None,
+        calendar_dates: DataFrame | None = None,
+        fare_attributes: DataFrame | None = None,
+        fare_rules: DataFrame | None = None,
+        shapes: DataFrame | None = None,
+        frequencies: DataFrame | None = None,
+        transfers: DataFrame | None = None,
+        feed_info: DataFrame | None = None,
+        attributions: DataFrame | None = None,
     ):
         """
         Assume that every non-None input is a DataFrame,
@@ -499,7 +499,7 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
     return feed
 
 
-def read_feed(path_or_url: Union[Path, str], dist_units: str) -> "Feed":
+def read_feed(path_or_url: Path | str, dist_units: str) -> "Feed":
     """
     Create a Feed instance from the given path or URL and given distance units.
     If the path exists, then call :func:`_read_feed_from_path`.

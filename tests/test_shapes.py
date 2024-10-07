@@ -2,11 +2,12 @@ import json
 
 import pytest
 from pandas.testing import assert_frame_equal
-import geopandas as gp
+import geopandas as gpd
 import shapely.geometry as sg
 
 from .context import gtfs_kit, DATA_DIR, cairns, cairns_shapeless
 from gtfs_kit import shapes as gks
+from gtfs_kit import constants as cs
 
 
 def test_append_dist_to_shapes():
@@ -27,11 +28,12 @@ def test_append_dist_to_shapes():
         assert sdt == sorted(sdt)
 
 
-def test_geometrize_shapes_0():
+def test_geometrize_shapes():
     shapes = cairns.shapes.copy()
-    geo_shapes = gks.geometrize_shapes_0(shapes, use_utm=True)
+    geo_shapes = gks.geometrize_shapes(shapes)
     # Should be a GeoDataFrame
-    assert isinstance(geo_shapes, gp.GeoDataFrame)
+    assert isinstance(geo_shapes, gpd.GeoDataFrame)
+    assert geo_shapes.crs == cs.WGS84
     # Should have the correct shape
     assert geo_shapes.shape[0] == shapes["shape_id"].nunique()
     assert geo_shapes.shape[1] == shapes.shape[1] - 2
@@ -47,10 +49,10 @@ def test_geometrize_shapes_0():
     assert set(geo_shapes.columns) == expect_cols
 
 
-def test_ungeometrize_shapes_0():
+def test_ungeometrize_shapes():
     shapes = cairns.shapes.copy()
-    geo_shapes = gks.geometrize_shapes_0(shapes)
-    shapes2 = gks.ungeometrize_shapes_0(geo_shapes)
+    geo_shapes = gks.geometrize_shapes(shapes)
+    shapes2 = gks.ungeometrize_shapes(geo_shapes)
     # Test columns are correct
     expect_cols = set(list(shapes.columns)) - set(["shape_dist_traveled"])
     assert set(shapes2.columns) == expect_cols
@@ -59,18 +61,18 @@ def test_ungeometrize_shapes_0():
     assert_frame_equal(shapes2[cols], shapes[cols])
 
 
-def test_geometrize_shapes():
-    g_1 = gks.geometrize_shapes(cairns, use_utm=True)
-    g_2 = gks.geometrize_shapes_0(cairns.shapes, use_utm=True)
-    assert g_1.equals(g_2)
-    with pytest.raises(ValueError):
-        gks.geometrize_shapes(cairns_shapeless)
+def test_get_shapes():
+    g = gks.get_shapes(cairns, as_gdf=True)
+    assert g.crs == cs.WGS84
+    assert set(g.columns) == {"shape_id", "geometry"}
+    assert gks.get_shapes(cairns_shapeless, as_gdf=True) is None
 
 
 def test_build_geometry_by_shape():
     d = gks.build_geometry_by_shape(cairns)
     assert isinstance(d, dict)
     assert len(d) == cairns.shapes.shape_id.nunique()
+    assert gks.build_geometry_by_shape(cairns_shapeless) == {}
 
 
 def test_shapes_to_geojson():
@@ -80,8 +82,10 @@ def test_shapes_to_geojson():
     assert isinstance(collection, dict)
     assert len(collection["features"]) == len(shape_ids)
 
-    with pytest.raises(ValueError):
-        gks.shapes_to_geojson(cairns_shapeless)
+    assert gks.shapes_to_geojson(cairns_shapeless) == {
+        "type": "FeatureCollection",
+        "features": [],
+    }
 
 
 def test_get_shapes_intersecting_geometry():
@@ -91,3 +95,7 @@ def test_get_shapes_intersecting_geometry():
     pshapes = gks.get_shapes_intersecting_geometry(feed, polygon)
     shape_ids = ["120N0005", "1200010", "1200001"]
     assert set(pshapes["shape_id"].unique()) == set(shape_ids)
+    g = gks.get_shapes_intersecting_geometry(feed, polygon, as_gdf=True)
+    assert g.crs == "epsg:4326"
+    assert set(g["shape_id"].unique()) == set(shape_ids)
+    assert gks.get_shapes_intersecting_geometry(cairns_shapeless, polygon) is None

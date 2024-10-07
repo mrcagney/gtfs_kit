@@ -1,11 +1,12 @@
 """
 Functions about validation.
 """
+
 from __future__ import annotations
 import re
 import pytz
 import datetime as dt
-from typing import Optional, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import pycountry
 import numpy as np
@@ -277,7 +278,7 @@ def check_column(
     df: DataFrame,
     column: str,
     checker,
-    message: Optional[str] = None,
+    message: str | None = None,
     type_: str = "error",
     *,
     column_required: bool = True,
@@ -426,7 +427,7 @@ def check_column_linked_id(
     df: DataFrame,
     column: str,
     target_df: DataFrame,
-    target_column: Optional[str] = None,
+    target_column: str | None = None,
     *,
     column_required: bool = True,
 ) -> list:
@@ -503,7 +504,7 @@ def check_column_linked_id(
     return problems
 
 
-def format_problems(problems: list, *, as_df: bool = False) -> Union[list, DataFrame]:
+def format_problems(problems: list, *, as_df: bool = False) -> list | DataFrame:
     """
     Format the given problems list as a DataFrame.
 
@@ -1565,7 +1566,7 @@ def check_trips(
 
 def validate(
     feed: "Feed", *, as_df: bool = True, include_warnings: bool = True
-) -> Union[list, DataFrame]:
+) -> list | DataFrame:
     """
     Check whether the given feed satisfies the GTFS.
 

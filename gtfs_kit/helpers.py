@@ -4,7 +4,7 @@ Functions useful across modules.
 
 from __future__ import annotations
 import datetime as dt
-from typing import Optional, Union, Callable
+from typing import Callable
 import copy
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
@@ -13,16 +13,14 @@ import math
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
-from shapely.ops import transform
-import utm
 import json2html as j2h
 
 from . import constants as cs
 
 
 def datestr_to_date(
-    x: Union[dt.date, str], format_str: str = "%Y%m%d", *, inverse: bool = False
-) -> Union[str, dt.date]:
+    x: dt.date | str, format_str: str = "%Y%m%d", *, inverse: bool = False
+) -> str | dt.date:
     """
     Given a string ``x`` representing a date in the given format,
     convert it to a datetime.date object and return the result.
@@ -39,7 +37,7 @@ def datestr_to_date(
 
 
 def timestr_to_seconds(
-    x: Union[dt.date, str], *, inverse: bool = False, mod24: bool = False
+    x: dt.date | str, *, inverse: bool = False, mod24: bool = False
 ) -> int:
     """
     Given an HH:MM:SS time string ``x``, return the number of seconds
@@ -86,9 +84,7 @@ def timestr_mod24(timestr: str) -> int:
     return result
 
 
-def weekday_to_str(
-    weekday: Union[int, str], *, inverse: bool = False
-) -> Union[int, str]:
+def weekday_to_str(weekday: int | str, *, inverse: bool = False) -> int | str:
     """
     Given a weekday number (integer in the range 0, 1, ..., 6),
     return its corresponding weekday name as a lowercase string.
@@ -109,7 +105,7 @@ def weekday_to_str(
 
 
 def get_segment_length(
-    linestring: sg.LineString, p: sg.Point, q: Optional[sg.Point] = None
+    linestring: sg.LineString, p: sg.Point, q: sg.Point | None = None
 ) -> float:
     """
     Given a Shapely linestring and two Shapely points,
@@ -258,32 +254,6 @@ def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
         return True
     else:
         return False
-
-
-def get_utm_crs(lat: float, lon: float) -> dict:
-    """
-    Return a GeoPandas coordinate reference system (CRS) string
-    corresponding to the UTM projection appropriate to the given WGS84
-    latitude and longitude.
-
-    Code inspired by https://github.com/Turbo87/utm/issues/51.
-    """
-    zone = utm.from_latlon(lat, lon)[2]
-    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"
-    return result
-
-
-def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
-    """
-    Given a Shapely LineString in WGS84 coordinates,
-    convert it to the appropriate UTM coordinates.
-    If ``inverse``, then do the inverse.
-    """
-
-    def proj(x, y):
-        return utm.from_latlon(y, x)[:2]
-
-    return transform(proj, linestring)
 
 
 def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:

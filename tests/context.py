@@ -1,16 +1,13 @@
 import os
 import sys
 from pathlib import Path
-import importlib
 
-sys.path.insert(0, os.path.abspath(".."))
-
-import geopandas as gpd
 import pandas as pd
 import numpy as np
 
+sys.path.insert(0, os.path.abspath(".."))
+
 import gtfs_kit
-import pytest
 
 
 # Load/create test feeds

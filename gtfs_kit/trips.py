@@ -4,9 +4,8 @@ Functions about trips.
 
 from __future__ import annotations
 import json
-from typing import Optional, Iterable, TYPE_CHECKING
+from typing import Iterable, TYPE_CHECKING
 
-import geopandas as gp
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
@@ -65,7 +64,12 @@ def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
 
 
 def get_trips(
-    feed: "Feed", date: Optional[str] = None, time: Optional[str] = None
+    feed: "Feed",
+    date: str | None = None,
+    time: str | None = None,
+    *,
+    as_gdf: bool = False,
+    use_utm: bool = False,
 ) -> pd.DataFrame:
     """
     Return ``feed.trips``.
@@ -73,35 +77,55 @@ def get_trips(
     that start on that date.
     If a time (HH:MM:SS string, possibly with HH > 23) is given in addition to a date,
     then further subset the result to trips in service at that time.
+
+    If ``as_gdf`` and ``feed.shapes`` is not None, then return the trips as a
+    GeoDataFrame whose 'geometry' column contains the trip's shape.
+    The GeoDataFrame will have a local UTM CRS if ``use_utm``; otherwise it will have
+    the WGS84 CRS.
+    If ``as_gdf`` and ``feed.shapes`` is ``None``, then raise a ValueError.
     """
-    if feed.trips is None or date is None:
-        return feed.trips
+    if feed.trips is None:
+        return None
 
     f = feed.trips.copy()
-    f["is_active"] = f["trip_id"].map(
-        lambda trip_id: feed.is_active_trip(trip_id, date)
-    )
-    f = f[f["is_active"]].copy()
-    del f["is_active"]
-
-    if time is not None:
-        # Get trips active during given time
-        g = pd.merge(f, feed.stop_times[["trip_id", "departure_time"]])
-
-        def F(group):
-            d = {}
-            start = group["departure_time"].dropna().min()
-            end = group["departure_time"].dropna().max()
-            try:
-                result = start <= time <= end
-            except TypeError:
-                result = False
-            d["is_active"] = result
-            return pd.Series(d)
-
-        h = g.groupby("trip_id").apply(F).reset_index()
-        f = pd.merge(f, h[h["is_active"]])
+    if date is not None:
+        f["is_active"] = f["trip_id"].map(
+            lambda trip_id: feed.is_active_trip(trip_id, date)
+        )
+        f = f[f["is_active"]].copy()
         del f["is_active"]
+
+        if time is not None:
+            # Get trips active during given time
+            g = pd.merge(f, feed.stop_times[["trip_id", "departure_time"]])
+
+            def F(group):
+                d = {}
+                start = group["departure_time"].dropna().min()
+                end = group["departure_time"].dropna().max()
+                try:
+                    result = start <= time <= end
+                except TypeError:
+                    result = False
+                d["is_active"] = result
+                return pd.Series(d)
+
+            h = g.groupby("trip_id").apply(F).reset_index()
+            f = pd.merge(f, h[h["is_active"]])
+            del f["is_active"]
+
+    if as_gdf:
+        if feed.shapes is None:
+            raise ValueError("This Feed has no shapes.")
+        else:
+            from .shapes import get_shapes
+
+            f = (
+                get_shapes(feed, as_gdf=True, use_utm=use_utm)
+                .filter(["shape_id", "geometry"])
+                .merge(f, how="right")
+                .filter(f.columns.tolist() + ["geometry"])
+            )
 
     return f
 
@@ -149,7 +173,7 @@ def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
 
 def compute_trip_stats(
     feed: "Feed",
-    route_ids: Optional[list[str]] = None,
+    route_ids: list[str | None] = None,
     *,
     compute_dist_from_shapes: bool = False,
 ) -> pd.DataFrame:
@@ -420,36 +444,9 @@ def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
     return h.groupby("shape_id").apply(get_lonlat)
 
 
-def geometrize_trips(
-    feed: "Feed", trip_ids: Optional[Iterable[str]] = None, *, use_utm=False
-) -> gp.GeoDataFrame:
-    """
-    Return a GeoDataFrame with the columns in ``feed.trips`` and a geometry column
-    of LineStrings, each of which represents the shape of the corresponding trip.
-
-    If an iterable of trip IDs is given, then subset to those trips.
-    If ``use_utm``, then use local UTM coordinates for the geometries.
-
-    Raise a ValueError if the Feed has no shapes.
-    """
-    if feed.shapes is None:
-        raise ValueError("This Feed has no shapes.")
-
-    if trip_ids is not None:
-        trips = feed.trips.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
-    else:
-        trips = feed.trips.copy()
-
-    return (
-        feed.geometrize_shapes(shape_ids=trips.shape_id.tolist(), use_utm=use_utm)
-        .filter(["shape_id", "geometry"])
-        .merge(trips, how="left")
-    )
-
-
 def trips_to_geojson(
     feed: "Feed",
-    trip_ids: Optional[Iterable[str]] = None,
+    trip_ids: Iterable[str] | None = None,
     *,
     include_stops: bool = False,
 ) -> dict:
@@ -472,7 +469,7 @@ def trips_to_geojson(
         raise ValueError(f"Trip IDs {D} not found in feed.")
 
     # Get trips
-    g = geometrize_trips(feed, trip_ids=trip_ids)
+    g = get_trips(feed, as_gdf=True).loc[lambda x: x["trip_id"].isin(trip_ids)]
     trips_gj = json.loads(g.to_json())
 
     # Get stops if desired

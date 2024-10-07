@@ -2,18 +2,18 @@ GTFS Kit
 ********
 .. image:: https://github.com/mrcagney/gtfs_kit/actions/workflows/test.yml/badge.svg
 
-GTFS Kit is a Python 3.9+ library for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
-It uses Pandas and Shapely to do the heavy lifting.
+GTFS Kit is a Python library for analyzing `General Transit Feed Specification (GTFS) <https://en.wikipedia.org/wiki/GTFS>`_ data in memory without a database.
+It uses Pandas and GeoPandas to do the heavy lifting.
 
 
 Installation
 =============
-``poetry add gtfs_kit``.
+Install it from PyPI with UV, say, via ``uv add gtfs_kit``.
 
 
 Examples
 ========
-You can find examples in the Jupyter notebook ``notebooks/examples.ipynb``.
+In the Jupyter notebook ``notebooks/examples.ipynb``.
 
 
 Authors
@@ -23,7 +23,7 @@ Authors
 
 Documentation
 =============
-Documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `mrcagney.github.io/gtfs_kit_docs <https://mrcagney.github.io/gtfs_kit_docs>`_.
+The documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `mrcagney.github.io/gtfs_kit_docs <https://mrcagney.github.io/gtfs_kit_docs>`_.
 
 
 Notes
@@ -41,3 +41,4 @@ Notes
 - GTFS time is measured relative noon minus 12 hours, which can mess things up when crossing into daylight savings time.
   I don't think this issue causes any bugs in GTFS Kit, but you and i have been warned.
   Thanks to user derhuerst for bringing this to my attention in `closed Issue 8 <https://github.com/mrcagney/gtfs_kit/issues/8#issue-1063633457>`_.
+- I'll probably remove the GTFS validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).

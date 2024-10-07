@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pytest
-import geopandas as gp
+import geopandas as gpd
 import folium as fl
 
 from .context import (
@@ -12,6 +12,7 @@ from .context import (
     cairns_dates,
     cairns_trip_stats,
 )
+from gtfs_kit import constants as cs
 from gtfs_kit import trips as gkt
 from gtfs_kit import calendar as gkc
 from gtfs_kit import helpers as gkh
@@ -53,6 +54,15 @@ def test_get_trips():
     assert trips2.shape[1] == trips1.shape[1]
     # Should have correct columns
     assert set(trips2.columns) == set(feed.trips.columns)
+
+    feed = cairns.copy()
+    g = gkt.get_trips(feed, as_gdf=True)
+    assert g.crs == cs.WGS84
+    assert g.shape[0] == feed.trips.shape[0]
+    assert set(g.columns) == set(feed.trips.columns) | {"geometry"}
+
+    with pytest.raises(ValueError):
+        gkt.get_trips(cairns_shapeless, as_gdf=True)
 
 
 def test_compute_trip_activity():
@@ -176,18 +186,6 @@ def test_locate_trips():
     del feed.trips["shape_id"]
     with pytest.raises(ValueError):
         gkt.locate_trips(feed, date, times)
-
-
-def test_geometrize_trips():
-    feed = cairns.copy()
-    trip_ids = feed.trips.trip_id.loc[:1]
-    g = gkt.geometrize_trips(feed, trip_ids, use_utm=True)
-    assert isinstance(g, gp.GeoDataFrame)
-    assert g.shape[0] == len(trip_ids)
-    assert g.crs != "epsg:4326"
-
-    with pytest.raises(ValueError):
-        gkt.geometrize_trips(cairns_shapeless)
 
 
 def test_trips_to_geojson():
