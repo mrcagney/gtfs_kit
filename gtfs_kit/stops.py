@@ -44,9 +44,7 @@ def geometrize_stops(stops: pd.DataFrame, *, use_utm: bool = False) -> gpd.GeoDa
     )
 
     if use_utm:
-        lat, lon = stops[["stop_lat", "stop_lon"]].values[0]
-        crs = hp.get_utm_crs(lat, lon)
-        g = g.to_crs(crs)
+        g = g.to_crs(g.estimate_utm_crs())
 
     return g
 

@@ -13,8 +13,6 @@ import math
 import pandas as pd
 import numpy as np
 import shapely.geometry as sg
-from shapely.ops import transform
-import utm
 import json2html as j2h
 
 from . import constants as cs
@@ -256,32 +254,6 @@ def is_not_null(df: pd.DataFrame, col_name: str) -> bool:
         return True
     else:
         return False
-
-
-def get_utm_crs(lat: float, lon: float) -> dict:
-    """
-    Return a GeoPandas coordinate reference system (CRS) string
-    corresponding to the UTM projection appropriate to the given WGS84
-    latitude and longitude.
-
-    Code inspired by https://github.com/Turbo87/utm/issues/51.
-    """
-    zone = utm.from_latlon(lat, lon)[2]
-    result = f"EPSG:326{zone:02d}" if lat >= 0 else f"EPSG:327{zone:02d}"
-    return result
-
-
-def linestring_to_utm(linestring: sg.LineString) -> sg.LineString:
-    """
-    Given a Shapely LineString in WGS84 coordinates,
-    convert it to the appropriate UTM coordinates.
-    If ``inverse``, then do the inverse.
-    """
-
-    def proj(x, y):
-        return utm.from_latlon(y, x)[:2]
-
-    return transform(proj, linestring)
 
 
 def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:

@@ -8,8 +8,6 @@ import json
 
 import geopandas as gpd
 import pandas as pd
-import numpy as np
-import utm
 import shapely.geometry as sg
 
 from . import constants as cs
@@ -35,35 +33,32 @@ def append_dist_to_shapes(feed: "Feed") -> "Feed":
         raise ValueError("This function requires the feed to have a shapes.txt file")
 
     feed = feed.copy()
-    f = feed.shapes
-    m_to_dist = hp.get_convert_dist("m", feed.dist_units)
 
-    def compute_dist(group):
-        # Compute the distances of the stops along this trip
-        group = group.sort_values("shape_pt_sequence")
-        shape = group["shape_id"].iat[0]
-        if not isinstance(shape, str):
-            group["shape_dist_traveled"] = np.nan
-            return group
-        points = [
-            sg.Point(utm.from_latlon(lat, lon)[:2])
-            for lon, lat in group[["shape_pt_lon", "shape_pt_lat"]].values
-        ]
-        p_prev = points[0]
-        d = 0
-        distances = [0]
-        for p in points[1:]:
-            d += p.distance(p_prev)
-            distances.append(d)
-            p_prev = p
-        group["shape_dist_traveled"] = distances
-        return group
+    g = (
+        feed.shapes.assign(
+            geometry=lambda x: gpd.points_from_xy(x["shape_pt_lon"], x["shape_pt_lat"])
+        )
+        .pipe(gpd.GeoDataFrame, crs=cs.WGS84)
+        .pipe(lambda x: x.to_crs(x.estimate_utm_crs()))
+        .sort_values(["shape_id", "shape_pt_sequence"])
+    )
+    # Compute cumulative between successive points within shape
+    g["prev_geom"] = g.groupby("shape_id")["geometry"].shift(1)
+    g["dist_m"] = g.apply(
+        lambda row: (
+            row["geometry"].distance(row["prev_geom"])
+            if pd.notnull(row["prev_geom"])
+            else 0
+        ),
+        axis=1,
+    )
+    g["shape_dist_traveled"] = (
+        g.groupby("shape_id")["dist_m"]
+        .cumsum()
+        .map(hp.get_convert_dist("m", feed.dist_units))
+    )
 
-    g = f.groupby("shape_id", group_keys=False).apply(compute_dist)
-    # Convert from meters
-    g["shape_dist_traveled"] = g["shape_dist_traveled"].map(m_to_dist)
-
-    feed.shapes = g
+    feed.shapes = g.drop(["geometry", "prev_geom", "dist_m"], axis=1)
     return feed
 
 
@@ -94,9 +89,7 @@ def geometrize_shapes(
     )
 
     if use_utm:
-        lat, lon = shapes[["shape_pt_lat", "shape_pt_lon"]].values[0]
-        crs = hp.get_utm_crs(lat, lon)
-        g = g.to_crs(crs)
+        g = g.to_crs(g.estimate_utm_crs())
 
     return g
 

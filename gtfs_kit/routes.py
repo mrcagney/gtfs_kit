@@ -783,16 +783,32 @@ def routes_to_geojson(
 
 def map_routes(
     feed: "Feed",
-    route_ids: Iterable[str],
-    color_palette: list[str] = cs.COLORS_SET2,
+    route_ids: Iterable[str] | None = None,
+    route_short_names: Iterable[str] | None = None,
+    color_palette: Iterable[str] = cs.COLORS_SET2,
     *,
     show_stops: bool = False,
 ):
     """
-    Return a Folium map showing the given routes and (optionally)
-    their stops.
+    Return a Folium map showing the given routes and (optionally) their stops.
+    At least one of ``route_ids`` and ``route_short_names`` must be given.
+    If both are given, then combine the two into a single set of routes.
     If any of the given route IDs are not found in the feed, then raise a ValueError.
     """
+    # Compile route IDs
+    R = set()
+    if route_short_names is not None:
+        R |= set(
+            feed.routes.loc[
+                lambda x: x["route_short_name"].isin(route_short_names), "route_id"
+            ]
+        )
+    if route_ids is not None:
+        R |= set(route_ids)
+    route_ids = sorted(R)
+    if not R:
+        raise ValueError("Route IDs or route short names must be given")
+
     # Initialize map
     my_map = fl.Map(tiles="cartodbpositron", prefer_canvas=True)
 

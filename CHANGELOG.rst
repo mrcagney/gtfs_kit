@@ -1,6 +1,11 @@
 Changelog
 =========
 
+8.0.0, 2024-10-08
+-----------------
+- Breaking change: removed the UTM library, deleted ``helpers.get_utm_crs``, and used the GeoPandas version of the function instead.
+- Changed ``routes.map_routes`` to accept a list of route short names, instead of or in addition to a list of route IDs.
+
 7.0.0, 2024-09-30
 -----------------
 - Switched from Poetry to UV for project management.
