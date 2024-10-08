@@ -124,6 +124,7 @@ class Feed(object):
         get_trips,
         compute_trip_activity,
         compute_busiest_date,
+        name_stop_patterns,
         compute_trip_stats,
         locate_trips,
         trips_to_geojson,
