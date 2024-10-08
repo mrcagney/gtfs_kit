@@ -1,6 +1,10 @@
 Changelog
 =========
 
+8.1.0, 2024-10-09
+-----------------
+- Added function ``trips.name_stop_patterns``, then used it to append column ``stop_pattern_name`` to the output of ``trips.compute_trip_stats`` and to append column ``num_stop_patterns`` to the output of ``routes.compute_route_stats``.
+
 8.0.0, 2024-10-08
 -----------------
 - Breaking change: removed the UTM library, deleted ``helpers.get_utm_crs``, and used the GeoPandas version of the function instead.

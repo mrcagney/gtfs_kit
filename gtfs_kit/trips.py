@@ -171,6 +171,51 @@ def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
     return max(s)[1]
 
 
+def name_stop_patterns(feed: "Feed") -> pd.DataFrame:
+    """
+    For each (route ID, direction ID) pair, find the distinct stop patterns of its
+    trips, and assign them each an integer *pattern rank* based on the stop pattern's
+    frequency rank, where 1 is the most frequent stop pattern, 2 is the second most
+    frequent, etc.
+    Return the DataFrame ``feed.trips`` with the additional column
+    ``stop_pattern_name``, which equals the trip's 'direction_id' concatenated with a
+    dash and its stop pattern rank.
+
+    If ``feed.trips`` has no 'direction_id' column, then temporarily create one equal
+    to all zeros, proceed as above, then delete the column.
+    """
+    # Collect stop patterns
+    trips = feed.trips.copy()
+    if "direction_id" in trips.columns:
+        has_direction = True
+    else:
+        has_direction = False
+        trips["direction_id"] = 0  # placeholder to ease calculations below
+    f = (
+        feed.stop_times.sort_values(["trip_id", "stop_sequence"])
+        .groupby("trip_id")
+        .apply(lambda x: pd.Series({"stop_pattern": "-".join(x["stop_id"])}))
+        .reset_index()
+        .merge(trips[["route_id", "trip_id", "direction_id"]])
+    )
+    # Compute pattern ranks
+    f["rank"] = f.groupby(["route_id", "direction_id"])["stop_pattern"].transform(
+        lambda x: pd.Series(x).map(
+            {pattern: idx + 1 for idx, pattern in enumerate(x.value_counts().index)}
+        )
+    )
+    # Assign pattern names
+    f["stop_pattern_name"] = (
+        f["direction_id"].astype(str).str.cat(f["rank"].astype(str), sep="-")
+    )
+    ff = trips.merge(f[["route_id", "trip_id", "direction_id", "stop_pattern_name"]])
+    # Clean up
+    if not has_direction:
+        del ff["direction_id"]
+
+    return ff
+
+
 def compute_trip_stats(
     feed: "Feed",
     route_ids: list[str | None] = None,
@@ -186,6 +231,7 @@ def compute_trip_stats(
     - ``'route_type'``
     - ``'direction_id'``: NaN if missing from feed
     - ``'shape_id'``: NaN if missing from feed
+    - ``'stop_pattern_name'``: output from :func:`name_stop_patterns`
     - ``'num_stops'``: number of stops on trip
     - ``'start_time'``: first departure time of the trip
     - ``'end_time'``: last departure time of the trip
@@ -227,7 +273,7 @@ def compute_trip_stats(
       yields a difference of at most 0.83km from the original values.
 
     """
-    f = feed.trips.copy()
+    f = name_stop_patterns(feed)
 
     # Restrict to given route IDs
     if route_ids is not None:
@@ -242,7 +288,7 @@ def compute_trip_stats(
         f["shape_id"] = np.nan
 
     f = (
-        f[["route_id", "trip_id", "direction_id", "shape_id"]]
+        f[["route_id", "trip_id", "direction_id", "shape_id", "stop_pattern_name"]]
         .merge(feed.routes[["route_id", "route_short_name", "route_type"]])
         .merge(feed.stop_times)
         .sort_values(["trip_id", "stop_sequence"])
@@ -261,6 +307,7 @@ def compute_trip_stats(
         d["route_type"] = group["route_type"].iat[0]
         d["direction_id"] = group["direction_id"].iat[0]
         d["shape_id"] = group["shape_id"].iat[0]
+        d["stop_pattern_name"] = group["stop_pattern_name"].iat[0]
         d["num_stops"] = group.shape[0]
         d["start_time"] = group["departure_time"].iat[0]
         d["end_time"] = group["departure_time"].iat[-1]

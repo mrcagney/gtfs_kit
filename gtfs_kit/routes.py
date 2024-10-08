@@ -49,6 +49,7 @@ def compute_route_stats_0(
       nonnull start times
     - ``'num_trip_ends'``: number of trips on the route with nonnull
       end times that end before 23:59:59
+    - ``'num_stop_patterns'``: number of stop pattern across trips
     - ``'is_loop'``: 1 if at least one of the trips on the route has
       its ``is_loop`` field equal to 1; 0 otherwise
     - ``'is_bidirectional'``: 1 if the route has trips in both
@@ -119,6 +120,7 @@ def compute_route_stats_0(
         d["num_trip_ends"] = group.loc[
             group["end_time"] < 24 * 3600, "end_time"
         ].count()
+        d["num_stop_patterns"] = group["stop_pattern_name"].nunique()
         d["is_loop"] = int(group["is_loop"].any())
         d["start_time"] = group["start_time"].min()
         d["end_time"] = group["end_time"].max()
@@ -160,6 +162,7 @@ def compute_route_stats_0(
         d["num_trip_ends"] = group.loc[
             group["end_time"] < 24 * 3600, "end_time"
         ].count()
+        d["num_stop_patterns"] = group["stop_pattern_name"].nunique()
         d["is_loop"] = int(group["is_loop"].any())
         d["is_bidirectional"] = int(group["direction_id"].unique().size > 1)
         d["start_time"] = group["start_time"].min()

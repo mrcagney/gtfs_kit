@@ -86,6 +86,17 @@ def test_compute_busiest_date():
     assert date in dates
 
 
+def test_name_stop_patterns():
+    feed = cairns.copy()
+    t = gkt.name_stop_patterns(feed)
+    assert set(t.columns) == set(feed.trips.columns) | {"stop_pattern_name"}
+
+    # Should still work without direction ID
+    feed.trips = feed.trips.drop("direction_id", axis=1)
+    t = gkt.name_stop_patterns(feed)
+    assert set(t.columns) == set(feed.trips.columns) | {"stop_pattern_name"}
+
+
 def test_compute_trip_stats():
     feed = cairns.copy()
     n = 3
@@ -106,6 +117,7 @@ def test_compute_trip_stats():
             "route_short_name",
             "route_type",
             "shape_id",
+            "stop_pattern_name",
             "num_stops",
             "start_time",
             "end_time",
