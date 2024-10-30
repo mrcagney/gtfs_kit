@@ -1,6 +1,10 @@
 Changelog
 =========
 
+8.1.1, 2024-10-31
+-----------------
+- Bugfixed ``shapes.geometrize_shapes`` to handle shapes comprising a single point.
+
 8.1.0, 2024-10-09
 -----------------
 - Added function ``trips.name_stop_patterns``, then used it to append column ``stop_pattern_name`` to the output of ``trips.compute_trip_stats`` and to append column ``num_stop_patterns`` to the output of ``routes.compute_route_stats``.
