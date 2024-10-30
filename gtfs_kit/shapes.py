@@ -8,6 +8,7 @@ import json
 
 import geopandas as gpd
 import pandas as pd
+import shapely
 import shapely.geometry as sg
 
 from . import constants as cs
@@ -76,7 +77,12 @@ def geometrize_shapes(
 
     def my_agg(group):
         d = {}
-        d["geometry"] = sg.LineString(group[["shape_pt_lon", "shape_pt_lat"]].values)
+        coords = group[["shape_pt_lon", "shape_pt_lat"]].values
+        try:
+            d["geometry"] = sg.LineString(coords)
+        except shapely.errors.GEOSException:
+            d["geometry"] = sg.Point(coords)
+
         return pd.Series(d)
 
     g = (

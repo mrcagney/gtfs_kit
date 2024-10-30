@@ -47,6 +47,11 @@ def test_geometrize_shapes():
         ]
     )
     assert set(geo_shapes.columns) == expect_cols
+    # A shape with only one point
+    shapes = cairns.shapes.iloc[:1]
+    geo_shapes = gks.geometrize_shapes(shapes)
+    assert isinstance(geo_shapes, gpd.GeoDataFrame)
+    assert geo_shapes.crs == cs.WGS84
 
 
 def test_ungeometrize_shapes():
