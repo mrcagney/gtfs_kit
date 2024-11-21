@@ -148,21 +148,29 @@ def get_shapes(
 
 
 def build_geometry_by_shape(
-    feed: "Feed", shape_ids: Iterable[str] | None = None, *, use_utm: bool = False
+    feed: "Feed",
+    shape_ids: Iterable[str] | None = None,
+    *,
+    as_gdf: bool = False,
+    use_utm: bool = False
 ) -> dict:
     """
-    Return a dictionary of the form
+    Get specific shapes from a feed in ``shape_ids``.
+    If ``as_gdf``, then return it as GeoDataFrame with a 'geometry' column, otherwise
+    return a dictionary containing:
     <shape ID> -> <Shapely LineString representing shape>.
-    If the Feed has no shapes, then return the empty dictionary.
+    If the Feed has no shapes, then return the empty item.
     If ``use_utm``, then use local UTM coordinates; otherwise, use WGS84 coordinates.
     """
     if feed.shapes is None:
-        return dict()
+        return gpd.GeoDataFrame() if as_gdf else dict()
 
     g = get_shapes(feed, as_gdf=True, use_utm=use_utm)
     if shape_ids is not None:
         g = g.loc[lambda x: x["shape_id"].isin(shape_ids)]
-    return dict(g[["shape_id", "geometry"]].values)
+    
+    g = g[["shape_id", "geometry"]]
+    return g if as_gdf else dict(g.values)
 
 
 def shapes_to_geojson(feed: "Feed", shape_ids: Iterable[str] | None = None) -> dict:
