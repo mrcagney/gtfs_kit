@@ -208,7 +208,7 @@ def compute_route_stats_0(
             )
 
         g = (
-            f.groupby(["route_id", "direction_id"])
+            f.groupby(["route_id", "direction_id"])[f.columns]
             .apply(compute_route_stats_split_directions)
             .reset_index()
         )
@@ -219,10 +219,12 @@ def compute_route_stats_0(
             d["is_bidirectional"] = int(group["direction_id"].unique().size > 1)
             return pd.Series(d)
 
-        gg = g.groupby("route_id").apply(is_bidirectional).reset_index()
+        gg = g.groupby("route_id")[g.columns].apply(is_bidirectional).\
+            reset_index()
         g = g.merge(gg)
     else:
-        g = f.groupby("route_id").apply(compute_route_stats).reset_index()
+        g = f.groupby("route_id")[f.columns].apply(compute_route_stats).\
+            reset_index()
 
     # Compute a few more stats
     g["service_speed"] = (g["service_distance"] / g["service_duration"]).fillna(
@@ -728,7 +730,7 @@ def get_routes(
             .drop_duplicates(subset="shape_id")
             .filter(groupby_cols + ["geometry"])
             .groupby(groupby_cols)
-            .apply(merge_lines)
+            .apply(merge_lines, include_groups=False)
             .reset_index()
             .merge(f, how="right")
             .pipe(gpd.GeoDataFrame)

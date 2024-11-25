@@ -156,7 +156,7 @@ def compute_stop_stats_0(
     else:
         g = f.groupby("stop_id")
 
-    result = g.apply(compute_stop_stats).reset_index()
+    result = g[f.columns].apply(compute_stop_stats).reset_index()
 
     # Convert start and end times to time strings
     result[["start_time", "end_time"]] = result[["start_time", "end_time"]].map(

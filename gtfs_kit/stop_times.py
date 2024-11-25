@@ -111,7 +111,10 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
         # Convert departure times to seconds to ease calculatios
         .assign(departure_time_s=lambda x: x.departure_time.map(hp.timestr_to_seconds))
         .sort_values(["trip_id", "stop_sequence"])
-        .groupby("trip_id", group_keys=False)
+    )
+
+    st = (
+        st.groupby("trip_id", group_keys=False)[st.columns]
         .apply(compute_dist)
         .reset_index()
         # Convert distances from meters to feed's distance units

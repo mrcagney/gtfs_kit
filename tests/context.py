@@ -24,3 +24,5 @@ cairns_dates = [week[0], week[2]]
 cairns_trip_stats = pd.read_csv(
     DATA_DIR / "cairns_trip_stats.csv", dtype=gtfs_kit.DTYPE
 )
+
+pd.set_option('future.no_silent_downcasting', True)
