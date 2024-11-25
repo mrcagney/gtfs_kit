@@ -11,7 +11,7 @@ import gtfs_kit
 
 
 # Load/create test feeds
-DATA_DIR = Path("data")
+DATA_DIR = Path(gtfs_kit.helpers.get_project_root() / "data")
 sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
 cairns = gtfs_kit.read_feed(DATA_DIR / "cairns_gtfs.zip", dist_units="km")
 cairns_shapeless = cairns.copy()

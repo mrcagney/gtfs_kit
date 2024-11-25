@@ -8,6 +8,7 @@ from typing import Callable
 import copy
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
+from pathlib import Path
 import math
 
 import pandas as pd
@@ -16,6 +17,13 @@ import shapely.geometry as sg
 import json2html as j2h
 
 from . import constants as cs
+
+
+def get_project_root() -> Path:
+    """
+    Returns the root directory of the project as Path.
+    """
+    return Path(__file__).absolute().parent.parent
 
 
 def datestr_to_date(
