@@ -665,6 +665,7 @@ def build_route_timetable(
         frames.append(f)
 
     f = pd.concat(frames)
+    f["min_dt"] = f["min_dt"].map(hp.timestr_to_seconds)
     return f.sort_values(["date", "min_dt", "stop_sequence"]).drop(
         ["min_dt", "dt"], axis=1
     )
