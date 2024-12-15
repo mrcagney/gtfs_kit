@@ -209,7 +209,7 @@ def compute_route_stats_0(
 
         g = (
             f.groupby(["route_id", "direction_id"])
-            .apply(compute_route_stats_split_directions)
+            .apply(compute_route_stats_split_directions, include_groups=False)
             .reset_index()
         )
 
@@ -219,10 +219,18 @@ def compute_route_stats_0(
             d["is_bidirectional"] = int(group["direction_id"].unique().size > 1)
             return pd.Series(d)
 
-        gg = g.groupby("route_id").apply(is_bidirectional).reset_index()
+        gg = (
+            g.groupby("route_id")
+            .apply(is_bidirectional, include_groups=False)
+            .reset_index()
+        )
         g = g.merge(gg)
     else:
-        g = f.groupby("route_id").apply(compute_route_stats).reset_index()
+        g = (
+            f.groupby("route_id")
+            .apply(compute_route_stats, include_groups=False)
+            .reset_index()
+        )
 
     # Compute a few more stats
     g["service_speed"] = (g["service_distance"] / g["service_duration"]).fillna(
@@ -660,13 +668,14 @@ def build_route_timetable(
         # Groupby trip ID and sort groups by their minimum departure time.
         # For some reason NaN departure times mess up the transform below.
         # So temporarily fill NaN departure times as a workaround.
-        f["dt"] = f["departure_time"].ffill()
+        f["dt"] = f["departure_time"].ffill().map(hp.timestr_to_seconds)
         f["min_dt"] = f.groupby("trip_id")["dt"].transform("min")
         frames.append(f)
 
-    f = pd.concat(frames)
-    return f.sort_values(["date", "min_dt", "stop_sequence"]).drop(
-        ["min_dt", "dt"], axis=1
+    return (
+        pd.concat(frames)
+        .sort_values(["date", "min_dt", "stop_sequence"], ignore_index=True)
+        .drop(["min_dt", "dt"], axis=1)
     )
 
 
@@ -728,7 +737,7 @@ def get_routes(
             .drop_duplicates(subset="shape_id")
             .filter(groupby_cols + ["geometry"])
             .groupby(groupby_cols)
-            .apply(merge_lines)
+            .apply(merge_lines, include_groups=False)
             .reset_index()
             .merge(f, how="right")
             .pipe(gpd.GeoDataFrame)

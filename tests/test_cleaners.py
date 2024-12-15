@@ -188,4 +188,5 @@ def test_drop_invalid_columns():
     f1.routes["bingo"] = "bongo"
     f1.trips["wingo"] = "wongo"
     f2 = gkc.drop_invalid_columns(f1)
+    print(f2.routes)
     assert f2 == sample

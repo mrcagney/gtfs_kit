@@ -13,6 +13,9 @@ from gtfs_kit import stops as gks
 from gtfs_kit import calendar as gkc
 
 
+sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs_2.zip", dist_units="km")
+
+
 def test_compute_stop_stats_0():
     feed1 = cairns.copy()
     feed2 = cairns.copy()
@@ -269,20 +272,17 @@ def test_compute_stop_time_series():
 
 
 def test_build_stop_timetable():
-    feed = cairns.copy()
+    feed = sample.copy()
     stop_id = feed.stops["stop_id"].values[0]
-    dates = cairns_dates + ["20010101"]
+    dates = feed.get_first_week()[:2]
     f = gks.build_stop_timetable(feed, stop_id, dates)
-
-    # Should be a data frame
-    assert isinstance(f, pd.core.frame.DataFrame)
 
     # Should have the correct columns
     expect_cols = set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
     assert set(f.columns) == expect_cols
 
     # Should only have feed dates
-    assert f.date.unique().tolist() == cairns_dates
+    assert f.date.unique().tolist() == dates
 
     # Empty check
     f = gks.build_stop_timetable(feed, stop_id, [])

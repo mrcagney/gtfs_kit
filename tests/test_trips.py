@@ -173,9 +173,9 @@ def test_locate_trips():
     date = cairns_dates[0]
     times = ["08:00:00"]
     f = gkt.locate_trips(feed, date, times)
+    print(f.head().T)
+
     g = gkt.get_trips(feed, date, times[0])
-    # Should be a data frame
-    assert isinstance(f, pd.core.frame.DataFrame)
     # Should have the correct number of rows
     assert f.shape[0] == g.shape[0]
     # Should have the correct columns

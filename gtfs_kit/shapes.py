@@ -88,7 +88,7 @@ def geometrize_shapes(
     g = (
         shapes.sort_values(["shape_id", "shape_pt_sequence"])
         .groupby("shape_id", sort=False)
-        .apply(my_agg)
+        .apply(my_agg, include_groups=False)
         .reset_index()
         .pipe(gpd.GeoDataFrame)
         .set_crs(cs.WGS84)

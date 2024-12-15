@@ -110,7 +110,7 @@ def get_trips(
                 d["is_active"] = result
                 return pd.Series(d)
 
-            h = g.groupby("trip_id").apply(F).reset_index()
+            h = g.groupby("trip_id").apply(F, include_groups=False).reset_index()
             f = pd.merge(f, h[h["is_active"]])
             del f["is_active"]
 
@@ -194,7 +194,10 @@ def name_stop_patterns(feed: "Feed") -> pd.DataFrame:
     f = (
         feed.stop_times.sort_values(["trip_id", "stop_sequence"])
         .groupby("trip_id")
-        .apply(lambda x: pd.Series({"stop_pattern": "-".join(x["stop_id"])}))
+        .apply(
+            lambda x: pd.Series({"stop_pattern": "-".join(x["stop_id"])}),
+            include_groups=False,
+        )
         .reset_index()
         .merge(trips[["route_id", "trip_id", "direction_id"]])
     )
@@ -323,7 +326,7 @@ def compute_trip_stats(
     # Apply my_agg, but don't reset index yet.
     # Need trip ID as index to line up the results of the
     # forthcoming distance calculation
-    h = g.apply(my_agg)
+    h = g.apply(my_agg, include_groups=False)
 
     # Compute distance
     if hp.is_not_null(f, "shape_dist_traveled") and not compute_dist_from_shapes:
@@ -389,7 +392,7 @@ def compute_trip_stats(
                 # return the length of the linestring
                 return D
 
-        h["distance"] = g.apply(compute_dist)
+        h["distance"] = g.apply(compute_dist, include_groups=False)
         # Convert from meters
         h["distance"] = h["distance"].map(m_to_dist)
     else:
@@ -456,7 +459,7 @@ def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
 
     # return f.groupby('trip_id', group_keys=False).\
     #   apply(compute_rel_dist).reset_index()
-    g = f.groupby("trip_id").apply(compute_rel_dist).reset_index()
+    g = f.groupby("trip_id").apply(compute_rel_dist, include_groups=False).reset_index()
 
     # Delete extraneous multi-index column
     del g["level_1"]
@@ -479,7 +482,7 @@ def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
         return h
 
     def get_lonlat(group):
-        shape = group["shape_id"].iat[0]
+        shape = group.name
         linestring = geometry_by_shape[shape]
         lonlats = [
             linestring.interpolate(d, normalized=True).coords[0]
@@ -488,7 +491,12 @@ def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
         group["lon"], group["lat"] = zip(*lonlats)
         return group
 
-    return h.groupby("shape_id").apply(get_lonlat)
+    return (
+        h.groupby("shape_id")
+        .apply(get_lonlat, include_groups=False)
+        .reset_index()
+        .drop("level_1", axis=1)  # Where did this column come from?
+    )
 
 
 def trips_to_geojson(
