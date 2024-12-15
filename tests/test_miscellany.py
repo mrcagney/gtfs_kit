@@ -323,6 +323,7 @@ def test_restrict_to_area():
 
 
 @pytest.mark.slow
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_compute_screen_line_counts():
     feed = cairns.append_dist_to_stop_times()
     dates = cairns_dates + ["20010101"]

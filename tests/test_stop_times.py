@@ -39,6 +39,7 @@ def test_get_start_and_end_times():
 
 
 @pytest.mark.slow
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_append_dist_to_stop_times():
     feed1 = cairns.copy()
     st1 = feed1.stop_times

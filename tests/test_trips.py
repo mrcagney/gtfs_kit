@@ -167,6 +167,7 @@ def test_compute_trip_stats():
 
 
 @pytest.mark.slow
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_locate_trips():
     feed = cairns.copy()
     feed = gks.append_dist_to_stop_times(feed)
