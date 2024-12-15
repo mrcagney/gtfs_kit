@@ -610,7 +610,10 @@ def build_stop_timetable(feed: "Feed", stop_id: str, dates: list[str]) -> pd.Dat
         frames.append(f)
 
     f = pd.concat(frames)
-    return f.sort_values(["date", "departure_time"])
+    f["departure_time"] = f["departure_time"].map(hp.timestr_to_seconds)
+    f = f.sort_values(["date", "departure_time"])
+    f["departure_time"] = f["departure_time"].apply(hp.timestr_to_seconds, inverse=True)
+    return f
 
 
 def build_geometry_by_stop(
