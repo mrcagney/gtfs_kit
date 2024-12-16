@@ -303,6 +303,48 @@ def test_restrict_to_routes():
     assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
 
 
+def test_restrict_to_agencies():
+    feed1 = cairns.copy()
+    # Most tests should be covered by `test_restrict_routes`
+    # But will need to test for reduced agency and routes tables
+
+    # Modify cairns to contain agency_id column
+    new_routes = feed1.routes.copy()
+    new_agency = feed1.agency.copy()
+
+    # Modify cairns to include agency_id
+    new_agency.insert(loc=0, column="agency_id", value="OP1")
+
+    # Add new empty agency "OP2" for testing
+    new_agency.loc[1] = (
+        "OP2",
+        "dummy agency",
+        "agency_url",
+        "GMT",
+        "en",
+        "(00)00000000",
+    )
+
+    # Modify cairns routes to contain new agency
+    new_routes.insert(loc=0, column="agency_id", value="OP1")
+    new_routes.loc[0, "agency_id"] = "OP2"
+
+    # Reassign agency
+    feed1.routes = new_routes
+    feed1.agency = new_agency
+
+    # Test function
+    feed2 = gkm.restrict_to_agencies(feed1, ["OP2"])
+    len1 = len(feed1.agency["agency_id"].tolist())
+    len2 = len(feed2.agency["agency_id"].tolist())
+    assert set(feed2.routes.iloc[0, 1:]) == set(feed1.routes.iloc[0, 1:])
+    assert len1 > len2
+    
+    # Check incorrect agency_id raises error
+    with pytest.raises(AssertionError):
+        gkm.restrict_to_agencies(feed1, ["OP"])
+
+
 def test_restrict_to_area():
     feed1 = cairns.copy()
     area = gp.read_file(DATA_DIR / "cairns_square_stop_750070.geojson")
