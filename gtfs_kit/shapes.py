@@ -127,7 +127,7 @@ def ungeometrize_shapes(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
             "shape_pt_lon",
             "shape_pt_lat",
         ],
-    )
+    ).astype({"shape_id": "string"})
 
 
 def get_shapes(

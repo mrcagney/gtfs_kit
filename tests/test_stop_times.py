@@ -27,7 +27,7 @@ def test_get_start_and_end_times():
     for t in times:
         assert isinstance(t, str)
         # Should lie in stop times
-        assert t in st[["departure_time", "arrival_time"]].values.flatten()
+        assert t in st[["departure_time", "arrival_time"]].dropna().values.flatten()
 
     # Should get null times in some cases
     times = gks.get_start_and_end_times(feed, "19690711")

@@ -1,6 +1,6 @@
 [project]
 name = "gtfs-kit"
-version = "8.1.1"
+version = "8.1.2"
 description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
 requires-python = ">=3.10"

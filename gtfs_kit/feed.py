@@ -367,14 +367,6 @@ class Feed(object):
                 continue
 
             f = f.copy()
-
-            # Some columns need to be output as integers.
-            # If there are NaNs in any such column,
-            # then Pandas will format the column as float, which we don't want.
-            # f_int_cols = set(cs.INT_COLS) & set(f.columns)
-            # for s in f_int_cols:
-            #     f[s] = f[s].fillna(-1).astype(int).astype(str).replace("-1", "")
-
             p = new_path / (table + ".txt")
             f.to_csv(str(p), index=False, float_format=f"%.{ndigits}f")
 
