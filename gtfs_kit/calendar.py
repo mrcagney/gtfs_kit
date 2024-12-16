@@ -1,6 +1,7 @@
 """
 Functions about calendar and calendar_dates.
 """
+
 from __future__ import annotations
 import dateutil.relativedelta as rd
 from typing import TYPE_CHECKING
@@ -60,7 +61,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
 
     # Get first Monday
     monday_index = None
-    for (i, date) in enumerate(dates):
+    for i, date in enumerate(dates):
         if date.weekday() == 0:
             monday_index = i
             break

@@ -770,6 +770,32 @@ def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
     return feed
 
 
+def restrict_to_agencies(feed: "Feed", agency_ids: list[str]) -> "Feed":
+    """
+    Build a new feed by restricting this one to only the stops,
+    trips, shapes, etc. used by the agencies with the given list of
+    agency IDs.
+    Return the resulting feed.
+    """
+    # Initialize the new feed as the old feed.
+    feed = feed.copy()
+
+    # check agencies exist in feed
+    feed_agency_ids = feed.agency["agency_id"].to_list()
+
+    for agency_id in agency_ids:
+        assert (
+            agency_id in feed_agency_ids
+        ), f"Agency id '{agency_id}' does not exist in feed. Valid ids are: {feed_agency_ids}"
+
+    # stack and call restrict to routes
+    route_ids = feed.routes.loc[
+        lambda x: x.agency_id.isin(agency_ids), "route_id"
+    ].to_list()
+
+    return feed.restrict_to_routes(route_ids)
+
+
 def restrict_to_area(feed: "Feed", area: gpd.GeoDataFrame) -> "Feed":
     """
     Build a new feed by restricting this one to only the trips
