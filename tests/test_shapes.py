@@ -77,12 +77,9 @@ def test_get_shapes():
 
 def test_build_geometry_by_shape():
     d = gks.build_geometry_by_shape(cairns)
-    g = gks.build_geometry_by_shape(cairns, as_gdf=True)
     assert isinstance(d, dict)
-    assert isinstance(g, gpd.GeoDataFrame)
     assert len(d) == cairns.shapes.shape_id.nunique()
     assert gks.build_geometry_by_shape(cairns_shapeless) == {}
-    assert gks.build_geometry_by_shape(cairns_shapeless, as_gdf=True).empty
 
 
 def test_shapes_to_geojson():
