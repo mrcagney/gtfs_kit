@@ -128,14 +128,11 @@ def test_write():
             shutil.rmtree(str(out_path))
 
     # Test that integer columns with NaNs get output properly.
-    # To this end, put a NaN, 1.0, and 0.0 in the direction_id column of trips.txt, export it, and import the column as strings.
-    # Should only get np.nan, '0', and '1' entries.
     feed3 = gkf.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
     f = feed3.trips.copy()
-    f["direction_id"] = f["direction_id"].astype(object)
     f.loc[0, "direction_id"] = np.nan
-    f.loc[1, "direction_id"] = 1.0
-    f.loc[2, "direction_id"] = 0.0
+    f.loc[1, "direction_id"] = 1
+    f.loc[2, "direction_id"] = 0
     feed3.trips = f
     q = DATA_DIR / "bingo.zip"
     feed3.write(q)
@@ -143,7 +140,7 @@ def test_write():
     tmp_dir = tempfile.TemporaryDirectory()
     shutil.unpack_archive(str(q), tmp_dir.name, "zip")
     qq = Path(tmp_dir.name) / "trips.txt"
-    t = pd.read_csv(qq, dtype={"direction_id": str})
-    assert t[~t["direction_id"].isin([np.nan, "0", "1"])].empty
+    t = pd.read_csv(qq, dtype={"direction_id": "Int8"})
+    assert t[~t["direction_id"].isin([pd.NA, 0, 1])].empty
     tmp_dir.cleanup()
     q.unlink()

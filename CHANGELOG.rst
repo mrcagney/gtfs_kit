@@ -1,6 +1,13 @@
 Changelog
 =========
 
+8.1.2, 2024-12-16
+-----------------
+- Fixed sorting in ``stops.build_timetable`` and ``routes.build_timetable``.
+- Improved data types for CSV reads.
+- Fixed Pandas groupby deprecation warnings.
+- Ignored Shapely runtime warnings in tests.
+
 8.1.1, 2024-10-31
 -----------------
 - Bugfixed ``shapes.geometrize_shapes`` to handle shapes comprising a single point.

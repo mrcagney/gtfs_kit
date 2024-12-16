@@ -36,6 +36,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     Calculate and append the optional ``shape_dist_traveled`` column in
     ``feed.stop_times`` in terms of the distance units ``feed.dist_units``.
     Return the resulting Feed.
+    Uses ``feed.shapes``, so if that is missing, then return the original feed.
 
     This does not always give accurate results.
     The algorithm works as follows.
@@ -51,6 +52,9 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     distances and use them and their corresponding departure times to linearly
     interpolate the rest of the distances.
     """
+    if feed.shapes is None or feed.shapes.empty:
+        return feed
+
     # Get stop and shape geometries as dictionaries
     geom_by_stop = feed.build_geometry_by_stop(use_utm=True)
     geom_by_shape = feed.build_geometry_by_shape(use_utm=True)
@@ -111,8 +115,8 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
         # Convert departure times to seconds to ease calculatios
         .assign(departure_time_s=lambda x: x.departure_time.map(hp.timestr_to_seconds))
         .sort_values(["trip_id", "stop_sequence"])
-        .groupby("trip_id", group_keys=False)
-        .apply(compute_dist)
+        .groupby("trip_id")
+        .apply(compute_dist, include_groups=False)
         .reset_index()
         # Convert distances from meters to feed's distance units
         .assign(
