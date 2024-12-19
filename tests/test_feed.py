@@ -114,12 +114,12 @@ def test_read_feed():
     assert feed.feed_info is None
 
 
-def test_write():
+def test_to_file():
     feed1 = gkf.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
 
     # Export feed1, import it as feed2, and then test equality
     for out_path in [DATA_DIR / "bingo.zip", DATA_DIR / "bingo"]:
-        feed1.write(out_path)
+        feed1.to_file(out_path)
         feed2 = gkf.read_feed(out_path, "km")
         assert feed1 == feed2
         try:
@@ -135,7 +135,7 @@ def test_write():
     f.loc[2, "direction_id"] = 0
     feed3.trips = f
     q = DATA_DIR / "bingo.zip"
-    feed3.write(q)
+    feed3.to_file(q)
 
     tmp_dir = tempfile.TemporaryDirectory()
     shutil.unpack_archive(str(q), tmp_dir.name, "zip")

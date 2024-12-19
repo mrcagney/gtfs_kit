@@ -11,14 +11,14 @@ from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
 
 
-def test_summarize():
+def test_list_fields():
     feed = sample.copy()
 
     with pytest.raises(ValueError):
-        gkm.summarize(feed, "bad_table")
+        gkm.list_fields(feed, "bad_table")
 
     for table in [None, "stops"]:
-        f = gkm.summarize(feed, table)
+        f = gkm.list_fields(feed, table)
         assert isinstance(f, pd.DataFrame)
         expect_cols = {
             "table",

@@ -18,9 +18,9 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def summarize(feed: "Feed", table: str | None = None) -> pd.DataFrame:
+def list_fields(feed: "Feed", table: str | None = None) -> pd.DataFrame:
     """
-    Return a DataFrame summarizing all GTFS tables in the given feed
+    Return a DataFrame describing all the fields of the GTFS tables in the given feed
     or in the given table if specified.
 
     The resulting DataFrame has the following columns.
