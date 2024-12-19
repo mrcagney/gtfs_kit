@@ -19,19 +19,11 @@ from gtfs_kit import helpers as gkh
 from gtfs_kit import stop_times as gks
 
 
-def test_is_active_trip():
-    feed = cairns.copy()
-    trip_id = "CNS2014-CNS_MUL-Weekday-00-4165878"
-    date1 = "20140526"
-    date2 = "20120322"
-    assert gkt.is_active_trip(feed, trip_id, date1)
-    assert not gkt.is_active_trip(feed, trip_id, date2)
-
-    trip_id = "CNS2014-CNS_MUL-Sunday-00-4165971"
-    date1 = "20140601"
-    date2 = "20120602"
-    assert gkt.is_active_trip(feed, trip_id, date1)
-    assert not gkt.is_active_trip(feed, trip_id, date2)
+def test_get_active_services():
+    feed = cairns
+    week = feed.get_first_week()
+    s = gkt.get_active_services(feed, week[0])
+    assert set() < set(s) < set(feed.trips["service_id"])
 
 
 def test_get_trips():
@@ -68,14 +60,11 @@ def test_get_trips():
 def test_compute_trip_activity():
     feed = cairns.copy()
     dates = gkc.get_first_week(feed)
-    trips_activity = gkt.compute_trip_activity(feed, dates)
-    # Should be a data frame
-    assert isinstance(trips_activity, pd.core.frame.DataFrame)
+    ta = gkt.compute_trip_activity(feed, dates)
     # Should have the correct shape
-    assert trips_activity.shape[0] == feed.trips.shape[0]
-    assert trips_activity.shape[1] == 1 + len(dates)
+    assert ta.shape == (feed.trips.shape[0], 1 + len(dates))
     # Date columns should contain only zeros and ones
-    assert set(trips_activity[dates].values.flatten()) == {0, 1}
+    assert set(ta[dates].values.flatten()) == {0, 1}
 
 
 def test_compute_busiest_date():
