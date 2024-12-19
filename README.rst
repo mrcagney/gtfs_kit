@@ -25,6 +25,8 @@ Documentation
 =============
 The documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `mrcagney.github.io/gtfs_kit_docs <https://mrcagney.github.io/gtfs_kit_docs>`_.
 
+Note to the maintainer: To update the docs do ``uv run publish-sphinx-docs``, then enter the docs remote ``git@github.com:mrcagney/gtfs_kit_docs``.
+
 
 Notes
 =====
