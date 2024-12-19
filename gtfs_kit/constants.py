@@ -121,7 +121,7 @@ DTYPE = dict(GTFS_REF[["column", "dtype"]].values)
 DIST_UNITS = ["ft", "mi", "m", "km"]
 
 #: Primary feed attributes
-FEED_ATTRS_1 = [
+FEED_ATTRS = [
     "agency",
     "attributions",
     "calendar",
@@ -138,12 +138,6 @@ FEED_ATTRS_1 = [
     "transfers",
     "dist_units",
 ]
-
-#: Secondary feed attributes; derived from primary ones
-FEED_ATTRS_2 = ["_trips_i", "_calendar_i", "_calendar_dates_i"]
-
-#:
-FEED_ATTRS = FEED_ATTRS_1 + FEED_ATTRS_2
 
 #: WGS84 coordinate reference system for Geopandas
 WGS84 = "EPSG:4326"

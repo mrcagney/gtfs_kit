@@ -5,6 +5,8 @@ Functions about trips.
 from __future__ import annotations
 import json
 from typing import Iterable, TYPE_CHECKING
+import datetime as dt
+import functools as ft
 
 import pandas as pd
 import numpy as np
@@ -21,46 +23,31 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def is_active_trip(feed: "Feed", trip_id: str, date: str) -> bool:
+def get_active_services(feed: "Feed", date: str) -> list[str]:
     """
-    Return ``True`` if the ``feed.calendar`` or ``feed.calendar_dates``
-    says that the trip runs on the given date (YYYYMMDD date string);
-    return ``False`` otherwise.
-
-    Note that a trip that starts on date d, ends after 23:59:59, and
-    does not start again on date d+1 is considered active on date d and
-    not active on date d+1.
-    This subtle point, which is a side effect of the GTFS, can
-    lead to confusion.
-
-    This function is key for getting all trips, routes, etc. that are
-    active on a given date, so the function needs to be fast.
+    Given a Feed and a date string in YYYYMMDD format,
+    return the list of service IDs that are active on the date.
     """
-    service = feed._trips_i.at[trip_id, "service_id"]
-    # Check feed._calendar_dates_g.
-    caldi = feed._calendar_dates_i
-    if caldi is not None:
-        if (service, date) in caldi.index:
-            et = caldi.at[(service, date), "exception_type"]
-            if et == 1:
-                return True
-            else:
-                # Exception type is 2
-                return False
-    # Check feed._calendar_i
-    cali = feed._calendar_i
-    if cali is not None:
-        if service in cali.index:
-            weekday_str = hp.weekday_to_str(hp.datestr_to_date(date).weekday())
-            if (
-                cali.at[service, "start_date"] <= date <= cali.at[service, "end_date"]
-                and cali.at[service, weekday_str] == 1
-            ):
-                return True
-            else:
-                return False
-    # If you made it here, then something went wrong
-    return False
+    # Convert date to weekday string (e.g., "monday")
+    weekday_str = dt.datetime.strptime(date, "%Y%m%d").strftime("%A").lower()
+
+    # Filter `calendar` to services active on date
+    active_1 = feed.calendar.loc[
+        lambda x: (x["start_date"] <= date)
+        & (x["end_date"] >= date)
+        & (x[weekday_str] == 1),
+        "service_id",
+    ]
+    # Filter `calendar_dates` to services active on date
+    active_2 = feed.calendar_dates.loc[
+        lambda x: (x["date"] == date) & (x["exception_type"] == 1), "service_id"
+    ]
+    # Filter `calendar_dates` to removed services on date
+    removed = feed.calendar_dates.loc[
+        lambda x: (x["date"] == date) & (x["exception_type"] == 2), "service_id"
+    ]
+    # Combine results for list of active services
+    return list((set(active_1) | set(active_2)) - set(removed))
 
 
 def get_trips(
@@ -79,27 +66,20 @@ def get_trips(
     then further subset the result to trips in service at that time.
 
     If ``as_gdf`` and ``feed.shapes`` is not None, then return the trips as a
-    GeoDataFrame whose 'geometry' column contains the trip's shape.
-    The GeoDataFrame will have a local UTM CRS if ``use_utm``; otherwise it will have
-    the WGS84 CRS.
+    GeoDataFrame of LineStrings representating trip shapes.
+    Use local UTM CRS if ``use_utm``; otherwise it the WGS84 CRS.
     If ``as_gdf`` and ``feed.shapes`` is ``None``, then raise a ValueError.
     """
     if feed.trips is None:
         return None
 
-    f = feed.trips.copy()
+    f = feed.trips
     if date is not None:
-        f["is_active"] = f["trip_id"].map(
-            lambda trip_id: feed.is_active_trip(trip_id, date)
-        )
-        f = f[f["is_active"]].copy()
-        del f["is_active"]
+        f = f.loc[lambda x: x["service_id"].isin(get_active_services(feed, date))]
 
         if time is not None:
             # Get trips active during given time
-            g = pd.merge(f, feed.stop_times[["trip_id", "departure_time"]])
-
-            def F(group):
+            def get_active(group):
                 d = {}
                 start = group["departure_time"].dropna().min()
                 end = group["departure_time"].dropna().max()
@@ -110,9 +90,15 @@ def get_trips(
                 d["is_active"] = result
                 return pd.Series(d)
 
-            h = g.groupby("trip_id").apply(F, include_groups=False).reset_index()
-            f = pd.merge(f, h[h["is_active"]])
-            del f["is_active"]
+            f = (
+                f.merge(feed.stop_times[["trip_id", "departure_time"]])
+                .groupby("trip_id")
+                .apply(get_active, include_groups=False)
+                .reset_index()
+                .loc[lambda x: x["is_active"]]
+                .merge(f)
+                .drop("is_active", axis=1)
+            )
 
     if as_gdf:
         if feed.shapes is None:
@@ -132,10 +118,8 @@ def get_trips(
 
 def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     """
-    Mark trip as active or inactive on the given dates (YYYYMMDD date strings)
-    as computed by the function :func:`is_active_trip`.
-
-    Return a DataFrame with the columns
+    Mark trips as active or inactive on the given dates (YYYYMMDD date strings).
+    Return a table with the columns
 
     - ``'trip_id'``
     - ``dates[0]``: 1 if the trip is active on ``dates[0]``;
@@ -153,12 +137,17 @@ def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     if not dates:
         return pd.DataFrame()
 
-    f = feed.trips.copy()
+    frames = [feed.trips[["trip_id"]]]
     for date in dates:
-        f[date] = f["trip_id"].map(
-            lambda trip_id: int(feed.is_active_trip(trip_id, date))
+        frames.append(get_trips(feed, date)[["trip_id"]].assign(**{date: 1}))
+
+    return (
+        ft.reduce(lambda left, right: left.merge(right, how="outer"), frames).fillna(
+            {date: 0 for date in dates}
         )
-    return f[["trip_id"] + list(dates)]
+        # Cast as integers
+        .assign(**{date: lambda x: x[date].astype(int) for date in dates})
+    )
 
 
 def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:

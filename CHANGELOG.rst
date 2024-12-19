@@ -1,6 +1,10 @@
 Changelog
 =========
 
+9.0.0, 2024-12-19
+-----------------
+- Breaking change: Replaced ``trips.is_active_trip`` with ``trips.get_active_services`` and removed the derived feed attributes ``trips_i``, ``calendar_i``, and ``calendar_dates_i`` as no longer necessary and overly complex.
+
 8.1.4, 2024-12-19
 -----------------
 - Added ``restrict_to_agencies`` to ``feed`` module local imports. Whoops!

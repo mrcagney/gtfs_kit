@@ -120,7 +120,7 @@ class Feed(object):
         stop_times_to_geojson,
     )
     from .trips import (
-        is_active_trip,
+        get_active_services,
         get_trips,
         compute_trip_activity,
         compute_busiest_date,
@@ -206,7 +206,7 @@ class Feed(object):
         # The @property magic below will then
         # validate some and set some derived attributes
         for prop, val in locals().items():
-            if prop in cs.FEED_ATTRS_1:
+            if prop in cs.FEED_ATTRS:
                 setattr(self, prop, val)
 
     @property
@@ -224,63 +224,6 @@ class Feed(object):
             )
         else:
             self._dist_units = val
-
-    @property
-    def trips(self):
-        """
-        The trips table of this Feed.
-        """
-        return self._trips
-
-    @trips.setter
-    def trips(self, val):
-        """
-        Update ``self._trips_i`` if ``self.trips`` changes.
-        """
-        self._trips = val
-        if val is not None and not val.empty:
-            self._trips_i = self._trips.set_index("trip_id")
-        else:
-            self._trips_i = None
-
-    @property
-    def calendar(self):
-        """
-        The calendar table of this Feed.
-        """
-        return self._calendar
-
-    @calendar.setter
-    def calendar(self, val):
-        """
-        Update ``self._calendar_i``if ``self.calendar`` changes.
-        """
-        self._calendar = val
-        if val is not None and not val.empty:
-            self._calendar_i = self._calendar.set_index("service_id")
-        else:
-            self._calendar_i = None
-
-    @property
-    def calendar_dates(self):
-        """
-        The calendar_dates table of this Feed.
-        """
-        return self._calendar_dates
-
-    @calendar_dates.setter
-    def calendar_dates(self, val):
-        """
-        Update ``self._calendar_dates_i``
-        if ``self.calendar_dates`` changes.
-        """
-        self._calendar_dates = val
-        if val is not None and not val.empty:
-            self._calendar_dates_i = self._calendar_dates.set_index(
-                ["service_id", "date"]
-            )
-        else:
-            self._calendar_dates_i = None
 
     def __str__(self):
         """
@@ -306,7 +249,7 @@ class Feed(object):
         which   canonically sorts DataFrame rows and columns.
         """
         # Return False if failures
-        for key in cs.FEED_ATTRS_1:
+        for key in cs.FEED_ATTRS:
             x = getattr(self, key)
             y = getattr(other, key)
             # DataFrame case
