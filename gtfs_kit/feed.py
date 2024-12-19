@@ -17,7 +17,7 @@ Ignore that extra parameter; it refers to the Feed instance,
 usually called ``self`` and usually hidden automatically by Sphinx.
 """
 
-from pathlib import Path
+import pathlib as pl
 import tempfile
 import shutil
 from copy import deepcopy
@@ -131,7 +131,7 @@ class Feed(object):
         map_trips,
     )
     from .miscellany import (
-        summarize,
+        list_fields,
         describe,
         assess_quality,
         convert_dist,
@@ -146,22 +146,6 @@ class Feed(object):
         restrict_to_dates,
         restrict_to_area,
         compute_screen_line_counts,
-    )
-    from .validators import (
-        validate,
-        check_agency,
-        check_calendar,
-        check_calendar_dates,
-        check_fare_attributes,
-        check_fare_rules,
-        check_feed_info,
-        check_frequencies,
-        check_routes,
-        check_shapes,
-        check_stops,
-        check_stop_times,
-        check_transfers,
-        check_trips,
     )
     from .cleaners import (
         clean_ids,
@@ -274,31 +258,29 @@ class Feed(object):
             if isinstance(value, pd.DataFrame):
                 # Pandas copy DataFrame
                 value = value.copy()
-            elif isinstance(value, pd.core.groupby.DataFrameGroupBy):
-                # Pandas does not have a copy method for groupby objects
-                # as far as i know
-                value = deepcopy(value)
             setattr(other, key, value)
 
         return other
 
-    def write(self, path: Path, ndigits: int = 6) -> None:
+    def to_file(self, path: pl.Path, ndigits: int | None = None) -> None:
         """
         Write this Feed to the given path.
         If the path ends in '.zip', then write the feed as a zip archive.
         Otherwise assume the path is a directory, and write the feed as a
         collection of CSV files to that directory, creating the directory
         if it does not exist.
-        Round all decimals to ``ndigits`` decimal places.
+        Round all decimals to ``ndigits`` decimal places, if given.
         All distances will be the distance units ``feed.dist_units``.
+        By the way, 6 decimal degrees of latitude and longitude is enough to locate
+        an individual cat.
         """
-        path = Path(path)
+        path = pl.Path(path)
 
         if path.suffix == ".zip":
             # Write to temporary directory before zipping
             zipped = True
             tmp_dir = tempfile.TemporaryDirectory()
-            new_path = Path(tmp_dir.name)
+            new_path = pl.Path(tmp_dir.name)
         else:
             zipped = False
             if not path.exists():
@@ -307,12 +289,12 @@ class Feed(object):
 
         for table in cs.GTFS_REF["table"].unique():
             f = getattr(self, table)
-            if f is None:
-                continue
-
-            f = f.copy()
-            p = new_path / (table + ".txt")
-            f.to_csv(str(p), index=False, float_format=f"%.{ndigits}f")
+            if f is not None:
+                p = new_path / (table + ".txt")
+                if ndigits is not None:
+                    f.to_csv(p, index=False, float_format=f"%.{ndigits}f")
+                else:
+                    f.to_csv(p, index=False)
 
         # Zip directory
         if zipped:
@@ -324,7 +306,7 @@ class Feed(object):
 # -------------------------------------
 # Functions about input and output
 # -------------------------------------
-def list_feed(path: Path) -> DataFrame:
+def list_feed(path: pl.Path) -> DataFrame:
     """
     Given a path (string or Path object) to a GTFS zip file or
     directory, record the file names and file sizes of the contents,
@@ -333,7 +315,7 @@ def list_feed(path: Path) -> DataFrame:
     - ``'file_name'``
     - ``'file_size'``
     """
-    path = Path(path)
+    path = pl.Path(path)
     if not path.exists():
         raise ValueError(f"Path {path} does not exist")
 
@@ -360,7 +342,7 @@ def list_feed(path: Path) -> DataFrame:
     return pd.DataFrame(rows)
 
 
-def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
+def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
     """
     Helper function for :func:`read_feed`.
     Create a Feed instance from the given path and given distance units.
@@ -375,7 +357,7 @@ def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
     - Automatically strip whitespace from the column names in GTFS files
 
     """
-    path = Path(path)
+    path = pl.Path(path)
     if not path.exists():
         raise ValueError(f"Path {path} does not exist")
 
@@ -383,7 +365,7 @@ def _read_feed_from_path(path: Path, dist_units: str) -> "Feed":
     if path.is_file():
         zipped = True
         tmp_dir = tempfile.TemporaryDirectory()
-        src_path = Path(tmp_dir.name)
+        src_path = pl.Path(tmp_dir.name)
         shutil.unpack_archive(str(path), tmp_dir.name, "zip")
     else:
         zipped = False
@@ -434,11 +416,11 @@ def _read_feed_from_url(url: str, dist_units: str) -> "Feed":
         f.write(r._content)
     f.close()
     feed = _read_feed_from_path(f.name, dist_units=dist_units)
-    Path(f.name).unlink()
+    pl.Path(f.name).unlink()
     return feed
 
 
-def read_feed(path_or_url: Path | str, dist_units: str) -> "Feed":
+def read_feed(path_or_url: pl.Path | str, dist_units: str) -> "Feed":
     """
     Create a Feed instance from the given path or URL and given distance units.
     If the path exists, then call :func:`_read_feed_from_path`.
@@ -453,7 +435,7 @@ def read_feed(path_or_url: Path | str, dist_units: str) -> "Feed":
 
     """
     try:
-        path_exists = Path(path_or_url).exists()
+        path_exists = pl.Path(path_or_url).exists()
     except OSError:
         path_exists = False
     if path_exists:
