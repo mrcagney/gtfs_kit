@@ -38,7 +38,7 @@ Notes
 - Thanks to `MRCagney <http://www.mrcagney.com/>`_ for periodically donating to this project.
 - Constructive feedback and contributions are welcome.
   Please issue pull requests from a feature branch into the ``develop`` branch and include tests.
-- GTFS time is measured relative noon minus 12 hours, which can mess things up when crossing into daylight savings time.
+- GTFS time is measured relative to noon minus 12 hours, which can mess things up when crossing into daylight savings time.
   I don't think this issue causes any bugs in GTFS Kit, but you and i have been warned.
-  Thanks to user derhuerst for bringing this to my attention in `closed Issue 8 <https://github.com/mrcagney/gtfs_kit/issues/8#issue-1063633457>`_.
-- I'll probably remove the GTFS validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).
+  Thanks to user Github user ``derhuerst`` for bringing this to my attention in `closed Issue 8 <https://github.com/mrcagney/gtfs_kit/issues/8#issue-1063633457>`_.
+- With release 10.0.0, i removed the validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).

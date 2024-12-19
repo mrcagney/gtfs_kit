@@ -8,7 +8,6 @@ from .stop_times import *
 from .trips import *
 from .miscellany import *
 from .cleaners import *
-from .validators import *
 from .feed import *
 
 

@@ -1,6 +1,6 @@
 [project]
 name = "gtfs-kit"
-version = "9.1.0"
+version = "10.0.0"
 description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -10,7 +10,6 @@ authors = [
 ]
 dependencies = [
     "shapely>=1.8",
-    "pycountry>=19",
     "json2html>=1",
     "geopandas>=1",
     "rtree>=0",

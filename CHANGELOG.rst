@@ -1,9 +1,10 @@
 Changelog
 =========
 
-9.1.0, 2024-12-20
+10.0.0, 2024-12-20
 -----------------
 - Added ``miscellany.restrict_to_trips`` and used it as a helper function to simplify the other restriction functions.
+- Breaking change: Removed the validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).
 
 9.0.0, 2024-12-19
 -----------------

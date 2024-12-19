@@ -147,22 +147,6 @@ class Feed(object):
         restrict_to_area,
         compute_screen_line_counts,
     )
-    from .validators import (
-        validate,
-        check_agency,
-        check_calendar,
-        check_calendar_dates,
-        check_fare_attributes,
-        check_fare_rules,
-        check_feed_info,
-        check_frequencies,
-        check_routes,
-        check_shapes,
-        check_stops,
-        check_stop_times,
-        check_transfers,
-        check_trips,
-    )
     from .cleaners import (
         clean_ids,
         extend_id,
