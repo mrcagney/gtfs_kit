@@ -1,6 +1,10 @@
 Changelog
 =========
 
+8.1.4, 2024-12-19
+-----------------
+- Added ``restrict_to_agencies`` to ``feed`` module local imports. Whoops!
+
 8.1.3, 2024-12-19
 -----------------
 - Added ``miscellany.restrict_to_agencies``, thanks to Github user `diegoperezalvarez`.
