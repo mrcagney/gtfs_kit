@@ -625,26 +625,27 @@ def compute_centroid(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Poin
 def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
     """
     Build a new feed by restricting this one to only the stops,
-    trips, shapes, etc. used by the trips with the given list of
-    trip IDs.
-    Return the resulting feed, which will have all empty non-agency tables
-    if no valid trip IDs are given (which includes the empty list of trip IDs).
+    trips, shapes, etc. used by the trips of the given IDs.
+    Return the resulting feed.
+
+    If no valid trip IDs are given, which includes the case of the empty list,
+    then the resulting feed will have all empty non-agency tables.
 
     This function is probably more useful internally than externally.
     """
     feed = feed.copy()
     has_agency_ids = "agency_id" in feed.routes.columns
 
-    # Slice trips
+    # Subset trips
     feed.trips = feed.trips.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
-    # Slice routes
+    # Subset routes
     feed.routes = feed.routes.loc[lambda x: x.route_id.isin(feed.trips.route_id)].copy()
 
-    # Slice stop times
+    # Subset stop times
     feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
-    # Slice stops
+    # Subset stops
     stop_ids = feed.stop_times["stop_id"].unique()
     f = feed.stops.copy()
     cond = f.stop_id.isin(stop_ids)
@@ -652,37 +653,37 @@ def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
         cond |= ~f.location_type.isin([0, np.nan])
     feed.stops = f[cond].copy()
 
-    # Slice calendar
+    # Subset calendar
     service_ids = feed.trips["service_id"].unique()
     if feed.calendar is not None:
         feed.calendar = feed.calendar.loc[
             lambda x: x.service_id.isin(service_ids)
         ].copy()
 
-    # Slice agency
+    # Subset agency
     if has_agency_ids:
         agency_ids = feed.routes["agency_id"]
         feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)].copy()
 
     # Now for the optional files.
-    # Get calendar dates for trips.
+    # Subset calendar dates.
     if feed.calendar_dates is not None:
         feed.calendar_dates = feed.calendar_dates.loc[
             lambda x: x.service_id.isin(service_ids)
         ].copy()
 
-    # Get frequencies for trips
+    # Subset frequencies
     if feed.frequencies is not None:
         feed.frequencies = feed.frequencies.loc[
             lambda x: x.trip_id.isin(trip_ids)
         ].copy()
 
-    # Get shapes for trips
+    # Subset shapes
     if feed.shapes is not None:
         shape_ids = feed.trips.shape_id
         feed.shapes = feed.shapes.loc[lambda x: x.shape_id.isin(shape_ids)].copy()
 
-    # Get transfers for stops
+    # Subset transfers
     if feed.transfers is not None:
         feed.transfers = feed.transfers.loc[
             lambda x: x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids)
@@ -720,8 +721,7 @@ def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
     """
     Build a new feed by restricting this one via :func:`restrict_to_trips` and
     the trips active on at least one of the given dates (YYYYMMDD strings).
-    Return the resulting feed, which will have empty non-agency tables
-    if no trip is active on any of the given dates.
+    Return the resulting feed.
     """
     # Get every trip that is active on at least one of the dates
     trip_activity = feed.compute_trip_activity(dates)
@@ -828,9 +828,8 @@ def compute_screen_line_counts(
     # Get intersection points of shapes and screen lines
     g0 = (
         # Only keep shapes that intersect screen lines to reduce computations
-        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"])).merge(
-            screen_lines, on="screen_line_id"
-        )
+        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"]))
+        .merge(screen_lines, on="screen_line_id")
         # Compute intersection points
         .assign(
             int_point=lambda x: gpd.GeoSeries(x["geometry_x"], crs=crs).intersection(
@@ -894,7 +893,8 @@ def compute_screen_line_counts(
     st = (
         feed.trips.loc[lambda x: x["shape_id"].isin(h.index)]
         # Merge in route short names and stop times
-        .merge(feed.routes[["route_id", "route_short_name"]]).merge(feed.stop_times)
+        .merge(feed.routes[["route_id", "route_short_name"]])
+        .merge(feed.stop_times)
         # Keep only non-NaN departure times
         .loc[lambda x: x["departure_time"].notna()]
         # Convert to seconds past midnight
