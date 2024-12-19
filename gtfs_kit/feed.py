@@ -141,8 +141,9 @@ class Feed(object):
         compute_bounds,
         compute_convex_hull,
         compute_centroid,
-        restrict_to_dates,
         restrict_to_routes,
+        restrict_to_agencies,
+        restrict_to_dates,
         restrict_to_area,
         compute_screen_line_counts,
     )
