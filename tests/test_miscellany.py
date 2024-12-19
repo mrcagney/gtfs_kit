@@ -6,6 +6,7 @@ import shapely.geometry as sg
 import geopandas as gp
 
 from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
+from gtfs_kit import constants as gkc
 from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
 
@@ -286,6 +287,26 @@ def test_restrict_to_dates():
     assert feed2.stop_times.empty
 
 
+def test_restrict_to_trips():
+    feed1 = cairns
+    trip_ids = feed1.trips["trip_id"][:2].values
+    feed2 = gkm.restrict_to_trips(feed1, trip_ids)
+    # Should have correct trips
+    assert set(feed2.trips["trip_id"]) == set(trip_ids)
+    # Should have correct shapes
+    shape_ids = feed1.trips[feed1.trips["trip_id"].isin(trip_ids)]["shape_id"]
+    assert set(feed2.shapes["shape_id"]) == set(shape_ids)
+    # Should have correct stops
+    stop_ids = feed1.stop_times[feed1.stop_times["trip_id"].isin(trip_ids)]["stop_id"]
+    assert set(feed2.stop_times["stop_id"]) == set(stop_ids)
+
+    feed2 = gkm.restrict_to_trips(feed1, ["fake"])
+    # All non-agency tables should be empty
+    for table in gkc.GTFS_REF["table"].unique():
+        if table != "agency" and getattr(feed1, table) is not None:
+            assert getattr(feed2, table).empty
+
+
 def test_restrict_to_routes():
     feed1 = cairns.copy()
     route_ids = feed1.routes["route_id"][:2].tolist()
@@ -337,10 +358,6 @@ def test_restrict_to_agencies():
     feed2 = gkm.restrict_to_agencies(feed1, ["OP2"])
     assert set(feed2.agency["agency_id"]) == {"OP2"}
     assert set(feed2.routes.iloc[0, 1:]) == set(feed1.routes.iloc[0, 1:])
-
-    # Check incorrect agency_id raises error
-    with pytest.raises(ValueError):
-        gkm.restrict_to_agencies(feed1, ["OP"])
 
 
 def test_restrict_to_area():
