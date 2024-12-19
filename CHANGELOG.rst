@@ -1,6 +1,10 @@
 Changelog
 =========
 
+8.1.3, 2024-12-19
+-----------------
+- Added ``miscellany.restrict_to_agencies``, thanks to Github user `diegoperezalvarez`.
+
 8.1.2, 2024-12-16
 -----------------
 - Fixed sorting in ``stops.build_timetable`` and ``routes.build_timetable``.
