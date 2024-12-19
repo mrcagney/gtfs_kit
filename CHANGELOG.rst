@@ -1,6 +1,21 @@
 Changelog
 =========
 
+8.1.3, 2024-12-19
+-----------------
+- Added ``miscellany.restrict_to_agencies``, thanks to Github user `diegoperezalvarez`.
+
+8.1.2, 2024-12-16
+-----------------
+- Fixed sorting in ``stops.build_timetable`` and ``routes.build_timetable``.
+- Improved data types for CSV reads.
+- Fixed Pandas groupby deprecation warnings.
+- Ignored Shapely runtime warnings in tests.
+
+8.1.1, 2024-10-31
+-----------------
+- Bugfixed ``shapes.geometrize_shapes`` to handle shapes comprising a single point.
+
 8.1.0, 2024-10-09
 -----------------
 - Added function ``trips.name_stop_patterns``, then used it to append column ``stop_pattern_name`` to the output of ``trips.compute_trip_stats`` and to append column ``num_stop_patterns`` to the output of ``routes.compute_route_stats``.

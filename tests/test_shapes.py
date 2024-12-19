@@ -1,7 +1,5 @@
 import json
 
-import pytest
-from pandas.testing import assert_frame_equal
 import geopandas as gpd
 import shapely.geometry as sg
 
@@ -47,18 +45,27 @@ def test_geometrize_shapes():
         ]
     )
     assert set(geo_shapes.columns) == expect_cols
+    # A shape with only one point
+    shapes = cairns.shapes.iloc[:1]
+    geo_shapes = gks.geometrize_shapes(shapes)
+    assert isinstance(geo_shapes, gpd.GeoDataFrame)
+    assert geo_shapes.crs == cs.WGS84
 
 
 def test_ungeometrize_shapes():
     shapes = cairns.shapes.copy()
     geo_shapes = gks.geometrize_shapes(shapes)
+    print(geo_shapes)
     shapes2 = gks.ungeometrize_shapes(geo_shapes)
+
     # Test columns are correct
     expect_cols = set(list(shapes.columns)) - set(["shape_dist_traveled"])
     assert set(shapes2.columns) == expect_cols
+
     # Data frames should agree on certain columns
     cols = ["shape_id", "shape_pt_lon", "shape_pt_lat"]
-    assert_frame_equal(shapes2[cols], shapes[cols])
+    print(shapes[cols])
+    assert shapes2[cols].equals(shapes[cols])
 
 
 def test_get_shapes():

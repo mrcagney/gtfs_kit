@@ -27,7 +27,7 @@ def test_get_start_and_end_times():
     for t in times:
         assert isinstance(t, str)
         # Should lie in stop times
-        assert t in st[["departure_time", "arrival_time"]].values.flatten()
+        assert t in st[["departure_time", "arrival_time"]].dropna().values.flatten()
 
     # Should get null times in some cases
     times = gks.get_start_and_end_times(feed, "19690711")
@@ -39,6 +39,7 @@ def test_get_start_and_end_times():
 
 
 @pytest.mark.slow
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_append_dist_to_stop_times():
     feed1 = cairns.copy()
     st1 = feed1.stop_times
@@ -47,9 +48,9 @@ def test_append_dist_to_stop_times():
 
     # Check that colums of st2 equal the columns of st1 plus
     # a shape_dist_traveled column
-    cols1 = st1.columns.values.tolist() + ["shape_dist_traveled"]
-    cols2 = st2.columns.values.tolist()
-    assert set(cols1) == set(cols2)
+    cols1 = set(st1.columns) | {"shape_dist_traveled"}
+    cols2 = set(st2.columns)
+    assert cols1 == cols2
 
     # Check that within each trip the shape_dist_traveled column
     # is monotonically increasing

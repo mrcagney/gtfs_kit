@@ -6,9 +6,19 @@ import pandas as pd
 import geopandas as gpd
 import folium as fl
 
-from .context import gtfs_kit, cairns, cairns_shapeless, cairns_dates, cairns_trip_stats
+from .context import (
+    DATA_DIR,
+    gtfs_kit,
+    cairns,
+    cairns_shapeless,
+    cairns_dates,
+    cairns_trip_stats,
+)
 from gtfs_kit import constants as cs
 from gtfs_kit import routes as gkr
+
+
+sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs_2.zip", dist_units="km")
 
 
 @pytest.mark.slow
@@ -352,9 +362,9 @@ def test_compute_route_time_series():
 
 
 def test_build_route_timetable():
-    feed = cairns.copy()
+    feed = sample.copy()
     route_id = feed.routes["route_id"].values[0]
-    dates = cairns_dates + ["20010101"]
+    dates = feed.get_first_week()[:2]
     f = gkr.build_route_timetable(feed, route_id, dates)
 
     # Should have the correct columns
@@ -362,7 +372,7 @@ def test_build_route_timetable():
     assert set(f.columns) == expect_cols
 
     # Should only have feed dates
-    assert f.date.unique().tolist() == cairns_dates
+    assert f.date.unique().tolist() == dates
 
     # Empty check
     f = gkr.build_route_timetable(feed, route_id, dates[2:])

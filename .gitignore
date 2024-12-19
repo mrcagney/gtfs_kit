@@ -104,3 +104,6 @@ ENV/
 
 # mkdocs documentation
 /site
+
+# Vim swap files
+.swp

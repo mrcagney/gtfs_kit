@@ -622,6 +622,96 @@ def compute_centroid(feed: "Feed", stop_ids: list[str] | None = None) -> sg.Poin
     return g.union_all().convex_hull.centroid
 
 
+def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
+    """
+    Build a new feed by restricting this one to only the stops,
+    trips, shapes, etc. used by the routes with the given list of
+    route IDs.
+    Return the resulting feed.
+    """
+    # Initialize the new feed as the old feed.
+    # Restrict its DataFrames below.
+    feed = feed.copy()
+
+    # Slice routes
+    feed.routes = feed.routes.loc[lambda x: x.route_id.isin(route_ids)].copy()
+
+    # Slice trips
+    feed.trips = feed.trips.loc[lambda x: x.route_id.isin(route_ids)].copy()
+
+    # Slice stop times
+    trip_ids = feed.trips.trip_id
+    feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
+
+    # Slice stops
+    stop_ids = feed.stop_times.stop_id.unique()
+    f = feed.stops.copy()
+    cond = f.stop_id.isin(stop_ids)
+    if "location_type" in f.columns:
+        cond |= ~f.location_type.isin([0, np.nan])
+    feed.stops = f[cond].copy()
+
+    # Slice calendar
+    service_ids = feed.trips.service_id
+    if feed.calendar is not None:
+        feed.calendar = feed.calendar.loc[
+            lambda x: x.service_id.isin(service_ids)
+        ].copy()
+
+    # Get agency for trips
+    if "agency_id" in feed.routes.columns:
+        agency_ids = feed.routes.agency_id
+        if len(agency_ids):
+            feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)].copy()
+
+    # Now for the optional files.
+    # Get calendar dates for trips.
+    if feed.calendar_dates is not None:
+        feed.calendar_dates = feed.calendar_dates.loc[
+            lambda x: x.service_id.isin(service_ids)
+        ].copy()
+
+    # Get frequencies for trips
+    if feed.frequencies is not None:
+        feed.frequencies = feed.frequencies.loc[
+            lambda x: x.trip_id.isin(trip_ids)
+        ].copy()
+
+    # Get shapes for trips
+    if feed.shapes is not None:
+        shape_ids = feed.trips.shape_id
+        feed.shapes = feed.shapes[lambda x: x.shape_id.isin(shape_ids)].copy()
+
+    # Get transfers for stops
+    if feed.transfers is not None:
+        feed.transfers = feed.transfers.loc[
+            lambda x: (x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids))
+        ].copy()
+
+    return feed
+
+
+def restrict_to_agencies(feed: "Feed", agency_ids: list[str]) -> "Feed":
+    """
+    Build a new feed by restricting this one to only the stops,
+    trips, shapes, etc. used by the agencies with the given list of
+    agency IDs.
+    Return the resulting feed.
+    """
+    # Check agencies exist in feed
+    feed_agency_ids = set(feed.agency["agency_id"])
+    if not set(agency_ids) <= feed_agency_ids:
+        raise ValueError(f"Agency IDs must be a subset of {feed_agency_ids}")
+
+    # Build feed via `restrict_to_routes`
+    feed = feed.copy()
+    route_ids = feed.routes.loc[
+        lambda x: x.agency_id.isin(agency_ids), "route_id"
+    ].tolist()
+
+    return feed.restrict_to_routes(route_ids)
+
+
 def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
     """
     Build a new feed by restricting this one to only the stops,
@@ -696,75 +786,6 @@ def restrict_to_dates(feed: "Feed", dates: list[str]) -> "Feed":
     if feed.transfers is not None:
         feed.transfers = feed.transfers.loc[
             lambda x: x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids)
-        ].copy()
-
-    return feed
-
-
-def restrict_to_routes(feed: "Feed", route_ids: list[str]) -> "Feed":
-    """
-    Build a new feed by restricting this one to only the stops,
-    trips, shapes, etc. used by the routes with the given list of
-    route IDs.
-    Return the resulting feed.
-    """
-    # Initialize the new feed as the old feed.
-    # Restrict its DataFrames below.
-    feed = feed.copy()
-
-    # Slice routes
-    feed.routes = feed.routes.loc[lambda x: x.route_id.isin(route_ids)].copy()
-
-    # Slice trips
-    feed.trips = feed.trips.loc[lambda x: x.route_id.isin(route_ids)].copy()
-
-    # Slice stop times
-    trip_ids = feed.trips.trip_id
-    feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
-
-    # Slice stops
-    stop_ids = feed.stop_times.stop_id.unique()
-    f = feed.stops.copy()
-    cond = f.stop_id.isin(stop_ids)
-    if "location_type" in f.columns:
-        cond |= ~f.location_type.isin([0, np.nan])
-    feed.stops = f[cond].copy()
-
-    # Slice calendar
-    service_ids = feed.trips.service_id
-    if feed.calendar is not None:
-        feed.calendar = feed.calendar.loc[
-            lambda x: x.service_id.isin(service_ids)
-        ].copy()
-
-    # Get agency for trips
-    if "agency_id" in feed.routes.columns:
-        agency_ids = feed.routes.agency_id
-        if len(agency_ids):
-            feed.agency = feed.agency.loc[lambda x: x.agency_id.isin(agency_ids)].copy()
-
-    # Now for the optional files.
-    # Get calendar dates for trips.
-    if feed.calendar_dates is not None:
-        feed.calendar_dates = feed.calendar_dates.loc[
-            lambda x: x.service_id.isin(service_ids)
-        ].copy()
-
-    # Get frequencies for trips
-    if feed.frequencies is not None:
-        feed.frequencies = feed.frequencies.loc[
-            lambda x: x.trip_id.isin(trip_ids)
-        ].copy()
-
-    # Get shapes for trips
-    if feed.shapes is not None:
-        shape_ids = feed.trips.shape_id
-        feed.shapes = feed.shapes[lambda x: x.shape_id.isin(shape_ids)].copy()
-
-    # Get transfers for stops
-    if feed.transfers is not None:
-        feed.transfers = feed.transfers.loc[
-            lambda x: (x.from_stop_id.isin(stop_ids) & x.to_stop_id.isin(stop_ids))
         ].copy()
 
     return feed

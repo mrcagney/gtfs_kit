@@ -156,7 +156,7 @@ def compute_stop_stats_0(
     else:
         g = f.groupby("stop_id")
 
-    result = g.apply(compute_stop_stats).reset_index()
+    result = g.apply(compute_stop_stats, include_groups=False).reset_index()
 
     # Convert start and end times to time strings
     result[["start_time", "end_time"]] = result[["start_time", "end_time"]].map(
@@ -609,8 +609,12 @@ def build_stop_timetable(feed: "Feed", stop_id: str, dates: list[str]) -> pd.Dat
         f["date"] = date
         frames.append(f)
 
-    f = pd.concat(frames)
-    return f.sort_values(["date", "departure_time"])
+    return (
+        pd.concat(frames)
+        .assign(dtime=lambda x: x["departure_time"].map(hp.timestr_to_seconds))
+        .sort_values(["date", "dtime"], ignore_index=True)
+        .drop("dtime", axis=1)
+    )
 
 
 def build_geometry_by_stop(
