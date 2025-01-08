@@ -35,6 +35,7 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
     """
     Calculate and append the optional ``shape_dist_traveled`` column in
     ``feed.stop_times`` in terms of the distance units ``feed.dist_units``.
+    Trips without shapes will have NaN distances.
     Return the resulting Feed.
     Uses ``feed.shapes``, so if that is missing, then return the original feed.
 
@@ -67,41 +68,46 @@ def append_dist_to_stop_times(feed: "Feed") -> "Feed":
 
         # Compute the distances of the stops along this trip and memoize.
         shape = g.shape_id.iat[0]
-        linestring = geom_by_shape[shape]
-        dists = []
-        for stop in g.stop_id.values:
-            if stop in dist_by_stop_by_shape[shape]:
-                d = dist_by_stop_by_shape[shape][stop]
-            else:
-                d = linestring.project(geom_by_stop[stop])
-                dist_by_stop_by_shape[shape][stop] = d
-            dists.append(d)
-
-        s = sorted(dists)
-        D = linestring.length
-        dists_are_reasonable = all([d < D + 100 for d in dists])
-
-        if dists_are_reasonable and s == dists:
-            # Good
-            g["shape_dist_traveled"] = dists
-        elif dists_are_reasonable and s == dists[::-1]:
-            # Good after reversal.
-            # This happens when the direction of the linestring
-            # opposes the direction of the vehicle trip.
-            dists = dists[::-1]
-            g["shape_dist_traveled"] = dists
+        if pd.isna(shape):
+            g["shape_dist_traveled"] = np.nan
         else:
-            # Bad. Redo using interpolation on a good subset of dists.
-            dists = np.array([0] + dists[1:-1] + [D])
-            ix = hp.longest_subsequence(dists, index=True)
-            good_dists = np.take(dists, ix)
-            g["shape_dist_traveled"] = np.interp(
-                g["departure_time_s"], g.iloc[ix]["departure_time_s"], good_dists
-            )
+            linestring = geom_by_shape[shape]
+            dists = []
+            for stop in g.stop_id.values:
+                if stop in dist_by_stop_by_shape[shape]:
+                    d = dist_by_stop_by_shape[shape][stop]
+                else:
+                    d = linestring.project(geom_by_stop[stop])
+                    dist_by_stop_by_shape[shape][stop] = d
+                dists.append(d)
 
-            # Update dist dictionary with new and improved dists
-            for row in g[["stop_id", "shape_dist_traveled"]].itertuples(index=False):
-                dist_by_stop_by_shape[shape][row.stop_id] = row.shape_dist_traveled
+            s = sorted(dists)
+            D = linestring.length
+            dists_are_reasonable = all([d < D + 100 for d in dists])
+
+            if dists_are_reasonable and s == dists:
+                # Good
+                g["shape_dist_traveled"] = dists
+            elif dists_are_reasonable and s == dists[::-1]:
+                # Good after reversal.
+                # This happens when the direction of the linestring
+                # opposes the direction of the vehicle trip.
+                dists = dists[::-1]
+                g["shape_dist_traveled"] = dists
+            else:
+                # Bad. Redo using interpolation on a good subset of dists.
+                dists = np.array([0] + dists[1:-1] + [D])
+                ix = hp.longest_subsequence(dists, index=True)
+                good_dists = np.take(dists, ix)
+                g["shape_dist_traveled"] = np.interp(
+                    g["departure_time_s"], g.iloc[ix]["departure_time_s"], good_dists
+                )
+
+                # Update dist dictionary with new and improved dists
+                for row in g[["stop_id", "shape_dist_traveled"]].itertuples(
+                    index=False
+                ):
+                    dist_by_stop_by_shape[shape][row.stop_id] = row.shape_dist_traveled
 
         return g
 
