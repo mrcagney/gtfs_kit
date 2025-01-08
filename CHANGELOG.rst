@@ -1,6 +1,10 @@
 Changelog
 =========
 
+10.1.0, 2025-??-??
+------------------
+- Handled null values better thanks to `pull request 22 <https://github.com/mrcagney/gtfs_kit/pull/22>`_.
+
 10.0.0, 2024-12-20
 ------------------
 - Added ``miscellany.restrict_to_trips`` and used it as a helper function to simplify the other restriction functions.
