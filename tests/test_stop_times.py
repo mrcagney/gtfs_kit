@@ -59,6 +59,24 @@ def test_append_dist_to_stop_times():
         sdt = group.shape_dist_traveled.values.tolist()
         assert sdt == sorted(sdt)
 
+    # Trips with no shapes should have NaN distances
+    trip_id = feed1.stop_times["trip_id"].iat[0]
+    feed1.trips.loc[lambda x: x["trip_id"] == trip_id, "shape_id"] = np.nan
+
+    feed2 = feed1.append_dist_to_stop_times()
+    assert (
+        feed2.stop_times.loc[lambda x: x["trip_id"] == trip_id, "shape_dist_traveled"]
+        .isna()
+        .all()
+    )
+
+    # Again, check that within each trip the shape_dist_traveled column
+    # is monotonically increasing
+    for trip, group in feed2.stop_times.groupby("trip_id"):
+        group = group.sort_values("stop_sequence")
+        sdt = group.shape_dist_traveled.values.tolist()
+        assert sdt == sorted(sdt)
+
 
 def test_stop_times_to_geojson():
     feed = cairns.copy()

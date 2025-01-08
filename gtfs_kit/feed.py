@@ -141,6 +141,7 @@ class Feed(object):
         compute_bounds,
         compute_convex_hull,
         compute_centroid,
+        restrict_to_trips,
         restrict_to_routes,
         restrict_to_agencies,
         restrict_to_dates,
@@ -384,7 +385,12 @@ def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
         ):
             # utf-8-sig gets rid of the byte order mark (BOM);
             # see http://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
-            df = pd.read_csv(p, dtype=cs.DTYPE, encoding="utf-8-sig")
+            csv_options = {
+                "na_values": ["", " ", "nan", "NaN", "null"],  # Add space to na_values
+                "keep_default_na": True,
+                "dtype_backend": "numpy_nullable",  # Use nullable dtypes
+            }
+            df = pd.read_csv(p, dtype=cs.DTYPE, encoding="utf-8-sig", **csv_options)
             if not df.empty:
                 feed_dict[table] = cn.clean_column_names(df)
 

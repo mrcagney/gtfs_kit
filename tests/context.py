@@ -13,6 +13,7 @@ import gtfs_kit
 # Load/create test feeds
 DATA_DIR = Path("data")
 sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="km")
+nyc_subway = gtfs_kit.read_feed(DATA_DIR / "nyc_subway_gtfs.zip", dist_units="mi")
 cairns = gtfs_kit.read_feed(DATA_DIR / "cairns_gtfs.zip", dist_units="km")
 cairns_shapeless = cairns.copy()
 cairns_shapeless.shapes = None
