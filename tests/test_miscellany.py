@@ -5,7 +5,15 @@ import numpy as np
 import shapely.geometry as sg
 import geopandas as gp
 
-from .context import gtfs_kit, DATA_DIR, sample, cairns, cairns_dates, cairns_trip_stats
+from .context import (
+    gtfs_kit,
+    DATA_DIR,
+    sample,
+    nyc_subway,
+    cairns,
+    cairns_dates,
+    cairns_trip_stats,
+)
 from gtfs_kit import constants as gkc
 from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
@@ -305,6 +313,19 @@ def test_restrict_to_trips():
     for table in gkc.GTFS_REF["table"].unique():
         if table != "agency" and getattr(feed1, table) is not None:
             assert getattr(feed2, table).empty
+
+    feed = nyc_subway
+    # Grab a stop with a parent station
+    stop_id = feed.stops.loc[lambda x: x["parent_station"].notna(), "stop_id"].iat[0]
+    parent_id = feed.stops.loc[lambda x: x["stop_id"] == stop_id, "parent_station"].iat[
+        0
+    ]
+    # Get one of its trips
+    trip_id = feed.stop_times.loc[lambda x: x["stop_id"] == stop_id, "trip_id"].iat[0]
+    # Restrict feed to that trip and resulting feed should contain that parent station
+    feed2 = feed.restrict_to_trips([trip_id])
+    assert parent_id in feed2.stops["stop_id"].values
+    assert parent_id in feed2.transfers["from_stop_id"].values
 
 
 def test_restrict_to_routes():

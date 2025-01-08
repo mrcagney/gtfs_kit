@@ -1,9 +1,12 @@
 Changelog
 =========
 
-10.1.0, 2025-??-??
+10.1.0, 2025-01-09
 ------------------
 - Handled null values better thanks to `pull request 22 <https://github.com/mrcagney/gtfs_kit/pull/22>`_.
+- Updated ``stop_times.append_dist_to_stop_times`` to handle trips missing shapes by setting their distances to NaN.
+- Updated ``miscellany.restrict_to_trips`` to also include the parent stations of the trip stops.
+- Forgot to import ``miscellany.restrict_to_trips`` in ``feed`` in last release. Fixed that.
 
 10.0.0, 2024-12-20
 ------------------

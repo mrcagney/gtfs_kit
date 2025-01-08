@@ -645,13 +645,15 @@ def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
     # Subset stop times
     feed.stop_times = feed.stop_times.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
-    # Subset stops
-    stop_ids = feed.stop_times["stop_id"].unique()
-    f = feed.stops.copy()
-    cond = f.stop_id.isin(stop_ids)
-    if "location_type" in f.columns:
-        cond |= ~f.location_type.isin([0, np.nan])
-    feed.stops = f[cond].copy()
+    # Subset stops, collecting parent stations too
+    stop_ids_0 = set(feed.stop_times["stop_id"])
+    stop_ids_1 = set(
+        feed.stops.loc[
+            lambda x: x["stop_id"].isin(stop_ids_0), "parent_station"
+        ].dropna()
+    )
+    stop_ids = stop_ids_0 | stop_ids_1
+    feed.stops = feed.stops.loc[lambda x: x["stop_id"].isin(stop_ids)].copy()
 
     # Subset calendar
     service_ids = feed.trips["service_id"].unique()
