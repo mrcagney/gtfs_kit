@@ -635,7 +635,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/15/6e/9cfffe6856f48852a
 
 [[package]]
 name = "gtfs-kit"
-version = "10.0.0"
+version = "10.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "folium" },
