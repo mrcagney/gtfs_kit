@@ -31,7 +31,7 @@ Note to the maintainer: To update the docs do ``uv run publish-sphinx-docs``, th
 Notes
 =====
 - This project's development status is Alpha.
-  I use GTFS Kit for work and change it breakingly to suit my needs.
+  I use GTFS Kit at my job and change it breakingly to suit my needs.
 - This project uses semantic versioning.
 - I aim for GTFS Kit to handle `the current GTFS <https://developers.google.com/transit/gtfs/reference>`_.
   In particular, i avoid handling `GTFS extensions <https://developers.google.com/transit/gtfs/reference/gtfs-extensions>`_.
