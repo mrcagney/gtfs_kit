@@ -25,6 +25,14 @@ def test_get_active_services():
     s = gkt.get_active_services(feed, week[0])
     assert set() < set(s) < set(feed.trips["service_id"])
 
+    # Should work with only one of `feed.calendar` and `feed.calendar_dates`
+    for table in ["calendar", "calendar_dates"]:
+        feed = cairns.copy()
+        setattr(feed, table, None)
+        week = feed.get_first_week()
+        s = gkt.get_active_services(feed, week[0])
+        assert set() < set(s) < set(feed.trips["service_id"])
+
 
 def test_get_trips():
     feed = cairns.copy()

@@ -96,11 +96,11 @@ def test_read_feed():
     with pytest.raises(ValueError):
         gkf.read_feed("bad_path!", dist_units="km")
 
-    # Bad dist_units:
+    # Bad dist_units
     with pytest.raises(ValueError):
         gkf.read_feed(DATA_DIR / "sample_gtfs.zip", dist_units="bingo")
 
-    # Requires dist_units:
+    # Requires dist_units
     with pytest.raises(TypeError):
         gkf.read_feed(path=DATA_DIR / "sample_gtfs.zip")
 
