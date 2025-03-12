@@ -906,6 +906,7 @@ def compute_screen_line_counts(
     subshapes = (
         feed.get_shapes(as_gdf=True, use_utm=True)
         .sjoin(screen_lines)
+        .drop_duplicates("shape_id")
         .pipe(split_simple, segmentize_m=segmentize_m)
     )
 
