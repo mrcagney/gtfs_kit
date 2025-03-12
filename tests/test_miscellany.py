@@ -404,7 +404,7 @@ def test_restrict_to_area():
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_compute_screen_line_counts():
     feed = cairns.append_dist_to_stop_times()
-    dates = cairns_dates + ["20010101"]
+    dates = cairns_dates[:2]
 
     # Load screen line
     path = DATA_DIR / "cairns_screen_lines.geojson"
@@ -414,14 +414,16 @@ def test_compute_screen_line_counts():
     # Should have correct columns
     expect_cols = {
         "date",
+        "screen_line_id",
         "trip_id",
+        "direction_id",
         "route_id",
         "route_short_name",
+        "route_type",
         "shape_id",
-        "screen_line_id",
-        "crossing_distance",
-        "crossing_time",
         "crossing_direction",
+        "crossing_dist_m",
+        "crossing_time",
     }
     assert set(f.columns) == expect_cols
 
@@ -429,8 +431,8 @@ def test_compute_screen_line_counts():
     assert set(f.crossing_direction.unique()) == {-1, 1}
 
     # Should only have feed dates
-    assert f.date.unique().tolist() == cairns_dates
+    assert set(f["date"].values) == set(dates)
 
     # Empty check
-    f = gkm.compute_screen_line_counts(feed, screen_lines, [])
+    f = gkm.compute_screen_line_counts(feed, screen_lines, ["20010101"])
     assert f.empty

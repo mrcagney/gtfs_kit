@@ -28,26 +28,39 @@ def get_active_services(feed: "Feed", date: str) -> list[str]:
     Given a Feed and a date string in YYYYMMDD format,
     return the list of service IDs that are active on the date.
     """
-    # Convert date to weekday string (e.g., "monday")
-    weekday_str = dt.datetime.strptime(date, "%Y%m%d").strftime("%A").lower()
+    active_services = set()
+    removed_services = set()
 
-    # Filter `calendar` to services active on date
-    active_1 = feed.calendar.loc[
-        lambda x: (x["start_date"] <= date)
-        & (x["end_date"] >= date)
-        & (x[weekday_str] == 1),
-        "service_id",
-    ]
-    # Filter `calendar_dates` to services active on date
-    active_2 = feed.calendar_dates.loc[
-        lambda x: (x["date"] == date) & (x["exception_type"] == 1), "service_id"
-    ]
-    # Filter `calendar_dates` to removed services on date
-    removed = feed.calendar_dates.loc[
-        lambda x: (x["date"] == date) & (x["exception_type"] == 2), "service_id"
-    ]
-    # Combine results for list of active services
-    return list((set(active_1) | set(active_2)) - set(removed))
+    if feed.calendar is not None:
+        # Convert date to weekday string (e.g., "monday")
+        weekday_str = dt.datetime.strptime(date, "%Y%m%d").strftime("%A").lower()
+        # Filter `calendar` to services active on date
+        active_services |= set(
+            feed.calendar.loc[
+                lambda x: (x["start_date"] <= date)
+                & (x["end_date"] >= date)
+                & (x[weekday_str] == 1),
+                "service_id",
+            ]
+        )
+
+    if feed.calendar_dates is not None:
+        # Filter `calendar_dates` to services added on date
+        active_services |= set(
+            feed.calendar_dates.loc[
+                lambda x: (x["date"] == date) & (x["exception_type"] == 1),
+                "service_id",
+            ]
+        )
+        # Filter `calendar_dates` to services removed on date
+        removed_services |= set(
+            feed.calendar_dates.loc[
+                lambda x: (x["date"] == date) & (x["exception_type"] == 2),
+                "service_id",
+            ]
+        )
+
+    return list(active_services - removed_services)
 
 
 def get_trips(
@@ -137,17 +150,17 @@ def compute_trip_activity(feed: "Feed", dates: list[str]) -> pd.DataFrame:
     if not dates:
         return pd.DataFrame()
 
+    # Get trip activity table for each day
     frames = [feed.trips[["trip_id"]]]
     for date in dates:
         frames.append(get_trips(feed, date)[["trip_id"]].assign(**{date: 1}))
 
-    return (
-        ft.reduce(lambda left, right: left.merge(right, how="outer"), frames).fillna(
-            {date: 0 for date in dates}
-        )
-        # Cast as integers
-        .assign(**{date: lambda x: x[date].astype(int) for date in dates})
+    # Merge daily trip activity tables into a single table
+    f = ft.reduce(lambda left, right: left.merge(right, how="outer"), frames).fillna(
+        {date: 0 for date in dates}
     )
+    f[dates] = f[dates].astype(int)
+    return f
 
 
 def compute_busiest_date(feed: "Feed", dates: list[str]) -> str:
@@ -588,7 +601,7 @@ def map_trips(
                     # trip direction equals LineString direction
                     fp.PolyLineTextPath(
                         path,
-                        "        \u27A4        ",
+                        "        \u27a4        ",
                         repeat=True,
                         offset=5.5,
                         attributes={"fill": color, "font-size": "18"},

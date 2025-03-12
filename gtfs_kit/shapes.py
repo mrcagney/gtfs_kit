@@ -130,6 +130,117 @@ def ungeometrize_shapes(shapes_g: gpd.GeoDataFrame) -> pd.DataFrame:
     ).astype({"shape_id": "string"})
 
 
+def split_simple(
+    shapes_g: gpd.GeoDataFrame, segmentize_m: float = 5
+) -> gpd.GeoDataFrame:
+    """
+    Given GTFS shapes as a GeoDataFrame of the form output by :func:`geometrize_shapes`
+    and possibly in a non-WGS84 CRS,
+    split each non-simple LineString into maximal simple (non-self-intersecting)
+    sub-LineStrings, and leave the simple LineStrings as is.
+    Before splitting, segmentize (with Shapely's ``segmentize`` method)
+    each non-simple LineString L by ``segmentize_m`` meters,
+    which also sets the maximum gap size between L's simple sub-LineStrings.
+
+    Return a GeoDataFrame in the CRS of ``shapes_g`` with the columns
+
+    - ``'shape_id'``: a unique identifier of the original LineString L
+    - ``'subshape_id'``: a unique identifier of a simple sub-LineString S of L
+    - ``'subshape_sequence'``: integer; indicates the order of S when joining up
+      all simple sub-LineStrings to form L
+    - ``'subshape_length_m'``: the length of S in meters
+    - ``'cum_length_m'``: the length S plus the lengths of sub-LineStrings of L
+      that come before S; in meters
+    - ``'geometry'``: LineString geometry corresponding to S
+
+    Within each 'shape_id' group, the subshapes will be sorted increasingly by
+    'subshape_sequence'.
+
+    Note that by construction, for each given LineString L with k simple subLineStrings
+    S_i, we have the inequalities
+
+    length(L) - k * segmentize_m <= sum over i of length(S_i) <= length(L),
+
+    where the lengths are expressed in meters.
+    """
+
+    def my_split(group):
+        coords = group["geometry"].iat[0].coords
+        # Partition the coords into maximal simple segments
+        segments = []
+        n = len(coords)
+        i = 0
+        while i < n:
+            # Binary search for the farthest index (best) starting at i
+            # that forms a simple segment
+            lo, hi = i, n - 1
+            best = i  # At least one point (or two) is always simple.
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                candidate = sg.LineString(coords[i : mid + 1])
+                if candidate.is_simple:
+                    best = mid  # candidate is simple; try extending further.
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
+            # Append the found segment
+            segments.append(sg.LineString(coords[i : best + 1]))
+            # If we've reached the end, we're done
+            if best == n - 1:
+                break
+            # Otherwise, start the next segment from the coordinate that broke simplicity
+            i = best + 1
+
+        return pd.DataFrame({"geometry": segments})
+
+    crs = shapes_g.crs
+    utm_crs = shapes_g.estimate_utm_crs()
+    g = shapes_g.assign(is_simple=lambda x: x.is_simple).to_crs(utm_crs)
+
+    # Simple shapes don't need splitting
+    g0 = g.loc[lambda x: x["is_simple"]].assign(
+        subshape_id=lambda x: x["shape_id"].astype(str) + "-0",
+        subshape_sequence=0,
+        subshape_length_m=lambda x: x.length,
+        cum_length_m=lambda x: x["subshape_length_m"],
+    )
+    # Split the non-simple shapes
+    g1 = (
+        g.loc[lambda x: ~x["is_simple"]]
+        .assign(geometry=lambda x: x.segmentize(segmentize_m))
+        .groupby("shape_id", sort=False)
+        .apply(my_split, include_groups=False)
+        .reset_index()
+        .rename(columns={"level_1": "subshape_sequence"})
+        .assign(
+            subshape_id=lambda x: x["shape_id"].str.cat(
+                x["subshape_sequence"].astype(str), sep="-"
+            )
+        )
+        .pipe(gpd.GeoDataFrame)
+        .set_crs(utm_crs)
+        .assign(
+            subshape_length_m=lambda x: x.length,
+            cum_length_m=lambda x: x.groupby("shape_id")["subshape_length_m"].cumsum(),
+        )
+    )
+    return (
+        pd.concat([g0, g1])
+        .to_crs(crs)
+        .filter(
+            [
+                "subshape_id",
+                "subshape_sequence",
+                "shape_id",
+                "subshape_length_m",
+                "cum_length_m",
+                "geometry",
+            ]
+        )
+        .sort_values(["subshape_id", "subshape_sequence"], ignore_index=True)
+    )
+
+
 def get_shapes(
     feed: "Feed", *, as_gdf: bool = False, use_utm: bool = False
 ) -> gpd.DataFrame | None:

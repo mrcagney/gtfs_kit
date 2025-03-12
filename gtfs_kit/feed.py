@@ -98,6 +98,7 @@ class Feed(object):
         build_geometry_by_shape,
         shapes_to_geojson,
         get_shapes_intersecting_geometry,
+        split_simple,
     )
     from .stops import (
         geometrize_stops,

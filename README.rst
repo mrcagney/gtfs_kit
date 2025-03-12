@@ -36,7 +36,7 @@ Notes
 - I aim for GTFS Kit to handle `the current GTFS <https://developers.google.com/transit/gtfs/reference>`_.
   In particular, i avoid handling `GTFS extensions <https://developers.google.com/transit/gtfs/reference/gtfs-extensions>`_.
   That is the most reasonable scope boundary i can draw at present, given this project's tiny budget.
-  If you would like to fund me to expand that scope, feel free to email me.
+  If you would like to fund this project to expand its scope, please email me.
 - Thanks to `MRCagney <http://www.mrcagney.com/>`_ for periodically donating to this project.
 - Constructive feedback and contributions are welcome.
   Please issue pull requests from a feature branch into the ``develop`` branch and include tests.

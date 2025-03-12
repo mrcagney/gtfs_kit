@@ -1,6 +1,16 @@
 Changelog
 =========
 
+10.2.0, 2025-03-12
+------------------
+- Improved ``miscellany.compute_screen_line_counts`` to now properly handle trips with non-simple shapes.
+- Added ``shapes.split_simple`` to help with the new screen line computation, but users might find it useful for other things too.
+
+10.1.1, 2025-01-21
+------------------
+- Bugfixed ``trips.compute_trip_activity`` which cleverly and wrongly cast values to integers.
+- Improved ``trips.get_active_services`` to handle feeds with only one of ``calendar.txt`` and ``calendar_dates.txt``.
+
 10.1.0, 2025-01-09
 ------------------
 - Handled null values better thanks to `pull request 22 <https://github.com/mrcagney/gtfs_kit/pull/22>`_.
