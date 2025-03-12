@@ -11,4 +11,4 @@ from .cleaners import *
 from .feed import *
 
 
-__version__ = "10.2.0"
+__version__ = "10.2.1"
