@@ -155,6 +155,13 @@ def split_simple(
 
     Within each 'shape_id' group, the subshapes will be sorted increasingly by
     'subshape_sequence'.
+
+    Note that by construction, for each given LineString L with k simple subLineStrings
+    S_i, we have the inequalities
+
+    length(L) - k * segmentize_m <= sum over i of length(S_i) <= length(L),
+
+    where the lengths are expressed in meters.
     """
 
     def my_split(group):

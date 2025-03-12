@@ -404,12 +404,12 @@ def test_restrict_to_area():
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_compute_screen_line_counts():
     feed = cairns.append_dist_to_stop_times()
-    date = cairns_dates[0]
+    dates = cairns_dates[:2]
 
     # Load screen line
     path = DATA_DIR / "cairns_screen_lines.geojson"
     screen_lines = gp.read_file(path)
-    f = gkm.compute_screen_line_counts(feed, screen_lines, date)
+    f = gkm.compute_screen_line_counts(feed, screen_lines, dates)
 
     # Should have correct columns
     expect_cols = {
@@ -431,44 +431,8 @@ def test_compute_screen_line_counts():
     assert set(f.crossing_direction.unique()) == {-1, 1}
 
     # Should only have feed dates
-    assert f["date"].unique().tolist() == [date]
+    assert set(f["date"].values) == set(dates)
 
     # Empty check
-    f = gkm.compute_screen_line_counts(feed, screen_lines, "20010101")
-    assert f.empty
-
-
-@pytest.mark.slow
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
-def test_compute_screen_line_counts_old():
-    feed = cairns.append_dist_to_stop_times()
-    dates = cairns_dates + ["20010101"]
-
-    # Load screen line
-    path = DATA_DIR / "cairns_screen_lines.geojson"
-    screen_lines = gp.read_file(path)
-    f = gkm.compute_screen_line_counts_old(feed, screen_lines, dates)
-
-    # Should have correct columns
-    expect_cols = {
-        "date",
-        "trip_id",
-        "route_id",
-        "route_short_name",
-        "shape_id",
-        "screen_line_id",
-        "crossing_distance",
-        "crossing_time",
-        "crossing_direction",
-    }
-    assert set(f.columns) == expect_cols
-
-    # Should have both directions
-    assert set(f.crossing_direction.unique()) == {-1, 1}
-
-    # Should only have feed dates
-    assert f.date.unique().tolist() == cairns_dates
-
-    # Empty check
-    f = gkm.compute_screen_line_counts_old(feed, screen_lines, [])
+    f = gkm.compute_screen_line_counts(feed, screen_lines, ["20010101"])
     assert f.empty

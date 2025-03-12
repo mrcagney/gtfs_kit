@@ -75,6 +75,28 @@ def test_get_shapes():
     assert gks.get_shapes(cairns_shapeless, as_gdf=True) is None
 
 
+def test_split_simple():
+    m = 7
+    shapes_g = gks.get_shapes(cairns, as_gdf=True, use_utm=True).iloc[:20]
+    s = gks.split_simple(shapes_g, segmentize_m=m)
+    assert set(s.columns) == {
+        "shape_id",
+        "subshape_id",
+        "subshape_sequence",
+        "subshape_length_m",
+        "cum_length_m",
+        "geometry",
+    }
+    assert s.is_simple.all()
+    for shape_id, group in s.groupby("shape_id"):
+        n = len(group)
+        ss = shapes_g.loc[lambda x: x["shape_id"] == shape_id]
+        assert (group["subshape_length_m"] <= ss.length.sum()).all()
+        assert (
+            ss.length.sum() - n * m <= group["cum_length_m"].iat[-1] <= ss.length.sum()
+        )
+
+
 def test_build_geometry_by_shape():
     d = gks.build_geometry_by_shape(cairns)
     assert isinstance(d, dict)

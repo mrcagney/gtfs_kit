@@ -772,6 +772,7 @@ def _reshape_stop_times(stop_times: pd.DataFrame) -> pd.DataFrame:
     - to_shape_dist_traveled (optional): present if and only if 'shape_dist_traveled'
       column present in given stop times
 
+    This is a helper function for :func:`compute_screen_line_counts`.
     """
     f = stop_times.sort_values(["trip_id", "stop_sequence"], ignore_index=True)
     g = f.groupby("trip_id")
@@ -813,13 +814,13 @@ def _reshape_stop_times(stop_times: pd.DataFrame) -> pd.DataFrame:
 def compute_screen_line_counts(
     feed: "Feed",
     screen_lines: gpd.GeoDataFrame,
-    date: str,
+    dates: list[str],
     segmentize_m: float = 5,
     *,
     include_testing_cols: bool = False,
 ) -> pd.DataFrame:
     """
-    Find all the Feed trips active on the given YYYYMMDD date that intersect
+    Find all the Feed trips active on the given YYYYMMDD dates that intersect
     the given segment-associated screen lines of the form output by
     :func:`build_screen_lines`.
     Behind the scenes, use simple sub-LineStrings of the feed
@@ -871,16 +872,15 @@ def compute_screen_line_counts(
     - Assume that the screen line is straight and simple.
     - The algorithm works as follows
 
-        1. Find the Feed simple subshape that intersect the screen lines.
+        1. Find the Feed's simple subshapes (computed via :func:`shapes.split_simple`)
+           that intersect the screen lines.
         2. For each such subshape and screen line, compute the intersection points,
-           the distance of the point along the subshape, aka the *crossing distance*,
+           the distance of each point along the subshape, aka the *crossing distance*,
            and the orientation of the screen line relative to the subshape.
-        3. Restrict to trips active on the given date and interpolate a stop time
+        3. Restrict to trips active on the given dates and for each trip associated to
+           an intersecting subshape above, interpolate a trip stop time
            for the intersection point using the crossing distance, subshape length,
-           and trip stop times.
-        4. Set that interpolated time as the crossing time of the trip and add the
-           crossing distance to the trip's shape distance traveled up to the first
-           stop of the link, to get the shape distance traveled at the crossing point.
+           cumulative subshape length, and trip stop times.
 
     """
     from .shapes import split_simple
@@ -948,7 +948,9 @@ def compute_screen_line_counts(
         lambda x: x["geometry"].project(x.int_point, normalized=True), axis=1
     )
     g["subshape_dist_m"] = g["subshape_dist_frac"] * g["subshape_length_m"]
-    g["crossing_dist_m"] = g["cum_length_m"] - g["subshape_dist_m"]
+    g["crossing_dist_m"] = (
+        g["subshape_dist_m"] + g["cum_length_m"] - g["subshape_length_m"]
+    )
 
     # Build a tiny vector along each subshape from the intersection point
     p2 = g.apply(
@@ -982,35 +984,43 @@ def compute_screen_line_counts(
     ]
 
     # Get stop times to compute crossing times
-    st = (
-        feed.convert_dist("m")
-        .get_stop_times(date)
-        .pipe(_reshape_stop_times)
-        .merge(feed.trips[["trip_id", "shape_id"]])
-        # Keep only non-NaN departure times
-        .loc[lambda x: x["from_departure_time"].notna()]
-        .loc[lambda x: x["to_departure_time"].notna()]
-        # Convert to seconds past midnight for upcoming crossing time calculation
-        .assign(
-            t1=lambda x: x["from_departure_time"].map(hp.timestr_to_seconds),
-            t2=lambda x: x["to_departure_time"].map(hp.timestr_to_seconds),
-        )
-    )
-
-    # Compute crossing times
+    feed = feed.convert_dist("m")
     frames = []
-    for shape_id, group in g.groupby("shape_id"):
-        f = (
-            st.merge(group)
-            # Only keep the times of the pair of stops on either side of each screen line,
-            # whose distance along a trip shape is marked by column 'crossing_dist_m'
-            .loc[lambda x: x["from_shape_dist_traveled"] <= x["crossing_dist_m"]]
-            .loc[lambda x: x["crossing_dist_m"] <= x["to_shape_dist_traveled"]]
+    for date in dates:
+        st = (
+            feed.get_stop_times(date)
+            .pipe(_reshape_stop_times)
+            .merge(feed.trips[["trip_id", "shape_id"]])
+            # Keep only non-NaN departure times
+            .loc[lambda x: x["from_departure_time"].notna()]
+            .loc[lambda x: x["to_departure_time"].notna()]
+            # Convert to seconds past midnight for upcoming crossing time calculation
+            .assign(
+                t1=lambda x: x["from_departure_time"].map(hp.timestr_to_seconds),
+                t2=lambda x: x["to_departure_time"].map(hp.timestr_to_seconds),
+            )
         )
-        f["crossing_time"] = (
-            f["t1"] + f["subshape_dist_frac"] * (f["t2"] - f["t1"])
-        ).map(lambda x: hp.timestr_to_seconds(x, inverse=True))
-        # Get distance along trip shape of crossing point
+
+        # Compute crossing times
+        subframes = []
+        for shape_id, group in g.groupby("shape_id"):
+            f = (
+                st.merge(group)
+                # Only keep the times of the pair of stops on either side of each screen line,
+                # whose distance along a trip shape is marked by column 'crossing_dist_m'
+                .loc[lambda x: x["from_shape_dist_traveled"] <= x["crossing_dist_m"]]
+                .loc[lambda x: x["crossing_dist_m"] <= x["to_shape_dist_traveled"]]
+            )
+            f["crossing_time"] = (
+                f["t1"] + f["subshape_dist_frac"] * (f["t2"] - f["t1"])
+            ).map(lambda x: hp.timestr_to_seconds(x, inverse=True))
+            # Get distance along trip shape of crossing point
+            subframes.append(f)
+
+        if subframes:
+            f = pd.concat(subframes).assign(date=date)
+        else:
+            f = pd.DataFrame()
         frames.append(f)
 
     f = pd.concat(frames)
@@ -1042,7 +1052,7 @@ def compute_screen_line_counts(
         ]
 
     return (
-        f.assign(date=date)
+        f
         # Append screen line info
         .merge(screen_lines.drop("geometry", axis=1))
         # Append extra trip info
@@ -1054,188 +1064,3 @@ def compute_screen_line_counts(
             ignore_index=True,
         )
     )
-
-
-def compute_screen_line_counts_old(
-    feed: "Feed", screen_lines: gpd.GeoDataFrame, dates: list[str]
-) -> pd.DataFrame:
-    """
-    Find all the Feed trips active on the given YYYYMMDD dates whose shapes
-    intersect the given GeoDataFrame of screen lines, that is, of straight WGS84
-    LineStrings.
-    Compute the intersection times and directions for each trip.
-
-    Return a DataFrame with the columns
-
-    - ``'date'``
-    - ``'trip_id'``
-    - ``'route_id'``
-    - ``'route_short_name'``
-    - ``'shape_id'``: shape ID of the trip
-    - ``'screen_line_id'``: ID of the screen line as specified in ``screen_lines`` or as
-      assigned after the fact.
-    - ``'crossing_distance'``: distance (in the feed's distance units) along the trip
-      shape of the screen line intersection
-    - ``'crossing_time'``: time that the trip's vehicle crosses
-      the scren line; one trip could cross multiple times
-    - ``'crossing_direction'``: 1 or -1; 1 indicates trip travel from the
-      left side to the right side of the screen line;
-      -1 indicates trip travel in the  opposite direction
-
-    Notes:
-
-    - Assume the Feed's stop times DataFrame has an accurate ``shape_dist_traveled``
-      column.
-    - Assume that trips travel in the same direction as their shapes, an assumption
-      that is part of the GTFS.
-    - Assume that the screen line is straight and simple.
-    - Probably does not give correct results for trips with self-intersecting shapes.
-    - The algorithm works as follows
-
-        1. Find the trip shapes that intersect the screen lines.
-        2. For each such shape and screen line, compute the intersection points,
-           the distance of the point along the shape, and the orientation of the screen
-           line relative to the shape.
-        3. For each given date, restrict to trips active on the
-           date and interpolate a stop time for the intersection point using
-           the ``shape_dist_traveled`` column.
-        4. Use that interpolated time as the crossing time of the trip vehicle.
-
-    """
-    from .shapes import get_shapes
-
-    dates = feed.subset_dates(dates)
-    if not dates:
-        return pd.DataFrame()
-
-    # Get shapes as GeoDataFrame
-    shapes_g = get_shapes(feed, as_gdf=True, use_utm=True)
-
-    # Convert screen lines to UTM
-    crs = shapes_g.crs
-    screen_lines = screen_lines.to_crs(crs)
-
-    # Create screen line IDs if necessary
-    n = screen_lines.shape[0]
-    if "screen_line_id" not in screen_lines.columns:
-        screen_lines["screen_line_id"] = hp.make_ids(n, "sl")
-
-    # Make a vector in the direction of each screen line to calculate crossing
-    # orientation. Does not work in case of a bent screen line.
-    p1 = screen_lines["geometry"].map(lambda x: np.array(x.coords[0]))
-    p2 = screen_lines["geometry"].map(lambda x: np.array(x.coords[-1]))
-    screen_lines["screen_line_vector"] = p2 - p1
-
-    # Get intersection points of shapes and screen lines
-    g0 = (
-        # Only keep shapes that intersect screen lines to reduce computations
-        gpd.sjoin(shapes_g, screen_lines.filter(["screen_line_id", "geometry"]))
-        .merge(screen_lines, on="screen_line_id")
-        # Compute intersection points
-        .assign(
-            int_point=lambda x: gpd.GeoSeries(x["geometry_x"], crs=crs).intersection(
-                gpd.GeoSeries(x["geometry_y"], crs=crs)
-            )
-        )
-    )
-
-    # Unpack multipoint intersections to yield a new GeoDataFrame
-    records = []
-    for row in g0.itertuples(index=False):
-        if isinstance(row.int_point, sg.Point):
-            intersections = [row.int_point]
-        else:
-            intersections = row.int_point.geoms
-        for int_point in intersections:
-            record = {
-                "shape_id": row.shape_id,
-                "screen_line_id": row.screen_line_id,
-                "geometry": row.geometry_x,
-                "int_point": int_point,
-                "screen_line_vector": row.screen_line_vector,
-            }
-            records.append(record)
-
-    g = gpd.GeoDataFrame.from_records(records).set_geometry("geometry")
-    g.crs = crs
-
-    # Get distance (in meters) of each intersection point along shape
-    g["crossing_dist"] = g.apply(lambda x: x["geometry"].project(x.int_point), axis=1)
-
-    # Build a tiny vector along each shape
-    p2 = g.apply(
-        lambda x: x["geometry"].interpolate(x["crossing_dist"] + 1), axis=1
-    ).map(lambda x: np.array(x.coords[0]))
-    p1 = g.int_point.map(lambda x: np.array(x.coords[0]))
-    g["shape_vector"] = p2 - p1
-
-    # Compute crossing direction by taking the vector cross product of
-    # the shape vector and the screen line vector
-    det = g.apply(
-        lambda x: np.linalg.det(np.array([x.shape_vector, x.screen_line_vector])),
-        axis=1,
-    )
-    g["crossing_direction"] = det.map(lambda x: 1 if x >= 0 else -1)
-
-    # Convert to feed distance units
-    converter = hp.get_convert_dist("m", feed.dist_units)
-    g["crossing_dist"] = g["crossing_dist"].map(converter)
-
-    # Summarize work so far into a lookup table
-    h = (
-        g.filter(["shape_id", "screen_line_id", "crossing_direction", "crossing_dist"])
-        .set_index("shape_id")
-        .sort_values(
-            ["shape_id", "crossing_dist"]
-        )  # Need this sorting for interpolation to work
-    )
-
-    # Get stop times of trips whose shapes lie in h
-    st = (
-        feed.trips.loc[lambda x: x["shape_id"].isin(h.index)]
-        # Merge in route short names and stop times
-        .merge(feed.routes[["route_id", "route_short_name"]])
-        .merge(feed.stop_times)
-        # Keep only non-NaN departure times
-        .loc[lambda x: x["departure_time"].notna()]
-        # Convert to seconds past midnight
-        .assign(departure_time=lambda x: x["departure_time"].map(hp.timestr_to_seconds))
-    )
-
-    # Compute crossing times by date
-    records = []
-    ta = feed.compute_trip_activity(dates)
-    for date in dates:
-        # Subset to trips active on date and merge with g
-        ids = ta.loc[lambda x: x[date] == 1, "trip_id"]
-        f = st.loc[lambda x: x["trip_id"].isin(ids)].sort_values(
-            ["trip_id", "shape_dist_traveled"]
-        )  # Need this sorting for interpolation to work
-
-        # Get crossing time for each trip
-        for tid, group in f.groupby("trip_id"):
-            sid = group["shape_id"].iat[0]
-            dists = group["shape_dist_traveled"].values
-            times = group["departure_time"].values
-            crossing_dists = h.loc[[sid], "crossing_dist"].values
-            crossing_times = np.interp(crossing_dists, dists, times)
-            for i, row in enumerate(h.loc[[sid]].itertuples(index=False)):
-                record = {
-                    "date": date,
-                    "trip_id": tid,
-                    "route_id": group["route_id"].iat[0],
-                    "route_short_name": group["route_short_name"].iat[0],
-                    "shape_id": group["shape_id"].iat[0],
-                    "screen_line_id": row.screen_line_id,
-                    "crossing_direction": row.crossing_direction,
-                    "crossing_distance": row.crossing_dist,
-                    "crossing_time": crossing_times[i],
-                }
-                records.append(record)
-
-    result = pd.DataFrame.from_records(records).assign(
-        crossing_time=lambda x: x["crossing_time"].map(
-            lambda x: hp.timestr_to_seconds(x, inverse=True)
-        )
-    )
-    return result
