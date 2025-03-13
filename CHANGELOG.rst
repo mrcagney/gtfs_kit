@@ -1,6 +1,10 @@
 Changelog
 =========
 
+10.2.2, 2025-03-13
+------------------
+- Bugfixed an edge case in the function ``shapes.split_simple``.
+
 10.2.1, 2025-03-12
 ------------------
 - Added a forgotten ``drop_duplicates('shape_id')`` line to the function ``miscellany.compute_screen_line_counts``, which speeds things up on large sets of screen lines.
