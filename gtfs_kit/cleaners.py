@@ -119,6 +119,7 @@ def drop_zombies(feed: "Feed") -> "Feed":
     4. Drop shapes with no trips.
     5. Drop routes with no trips.
     6. Drop services with no trips.
+    7. Drop agencies with no routes.
 
     """
     feed = feed.copy()
@@ -161,6 +162,13 @@ def drop_zombies(feed: "Feed") -> "Feed":
     if feed.calendar_dates is not None:
         f = feed.calendar_dates
         feed.calendar_dates = f[f["service_id"].isin(ids)]
+
+    # Drop agencies with no routes
+    f = feed.agency
+    feed.agency = (f[
+        f["agency_id"]
+        .isin(feed.routes["agency_id"].unique())
+    ]).reset_index(drop=True)
 
     return feed
 
