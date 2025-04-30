@@ -1,6 +1,6 @@
 [project]
 name = "gtfs-kit"
-version = "10.2.2"
+version = "10.3.0"
 description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -36,7 +36,6 @@ dev-dependencies = [
     "pre-commit-uv>=0",
     "matplotlib>=1",
     "pytest-socket>=0",
-    "black>22",
     "ruff>=0.0.257",
     "publish_sphinx_docs>=1.0",
     "marimo>=0.13.2",
@@ -53,4 +52,4 @@ markers = [
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 lint.select = ["E", "F"]
 lint.ignore = ["E501", "E731", "F401", "F403"]
-exclude = ["*.ipynb"]
+exclude = ["notebooks/*.py"]

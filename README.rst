@@ -13,7 +13,7 @@ Install it from PyPI with UV, say, via ``uv add gtfs_kit``.
 
 Examples
 ========
-In the Jupyter notebook ``notebooks/examples.ipynb``.
+In the Marimo notebook ``notebooks/examples.py``.
 
 
 Authors

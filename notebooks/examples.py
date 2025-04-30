@@ -1,13 +1,14 @@
+
+
 import marimo
 
 __generated_with = "0.13.2"
-app = marimo.App()
+app = marimo.App(width="medium")
 
 
 @app.cell
 def _():
-    import sys
-    from pathlib import Path
+    import pathlib as pl
     import json
 
     import pandas as pd
@@ -16,17 +17,9 @@ def _():
     import matplotlib
     import folium as fl
 
-    DIR = Path("..")
-    sys.path.append(str(DIR))
-
     import gtfs_kit as gk
 
-    DATA = DIR / "data"
-
-    # magic command not supported in marimo; please file an issue to add support
-    # %load_ext autoreload
-    # '%autoreload 2' command supported automatically in marimo
-    # '%matplotlib inline' command supported automatically in marimo
+    DATA = pl.Path("data")
     return DATA, fl, gk, gp, pd
 
 
@@ -49,10 +42,10 @@ def _(gk, path):
 
 
 @app.cell
-def _(display, feed):
-    display(feed.stop_times)
+def _(feed):
+    print(feed.stop_times)
     feed_1 = feed.append_dist_to_stop_times()
-    display(feed_1.stop_times)
+    print(feed_1.stop_times)
     return (feed_1,)
 
 
@@ -129,7 +122,7 @@ def _(dates, feed_1):
 
 
 @app.cell
-def _(DATA, dates, display, feed_1, fl, gp):
+def _(DATA, feed_1, fl, gp):
     trip_id = "CNS2014-CNS_MUL-Weekday-00-4166247"
     m = feed_1.map_trips([trip_id], show_stops=True, show_direction=True)
     screen_line = gp.read_file(DATA / "cairns_screen_line.geojson")
@@ -147,7 +140,14 @@ def _(DATA, dates, display, feed_1, fl, gp):
     fg.add_to(m)
     fl.LayerControl().add_to(m)
     m.fit_bounds(fg.get_bounds())
-    display(m)
+    m
+
+
+    return screen_line, trip_id
+
+
+@app.cell
+def _(dates, feed_1, screen_line, trip_id):
     slc = feed_1.compute_screen_line_counts(screen_line, dates=dates)
     slc.loc[lambda x: x["trip_id"] == trip_id]
     return

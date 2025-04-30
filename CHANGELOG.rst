@@ -1,6 +1,12 @@
 Changelog
 =========
 
+10.3.0, 2025-04-30
+------------------
+- In ``cleaners.drop_zombies``, additionally dropped agencies without routes.
+- Fixed ``routes.get_routes`` to handle the case when at least one of a route's shapes is a point.
+- Turned the example notebook into a Marimo notebook.
+
 10.2.2, 2025-03-13
 ------------------
 - Bugfixed an edge case in the function ``shapes.split_simple``.

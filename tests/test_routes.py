@@ -229,6 +229,22 @@ def test_get_routes():
     print(feed.get_trips(as_gdf=True))
     assert g.crs == cs.WGS84
 
+    # Turning a route's shapes into point geometries,
+    # should yield an empty route geometry and should not throw an error
+    rid = feed.routes["route_id"].iat[0]
+    shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
+    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates(
+        "shape_id"
+    )
+    f1 = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
+    feed.shapes = pd.concat([f0, f1])
+    assert (
+        feed.get_routes(as_gdf=True)
+        .loc[lambda x: x["route_id"] == rid, "geometry"]
+        .iat[0]
+        is None
+    )
+
 
 def test_compute_route_stats():
     feed = cairns.copy()

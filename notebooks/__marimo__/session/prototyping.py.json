@@ -133,12 +133,12 @@
     },
     {
       "id": "Tvns",
-      "code_hash": "c7ce773efc35586a714b3618a91abb67",
+      "code_hash": "5a0b6a37c52c0b100bd6a2e747c69058",
       "outputs": [
         {
           "type": "data",
           "data": {
-            "text/html": "<marimo-ui-element object-id='Tvns-0' random-id='28e6066d-5c6d-2546-7921-6e44cd49d036'><marimo-table data-initial-value='[]' data-label='null' data-data='&quot;./@file/1009-383424-UTvvmmtc.json&quot;' data-total-rows='22784' data-total-columns='4' data-banner-text='&quot;&quot;' data-pagination='true' data-page-size='10' data-field-types='[[&quot;shape_id&quot;, [&quot;unknown&quot;, &quot;string&quot;]], [&quot;shape_pt_lat&quot;, [&quot;number&quot;, &quot;float64&quot;]], [&quot;shape_pt_lon&quot;, [&quot;number&quot;, &quot;float64&quot;]], [&quot;shape_pt_sequence&quot;, [&quot;unknown&quot;, &quot;Int32&quot;]]]' data-show-filters='true' data-show-download='true' data-show-column-summaries='true' data-row-headers='[]' data-has-stable-row-id='false' data-lazy='false' data-preload='false'></marimo-table></marimo-ui-element>"
+            "text/plain": ""
           }
         }
       ],
