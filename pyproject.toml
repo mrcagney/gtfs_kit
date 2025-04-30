@@ -41,6 +41,7 @@ dev-dependencies = [
     "nbstripout>=0.5",
     "ruff>=0.0.257",
     "publish_sphinx_docs>=1.0",
+    "marimo>=0.13.2",
 ]
 
 [tool.pytest.ini_options]
