@@ -31,14 +31,12 @@ packages = ["gtfs_kit"]
 
 [tool.uv]
 dev-dependencies = [
-    "jupyter>=1",
     "pytest>=6",
     "sphinx>=3",
     "pre-commit-uv>=0",
     "matplotlib>=1",
     "pytest-socket>=0",
     "black>22",
-    "nbstripout>=0.5",
     "ruff>=0.0.257",
     "publish_sphinx_docs>=1.0",
     "marimo>=0.13.2",
