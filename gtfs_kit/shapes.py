@@ -166,15 +166,17 @@ def split_simple(
 
     def my_split(group):
         coords = group["geometry"].iat[0].coords
-        # Partition the coords into maximal simple segments
         segments = []
         n = len(coords)
         i = 0
         while i < n:
-            # Binary search for the farthest index (best) starting at i
-            # that forms a simple segment
-            lo, hi = i, n - 1
-            best = i  # At least one point (or two) is always simple.
+            # If only one coordinate remains, break  to
+            # avoids making a degenerate LineString
+            if i == n - 1:
+                break
+            # Start a binary search with at least two points
+            lo, hi = i + 1, n - 1
+            best = i + 1
             while lo <= hi:
                 mid = (lo + hi) // 2
                 candidate = sg.LineString(coords[i : mid + 1])
@@ -183,14 +185,11 @@ def split_simple(
                     lo = mid + 1
                 else:
                     hi = mid - 1
-            # Append the found segment
             segments.append(sg.LineString(coords[i : best + 1]))
-            # If we've reached the end, we're done
             if best == n - 1:
                 break
-            # Otherwise, start the next segment from the coordinate that broke simplicity
+            # Start next segment after the current best segment
             i = best + 1
-
         return pd.DataFrame({"geometry": segments})
 
     crs = shapes_g.crs

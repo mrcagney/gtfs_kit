@@ -204,7 +204,7 @@ def compute_route_stats_0(
         )
         if f.empty:
             raise ValueError(
-                "At least one trip stats direction ID value " "must be non-NaN."
+                "At least one trip stats direction ID value must be non-NaN."
             )
 
         g = (
@@ -335,7 +335,7 @@ def compute_route_time_series_0(
         )
         if tss.empty:
             raise ValueError(
-                "At least one trip stats direction ID value " "must be non-NaN."
+                "At least one trip stats direction ID value must be non-NaN."
             )
 
         # Alter route IDs to encode direction:
@@ -726,10 +726,20 @@ def get_routes(
             groupby_cols = ["route_id"]
             final_cols = f.columns.tolist() + ["geometry"]
 
+        # def merge_lines(group):
+        #     d = {}
+        #     d["geometry"] = so.linemerge(group["geometry"].tolist())
+        #     return pd.Series(d)
+
         def merge_lines(group):
-            d = {}
-            d["geometry"] = so.linemerge(group["geometry"].tolist())
-            return pd.Series(d)
+            lines = [
+                g
+                for g in group["geometry"]
+                if g.geom_type in ["LineString", "MultiLineString"]
+            ]
+            if not lines:
+                return pd.Series({"geometry": None})
+            return pd.Series({"geometry": so.linemerge(lines)})
 
         f = (
             trips

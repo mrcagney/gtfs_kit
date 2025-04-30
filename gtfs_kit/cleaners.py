@@ -113,54 +113,66 @@ def drop_zombies(feed: "Feed") -> "Feed":
     """
     In the given Feed, do the following in order and return the resulting Feed.
 
-    1. Drop stops of location type 0 or NaN with no stop times.
-    2. Remove undefined parent stations from the ``parent_station`` column.
-    3. Drop trips with no stop times.
-    4. Drop shapes with no trips.
-    5. Drop routes with no trips.
-    6. Drop services with no trips.
+    1. Drop agencies with no routes.
+    2. Drop stops of location type 0 or NaN with no stop times.
+    3. Remove undefined parent stations from the ``parent_station`` column.
+    4. Drop trips with no stop times.
+    5. Drop shapes with no trips.
+    6. Drop routes with no trips.
+    7. Drop services with no trips.
 
     """
     feed = feed.copy()
 
-    f = feed.stops.copy()
-    ids = feed.stop_times.stop_id.unique()
+    # Drop agencies with no routes
+    f = feed.agency
+    feed.agency = f[f["agency_id"].isin(feed.routes["agency_id"].unique())].reset_index(
+        drop=True
+    )
+
+    # Drop stops of location type 0 or NaN with no stop times.
+    f = feed.stops
+    ids = feed.stop_times["stop_id"].unique()
     cond = f.stop_id.isin(ids)
     if "location_type" in f.columns:
         cond |= ~f.location_type.isin([0, np.nan])
-    feed.stops = f[cond].copy()
+    feed.stops = f[cond].reset_index(drop=True)
 
     # Remove undefined parent stations from the ``parent_station`` column
     if "parent_station" in feed.stops.columns:
         f = feed.stops.copy()
-        ids = f.stop_id.unique()
-        f["parent_station"] = f.parent_station.map(lambda x: x if x in ids else np.nan)
+        ids = f["stop_id"].unique()
+        f["parent_station"] = f["parent_station"].map(
+            lambda x: x if x in ids else np.nan
+        )
         feed.stops = f
 
     # Drop trips with no stop times
-    ids = feed.stop_times["trip_id"].unique()
     f = feed.trips
-    feed.trips = f[f["trip_id"].isin(ids)]
+    ids = feed.stop_times["trip_id"].unique()
+    feed.trips = f[f["trip_id"].isin(ids)].reset_index(drop=True)
 
     # Drop shapes with no trips
-    ids = feed.trips["shape_id"].unique()
     f = feed.shapes
     if f is not None:
-        feed.shapes = f[f["shape_id"].isin(ids)]
+        feed.shapes = f[
+            f["shape_id"].isin(feed.trips["shape_id"].unique())
+        ].reset_index(drop=True)
 
     # Drop routes with no trips
-    ids = feed.trips["route_id"].unique()
     f = feed.routes
-    feed.routes = f[f["route_id"].isin(ids)]
+    feed.routes = f[f["route_id"].isin(feed.trips["route_id"].unique())].reset_index(
+        drop=True
+    )
 
     # Drop services with no trips
     ids = feed.trips["service_id"].unique()
     if feed.calendar is not None:
         f = feed.calendar
-        feed.calendar = f[f["service_id"].isin(ids)]
+        feed.calendar = f[f["service_id"].isin(ids)].reset_index(drop=True)
     if feed.calendar_dates is not None:
         f = feed.calendar_dates
-        feed.calendar_dates = f[f["service_id"].isin(ids)]
+        feed.calendar_dates = f[f["service_id"].isin(ids)].reset_index(drop=True)
 
     return feed
 

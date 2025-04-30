@@ -96,6 +96,18 @@ def test_split_simple():
             ss.length.sum() - n * m <= group["cum_length_m"].iat[-1] <= ss.length.sum()
         )
 
+    # Create a (non-simple) bow-tie
+    bowtie = sg.LineString([(0, 0), (1, 1), (0, 1), (1, 0)])
+    g = gpd.GeoDataFrame(
+        {"shape_id": ["test_shape"], "geometry": [bowtie]}, crs="EPSG:2193"
+    )
+
+    result = gks.split_simple(g)
+
+    # Assert that no sub-linestring in the result has only one coordinate
+    for geom in result.geometry:
+        assert len(geom.coords) > 1, f"Found a degenerate one-point LineString: {geom}"
+
 
 def test_build_geometry_by_shape():
     d = gks.build_geometry_by_shape(cairns)
