@@ -30,22 +30,18 @@ def _():
     warnings.filterwarnings("ignore")
 
     DATA = pl.Path("data")
-    return DATA, gk, pd
+    DOWN = pl.Path.home() / "Downloads"
+
+    return DOWN, gk
 
 
 @app.cell
-def _(DATA, gk, pd):
-    feed = gk.read_feed(DATA / "cairns_gtfs.zip", dist_units="m")
-
-    # Turning a route's shapes into point geometries, should yield an empty route geometry
-    # and should not throw an error
-    rid = feed.routes["route_id"].iat[0]
-    shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
-    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates("shape_id")
-    f1 = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
-    feed.shapes = pd.concat([f0, f1])
-
-    assert feed.get_routes(as_gdf=True).loc[lambda x: x["route_id"] == rid, "geometry"].iat[0] == None
+def _(DOWN, gk):
+    feed = gk.read_feed(DOWN / "gtfs_brevibus.zip", dist_units="km")
+    routes = feed.get_routes(as_gdf=True)
+    print(routes)
+    feed = feed.aggregate_routes()
+    feed.map_routes(feed.routes["route_id"])
 
 
     return
