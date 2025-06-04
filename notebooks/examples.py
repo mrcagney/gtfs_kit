@@ -141,8 +141,6 @@ def _(DATA, feed_1, fl, gp):
     fl.LayerControl().add_to(m)
     m.fit_bounds(fg.get_bounds())
     m
-
-
     return screen_line, trip_id
 
 
@@ -157,6 +155,26 @@ def _(dates, feed_1, screen_line, trip_id):
 def _(feed_1):
     rsns = feed_1.routes["route_short_name"].iloc[2:4]
     feed_1.map_routes(route_short_names=rsns, show_stops=True)
+    return
+
+
+@app.cell
+def _(feed):
+    # Alternatively plot routes using GeoPandas's explore
+
+    (
+        feed.get_routes(as_gdf=True).explore(
+            column="route_short_name",
+            style_kwds=dict(weight=3),
+            highlight_kwds=dict(weight=8),
+            tiles="CartoDB positron",
+        )
+    )
+    return
+
+
+@app.cell
+def _():
     return
 
 

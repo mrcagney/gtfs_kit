@@ -1,6 +1,11 @@
 Changelog
 =========
 
+10.3.1, 2025-06-04
+------------------
+- Bugfixed ``routes.get_routes``, which was deleting shapes shared across routes.
+- Added to ``notebooks/examples.py`` an example of plotting routes with GeoPandas's ``explore`` method.
+
 10.3.0, 2025-04-30
 ------------------
 - In ``cleaners.drop_zombies``, additionally dropped agencies without routes.

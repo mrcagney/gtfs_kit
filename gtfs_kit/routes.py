@@ -744,7 +744,7 @@ def get_routes(
         f = (
             trips
             # Drop unnecessary duplicate shapes
-            .drop_duplicates(subset="shape_id")
+            .drop_duplicates(subset=["shape_id", "route_id"])
             .filter(groupby_cols + ["geometry"])
             .groupby(groupby_cols)
             .apply(merge_lines, include_groups=False)
