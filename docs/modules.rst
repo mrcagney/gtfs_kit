@@ -16,15 +16,6 @@ Module helpers
     :show-inheritance:
 
 
-Module validators
-===========================
-
-.. automodule:: gtfs_kit.validators
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 Module cleaners
 ===========================
 
