@@ -74,12 +74,12 @@ def test_convert_dist():
     )
 
 
-def test_compute_feed_stats_0():
+def test_compute_network_stats_0():
     feed = cairns.copy()
     trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats_0(
+        f = gkm.compute_network_stats_0(
             feed, trip_stats, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -104,13 +104,13 @@ def test_compute_feed_stats_0():
         assert set(f.columns) == expect_cols
 
 
-def test_compute_feed_stats():
+def test_compute_network_stats():
     feed = cairns.copy()
     dates = cairns_dates + ["20010101"]
     trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats(
+        f = gkm.compute_network_stats(
             feed, trip_stats, dates, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -138,20 +138,20 @@ def test_compute_feed_stats():
         assert set(f.columns) == expect_cols
 
         # Empty dates should yield empty DataFrame
-        f = gkm.compute_feed_stats(
+        f = gkm.compute_network_stats(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty
 
 
-def test_compute_feed_time_series():
+def test_compute_network_time_series():
     feed = cairns.copy()
-    feed.routes.route_type.iat[0] = 2  # Add another route type
+    feed.routes.loc[0, "route_type"] = 2  # Add another route type
     dates = cairns_dates + ["20010101"]
     trip_stats = cairns_trip_stats
 
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_time_series(
+        f = gkm.compute_network_time_series(
             feed, trip_stats, dates, freq="12h", split_route_types=split_route_types
         )
 
@@ -183,7 +183,7 @@ def test_compute_feed_time_series():
         assert f.shape[0] == 2 * 3
 
         # Empty check
-        f = gkm.compute_feed_time_series(
+        f = gkm.compute_network_time_series(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty

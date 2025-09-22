@@ -2,6 +2,7 @@
 Constants useful across modules.
 """
 
+#: GTFS data types
 DTYPES = {
     "agency": {
         "agency_id": "string",
@@ -19,37 +20,37 @@ DTYPES = {
         "route_id": "string",
         "trip_id": "string",
         "organization_name": "string",
-        "is_producer": "int32",
-        "is_operator": "int32",
-        "is_authority": "int32",
+        "is_producer": "Int8",
+        "is_operator": "Int8",
+        "is_authority": "Int8",
         "attribution_url": "string",
         "attribution_email": "string",
         "attribution_phone": "string",
     },
     "calendar": {
         "service_id": "string",
-        "monday": "int32",
-        "tuesday": "int32",
-        "wednesday": "int32",
-        "thursday": "int32",
-        "friday": "int32",
-        "saturday": "int32",
-        "sunday": "int32",
+        "monday": "Int8",
+        "tuesday": "Int8",
+        "wednesday": "Int8",
+        "thursday": "Int8",
+        "friday": "Int8",
+        "saturday": "Int8",
+        "sunday": "Int8",
         "start_date": "string",
         "end_date": "string",
     },
     "calendar_dates": {
         "service_id": "string",
         "date": "string",
-        "exception_type": "int32",
+        "exception_type": "Int8",
     },
     "fare_attributes": {
         "fare_id": "string",
         "price": "float",
         "currency_type": "string",
-        "payment_method": "int32",
-        "transfers": "int32",
-        "transfer_duration": "int32",
+        "payment_method": "Int8",
+        "transfers": "Int8",
+        "transfer_duration": "Int16",
     },
     "fare_rules": {
         "fare_id": "string",
@@ -70,8 +71,8 @@ DTYPES = {
         "trip_id": "string",
         "start_time": "string",
         "end_time": "string",
-        "headway_secs": "int32",
-        "exact_times": "int32",
+        "headway_secs": "Int16",
+        "exact_times": "Int8",
     },
     "routes": {
         "route_id": "string",
@@ -79,7 +80,7 @@ DTYPES = {
         "route_short_name": "string",
         "route_long_name": "string",
         "route_desc": "string",
-        "route_type": "int32",
+        "route_type": "Int8",
         "route_url": "string",
         "route_color": "string",
         "route_text_color": "string",
@@ -88,8 +89,20 @@ DTYPES = {
         "shape_id": "string",
         "shape_pt_lat": "float",
         "shape_pt_lon": "float",
-        "shape_pt_sequence": "int32",
+        "shape_pt_sequence": "Int32",
         "shape_dist_traveled": "float",
+    },
+    "stop_times": {
+        "trip_id": "string",
+        "arrival_time": "string",
+        "departure_time": "string",
+        "stop_id": "string",
+        "stop_sequence": "Int32",
+        "stop_headsign": "string",
+        "pickup_type": "Int8",
+        "drop_off_type": "Int8",
+        "shape_dist_traveled": "float",
+        "timepoint": "Int8",
     },
     "stops": {
         "stop_id": "string",
@@ -100,28 +113,16 @@ DTYPES = {
         "stop_lon": "float",
         "zone_id": "string",
         "stop_url": "string",
-        "location_type": "int32",
+        "location_type": "Int8",
         "parent_station": "string",
         "stop_timezone": "string",
-        "wheelchair_boarding": "int32",
-    },
-    "stop_times": {
-        "trip_id": "string",
-        "arrival_time": "string",
-        "departure_time": "string",
-        "stop_id": "string",
-        "stop_sequence": "int32",
-        "stop_headsign": "string",
-        "pickup_type": "int32",
-        "drop_off_type": "int32",
-        "shape_dist_traveled": "float",
-        "timepoint": "int32",
+        "wheelchair_boarding": "Int8",
     },
     "transfers": {
         "from_stop_id": "string",
         "to_stop_id": "string",
-        "transfer_type": "int32",
-        "min_transfer_time": "int32",
+        "transfer_type": "Int8",
+        "min_transfer_time": "Int16",
     },
     "trips": {
         "route_id": "string",
@@ -129,24 +130,18 @@ DTYPES = {
         "trip_id": "string",
         "trip_headsign": "string",
         "trip_short_name": "string",
-        "direction_id": "int32",
+        "direction_id": "Int8",
         "block_id": "string",
         "shape_id": "string",
-        "wheelchair_accessible": "int32",
-        "bikes_allowed": "int32",
+        "wheelchair_accessible": "Int8",
+        "bikes_allowed": "Int8",
     },
 }
-
-#: Columns that must be formatted as integers when outputting GTFS
-INT_COLS = [col for d in DTYPES.values() for col in d if d[col].startswith("int")]
-
-#: Columns that must be read as strings
-STR_COLS = [col for d in DTYPES.values() for col in d if d[col] == "string"]
 
 #: Valid distance units
 DIST_UNITS = ["ft", "mi", "m", "km"]
 
-#: Primary feed attributes
+#: Feed attributes
 FEED_ATTRS = [
     "agency",
     "attributions",

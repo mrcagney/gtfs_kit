@@ -63,7 +63,7 @@ def extend_id(feed: "Feed", id_col: str, extension: str, *, prefix=True) -> "Fee
     This can be helpful when preparing to merge multiple GTFS feeds with colliding
     route IDs, say.
 
-    Raises a ValueError if ``id_col`` values can't have strings added to them,
+    Raises a ValueError if ``id_col`` values are strings,
     e.g. if ``id_col`` is 'direction_id'.
     """
     feed = feed.copy()
@@ -71,8 +71,11 @@ def extend_id(feed: "Feed", id_col: str, extension: str, *, prefix=True) -> "Fee
     for table, d in cs.DTYPES.items():
         t = getattr(feed, table)
         if t is not None and id_col in d:
-            t[id_col] = extension + t[id_col] if prefix else t[id_col] + extension
-            setattr(feed, table, t)
+            if d[id_col] != "string":
+                raise ValueError(f"{id_col} must be a string column")
+            else:
+                t[id_col] = extension + t[id_col] if prefix else t[id_col] + extension
+                setattr(feed, table, t)
 
     return feed
 

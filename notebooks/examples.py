@@ -61,7 +61,7 @@ def _(feed_1):
 def _(dates, feed_1):
     trip_stats = feed_1.compute_trip_stats()
     trip_stats.head().T
-    fts = feed_1.compute_feed_time_series(trip_stats, dates, freq="6h")
+    fts = feed_1.compute_network_time_series(trip_stats, dates, freq="6h")
     fts
     return fts, trip_stats
 
@@ -74,8 +74,8 @@ def _(fts, gk):
 
 @app.cell
 def _(feed_1, trip_stats, week):
-    feed_stats = feed_1.compute_feed_stats(trip_stats, week)
-    feed_stats
+    network_stats = feed_1.compute_network_stats(trip_stats, week)
+    network_stats
     return
 
 

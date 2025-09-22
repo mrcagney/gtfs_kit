@@ -250,11 +250,11 @@ def convert_dist(feed: "Feed", new_dist_units: str) -> "Feed":
     return feed
 
 
-def compute_feed_stats_0(
+def compute_network_stats_0(
     feed: "Feed", trip_stats_subset: pd.DataFrame, *, split_route_types=False
 ) -> pd.DataFrame:
     """
-    Helper function for :func:`compute_feed_stats`.
+    Helper function for :func:`compute_network_stats`.
     """
     ts = trip_stats_subset.copy()
     stop_times = feed.stop_times.copy()
@@ -325,7 +325,7 @@ def compute_feed_stats_0(
     return stats
 
 
-def compute_feed_stats(
+def compute_network_stats(
     feed: "Feed",
     trip_stats: pd.DataFrame,
     dates: list[str],
@@ -396,7 +396,7 @@ def compute_feed_stats(
             # Compute stats
             ts = trip_stats.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = (
-                compute_feed_stats_0(feed, ts, split_route_types=split_route_types)
+                compute_network_stats_0(feed, ts, split_route_types=split_route_types)
                 # Assign date
                 .assign(date=date)
             )
@@ -412,7 +412,7 @@ def compute_feed_stats(
     return pd.concat(frames)
 
 
-def compute_feed_time_series(
+def compute_network_time_series(
     feed: "Feed",
     trip_stats: pd.DataFrame,
     dates: list[str],

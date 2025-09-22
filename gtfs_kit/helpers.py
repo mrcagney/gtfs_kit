@@ -359,7 +359,7 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     Downsample the given route, stop, or feed time series,
     (outputs of :func:`.routes.compute_route_time_series`,
     :func:`.stops.compute_stop_time_series`, or
-    :func:`.miscellany.compute_feed_time_series`,
+    :func:`.miscellany.compute_network_time_series`,
     respectively) to the given Pandas frequency string (e.g. '15Min').
     Return the given time series unchanged if the given frequency is
     shorter than the original frequency.
@@ -428,7 +428,7 @@ def unstack_time_series(time_series: pd.DataFrame) -> pd.DataFrame:
     """
     Given a route, stop, or feed time series of the form output by the functions,
     :func:`compute_stop_time_series`, :func:`compute_route_time_series`, or
-    :func:`compute_feed_time_series`, respectively, unstack it to return a DataFrame
+    :func:`compute_network_time_series`, respectively, unstack it to return a DataFrame
     of with the columns:
 
     - ``"datetime"``
