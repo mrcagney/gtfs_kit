@@ -1,7 +1,7 @@
 Changelog
 =========
 
-11.0.0, 2025-09-23
+11.0.0, 2025-??-??
 ------------------
 - Breaking change: simplified ``constants.py``.
 - Breaking change: renamed ``compute_feed_stats`` and ``compute_feed_time_series`` to ``compute_network_stats`` and ``compute_network_time_series``, respectively.
