@@ -1,22 +1,23 @@
-import pytest
-import pandas as pd
-from pandas.testing import assert_series_equal
-import numpy as np
-import shapely.geometry as sg
 import geopandas as gp
+import numpy as np
+import pandas as pd
+import pytest
+import shapely.geometry as sg
+from pandas.testing import assert_series_equal
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    sample,
-    nyc_subway,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
 from gtfs_kit import constants as gkc
 from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
+
+from .context import (
+    DATA_DIR,
+    cairns,
+    cairns_dates,
+    cairns_trip_stats,
+    gtfs_kit,
+    nyc_subway,
+    sample,
+)
 
 
 def test_list_fields():
@@ -310,7 +311,7 @@ def test_restrict_to_trips():
 
     feed2 = gkm.restrict_to_trips(feed1, ["fake"])
     # All non-agency tables should be empty
-    for table in gkc.GTFS_REF["table"].unique():
+    for table in gkc.DTYPES:
         if table != "agency" and getattr(feed1, table) is not None:
             assert getattr(feed2, table).empty
 

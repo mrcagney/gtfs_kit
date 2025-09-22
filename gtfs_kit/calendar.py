@@ -1,9 +1,12 @@
 """
 Functions about calendar and calendar_dates.
 """
+
 from __future__ import annotations
-import dateutil.relativedelta as rd
+
 from typing import TYPE_CHECKING
+
+import dateutil.relativedelta as rd
 
 from . import helpers as hp
 
@@ -60,7 +63,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
 
     # Get first Monday
     monday_index = None
-    for (i, date) in enumerate(dates):
+    for i, date in enumerate(dates):
         if date.weekday() == 0:
             monday_index = i
             break
@@ -95,4 +98,4 @@ def subset_dates(feed: "Feed", dates: list[str]) -> list[str]:
     return the sublist of dates that lie in the Feed's dates
     (the output :func:`feed.get_dates`).
     """
-    return [d for d in dates if d in feed.get_dates()]
+    return sorted(set(dates) & set(feed.get_dates()))

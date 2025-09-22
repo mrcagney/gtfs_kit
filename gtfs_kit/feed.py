@@ -18,18 +18,18 @@ usually called ``self`` and usually hidden automatically by Sphinx.
 """
 
 import pathlib as pl
-import tempfile
 import shutil
-from copy import deepcopy
+import tempfile
 import zipfile
+from copy import deepcopy
 
 import pandas as pd
-from pandas.core.frame import DataFrame
 import requests
+from pandas.core.frame import DataFrame
 
+from . import cleaners as cn
 from . import constants as cs
 from . import helpers as hp
-from . import cleaners as cn
 
 
 class Feed(object):
@@ -81,84 +81,84 @@ class Feed(object):
     # Import heaps of methods from modules split by functionality;
     # i learned this trick from
     # https://groups.google.com/d/msg/comp.lang.python/goLBrqcozNY/DPgyaZ6gAwAJ
-    from .calendar import get_dates, get_week, get_first_week, subset_dates
-    from .routes import (
-        get_routes,
-        compute_route_stats,
-        build_zero_route_time_series,
-        compute_route_time_series,
-        build_route_timetable,
-        routes_to_geojson,
-        map_routes,
-    )
-    from .shapes import (
-        append_dist_to_shapes,
-        geometrize_shapes,
-        get_shapes,
-        build_geometry_by_shape,
-        shapes_to_geojson,
-        get_shapes_intersecting_geometry,
-        split_simple,
-    )
-    from .stops import (
-        geometrize_stops,
-        ungeometrize_stops,
-        get_stops,
-        compute_stop_activity,
-        compute_stop_stats,
-        build_zero_stop_time_series,
-        compute_stop_time_series,
-        build_stop_timetable,
-        build_geometry_by_stop,
-        stops_to_geojson,
-        get_stops_in_area,
-        map_stops,
-    )
-    from .stop_times import (
-        get_stop_times,
-        append_dist_to_stop_times,
-        get_start_and_end_times,
-        stop_times_to_geojson,
-    )
-    from .trips import (
-        get_active_services,
-        get_trips,
-        compute_trip_activity,
-        compute_busiest_date,
-        name_stop_patterns,
-        compute_trip_stats,
-        locate_trips,
-        trips_to_geojson,
-        map_trips,
-    )
-    from .miscellany import (
-        list_fields,
-        describe,
-        assess_quality,
-        convert_dist,
-        compute_feed_stats,
-        compute_feed_time_series,
-        create_shapes,
-        compute_bounds,
-        compute_convex_hull,
-        compute_centroid,
-        restrict_to_trips,
-        restrict_to_routes,
-        restrict_to_agencies,
-        restrict_to_dates,
-        restrict_to_area,
-        compute_screen_line_counts,
-    )
+    from .calendar import get_dates, get_first_week, get_week, subset_dates
     from .cleaners import (
-        clean_ids,
-        extend_id,
-        clean_times,
-        clean_route_short_names,
-        drop_zombies,
         aggregate_routes,
         aggregate_stops,
         clean,
+        clean_ids,
+        clean_route_short_names,
+        clean_times,
         drop_invalid_columns,
+        drop_zombies,
+        extend_id,
+    )
+    from .miscellany import (
+        assess_quality,
+        compute_bounds,
+        compute_centroid,
+        compute_convex_hull,
+        compute_feed_stats,
+        compute_feed_time_series,
+        compute_screen_line_counts,
+        convert_dist,
+        create_shapes,
+        describe,
+        list_fields,
+        restrict_to_agencies,
+        restrict_to_area,
+        restrict_to_dates,
+        restrict_to_routes,
+        restrict_to_trips,
+    )
+    from .routes import (
+        build_route_timetable,
+        build_zero_route_time_series,
+        compute_route_stats,
+        compute_route_time_series,
+        get_routes,
+        map_routes,
+        routes_to_geojson,
+    )
+    from .shapes import (
+        append_dist_to_shapes,
+        build_geometry_by_shape,
+        geometrize_shapes,
+        get_shapes,
+        get_shapes_intersecting_geometry,
+        shapes_to_geojson,
+        split_simple,
+    )
+    from .stop_times import (
+        append_dist_to_stop_times,
+        get_start_and_end_times,
+        get_stop_times,
+        stop_times_to_geojson,
+    )
+    from .stops import (
+        build_geometry_by_stop,
+        build_stop_timetable,
+        build_zero_stop_time_series,
+        compute_stop_activity,
+        compute_stop_stats,
+        compute_stop_time_series,
+        geometrize_stops,
+        get_stops,
+        get_stops_in_area,
+        map_stops,
+        stops_to_geojson,
+        ungeometrize_stops,
+    )
+    from .trips import (
+        compute_busiest_date,
+        compute_trip_activity,
+        compute_trip_stats,
+        get_active_services,
+        get_trips,
+        locate_trips,
+        map_trips,
+        name_stop_patterns,
+        trips_to_geojson,
     )
 
     def __init__(
@@ -206,7 +206,7 @@ class Feed(object):
     def dist_units(self, val):
         if val not in cs.DIST_UNITS:
             raise ValueError(
-                f"Distance units are required and " f"must lie in {cs.DIST_UNITS}"
+                f"Distance units are required and must lie in {cs.DIST_UNITS}"
             )
         else:
             self._dist_units = val
@@ -216,7 +216,7 @@ class Feed(object):
         Print the first five rows of each GTFS table.
         """
         d = {}
-        for table in cs.GTFS_REF["table"].unique():
+        for table in cs.DTYPES:
             try:
                 d[table] = getattr(self, table).head(5)
             except Exception:
@@ -289,7 +289,7 @@ class Feed(object):
                 path.mkdir()
             new_path = path
 
-        for table in cs.GTFS_REF["table"].unique():
+        for table in cs.DTYPES:
             f = getattr(self, table)
             if f is not None:
                 p = new_path / (table + ".txt")
@@ -374,7 +374,7 @@ def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
         src_path = path
 
     # Read files into feed dictionary of DataFrames
-    feed_dict = {table: None for table in cs.GTFS_REF["table"]}
+    feed_dict = {table: None for table in cs.DTYPES}
     for p in src_path.iterdir():
         table = p.stem
         # Skip empty files, irrelevant files, and files with no data
@@ -391,7 +391,9 @@ def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
                 "keep_default_na": True,
                 "dtype_backend": "numpy_nullable",  # Use nullable dtypes
             }
-            df = pd.read_csv(p, dtype=cs.DTYPE, encoding="utf-8-sig", **csv_options)
+            df = pd.read_csv(
+                p, dtype=cs.DTYPES[table], encoding="utf-8-sig", **csv_options
+            )
             if not df.empty:
                 feed_dict[table] = cn.clean_column_names(df)
 

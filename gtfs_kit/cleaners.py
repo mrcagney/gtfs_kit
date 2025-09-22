@@ -3,10 +3,11 @@ Functions about cleaning feeds.
 """
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 from . import constants as cs
 from . import helpers as hp
@@ -37,11 +38,11 @@ def clean_ids(feed: "Feed") -> "Feed":
     # will be automatically handled when creating the new feed.
     feed = feed.copy()
 
-    for table in cs.GTFS_REF["table"].unique():
+    for table, d in cs.DTYPES.items():
         f = getattr(feed, table)
         if f is None:
             continue
-        for column in cs.GTFS_REF.loc[cs.GTFS_REF["table"] == table, "column"]:
+        for column in d:
             if column in f.columns and column.endswith("_id"):
                 try:
                     f[column] = (
@@ -67,15 +68,11 @@ def extend_id(feed: "Feed", id_col: str, extension: str, *, prefix=True) -> "Fee
     """
     feed = feed.copy()
 
-    for table in cs.GTFS_REF.loc[lambda x: x["column"] == id_col, "table"].unique():
+    for table, d in cs.DTYPES.items():
         t = getattr(feed, table)
-        if t is None:
-            continue
-        try:
+        if t is not None and id_col in d:
             t[id_col] = extension + t[id_col] if prefix else t[id_col] + extension
             setattr(feed, table, t)
-        except Exception as e:
-            raise ValueError(e)
 
     return feed
 
@@ -372,11 +369,11 @@ def drop_invalid_columns(feed: "Feed") -> "Feed":
     Return the resulting Feed.
     """
     feed = feed.copy()
-    for table, group in cs.GTFS_REF.groupby("table"):
+    for table, d in cs.DTYPES.items():
         f = getattr(feed, table)
         if f is None:
             continue
-        valid_columns = group["column"].values
+        valid_columns = set(d.keys())
         for col in f.columns:
             if col not in valid_columns:
                 print(f"{table}: dropping invalid column {col}")

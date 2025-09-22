@@ -3,15 +3,16 @@ Functions about miscellany.
 """
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
 
-import pandas as pd
-import numpy as np
-import shapely.geometry as sg
 import geopandas as gpd
+import numpy as np
+import pandas as pd
+import shapely.geometry as sg
 
-from . import helpers as hp
 from . import constants as cs
+from . import helpers as hp
 
 # Help mypy but avoid circular imports
 if TYPE_CHECKING:
@@ -39,8 +40,7 @@ def list_fields(feed: "Feed", table: str | None = None) -> pd.DataFrame:
     If the table is not in the feed, then return an empty DataFrame
     If the table is not valid, raise a ValueError
     """
-    gtfs_tables = cs.GTFS_REF.table.unique()
-
+    gtfs_tables = list(cs.DTYPES.keys())
     if table is not None:
         if table not in gtfs_tables:
             raise ValueError(f"{table} is not a GTFS table")
