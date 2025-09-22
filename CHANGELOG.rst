@@ -5,7 +5,6 @@ Changelog
 ------------------
 - Breaking change: simplified ``constants.py``.
 - Breaking change: renamed ``compute_feed_stats`` and ``compute_feed_time_series`` to ``compute_network_stats`` and ``compute_network_time_series``, respectively.
-- Updated dependencies.
 
 10.3.1, 2025-06-04
 ------------------
