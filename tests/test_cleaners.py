@@ -1,10 +1,11 @@
-from pandas.testing import assert_frame_equal, assert_series_equal
 import numpy as np
 import pytest
+from pandas.testing import assert_frame_equal, assert_series_equal
 
-from .context import sample, gtfs_kit
 from gtfs_kit import cleaners as gkc
 from gtfs_kit import helpers as hp
+
+from .context import gtfs_kit, sample
 
 
 def test_clean_column_names():
@@ -49,11 +50,11 @@ def test_extend_id():
 
 def test_clean_times():
     f1 = sample.copy()
-    f1.stop_times["departure_time"].iat[0] = "7:00:00"
-    f1.frequencies["start_time"].iat[0] = "7:00:00"
+    f1.stop_times.loc[0, "departure_time"] = "7:00:00"
+    f1.frequencies.loc[0, "start_time"] = "7:00:00"
     f2 = gkc.clean_times(f1)
-    assert f2.stop_times["departure_time"].iat[0] == "07:00:00"
-    assert f2.frequencies["start_time"].iat[0] == "07:00:00"
+    assert f2.stop_times.loc[0, "departure_time"] == "07:00:00"
+    assert f2.frequencies.loc[0, "start_time"] == "07:00:00"
 
 
 def test_clean_route_short_names():
@@ -177,9 +178,9 @@ def test_aggregate_stops():
 def test_clean():
     f1 = sample.copy()
     rid = f1.routes["route_id"].iat[0]
-    f1.routes["route_id"].iat[0] = " " + rid + "   "
+    f1.routes.loc[0, "route_id"] = " " + rid + "   "
     f2 = gkc.clean(f1)
-    assert f2.routes["route_id"].iat[0] == rid
+    assert f2.routes.loc[0, "route_id"] == rid
     assert_frame_equal(f2.trips, sample.trips)
 
 

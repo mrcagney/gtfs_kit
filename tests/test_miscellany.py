@@ -1,22 +1,23 @@
-import pytest
-import pandas as pd
-from pandas.testing import assert_series_equal
-import numpy as np
-import shapely.geometry as sg
 import geopandas as gp
+import numpy as np
+import pandas as pd
+import pytest
+import shapely.geometry as sg
+from pandas.testing import assert_series_equal
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    sample,
-    nyc_subway,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
 from gtfs_kit import constants as gkc
 from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
+
+from .context import (
+    DATA_DIR,
+    cairns,
+    cairns_dates,
+    cairns_trip_stats,
+    gtfs_kit,
+    nyc_subway,
+    sample,
+)
 
 
 def test_list_fields():
@@ -73,12 +74,12 @@ def test_convert_dist():
     )
 
 
-def test_compute_feed_stats_0():
+def test_compute_network_stats_0():
     feed = cairns.copy()
     trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats_0(
+        f = gkm.compute_network_stats_0(
             feed, trip_stats, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -103,13 +104,13 @@ def test_compute_feed_stats_0():
         assert set(f.columns) == expect_cols
 
 
-def test_compute_feed_stats():
+def test_compute_network_stats():
     feed = cairns.copy()
     dates = cairns_dates + ["20010101"]
     trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats(
+        f = gkm.compute_network_stats(
             feed, trip_stats, dates, split_route_types=split_route_types
         )
         # Should be a data frame
@@ -137,20 +138,20 @@ def test_compute_feed_stats():
         assert set(f.columns) == expect_cols
 
         # Empty dates should yield empty DataFrame
-        f = gkm.compute_feed_stats(
+        f = gkm.compute_network_stats(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty
 
 
-def test_compute_feed_time_series():
+def test_compute_network_time_series():
     feed = cairns.copy()
-    feed.routes.route_type.iat[0] = 2  # Add another route type
+    feed.routes.loc[0, "route_type"] = 2  # Add another route type
     dates = cairns_dates + ["20010101"]
     trip_stats = cairns_trip_stats
 
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_time_series(
+        f = gkm.compute_network_time_series(
             feed, trip_stats, dates, freq="12h", split_route_types=split_route_types
         )
 
@@ -182,7 +183,7 @@ def test_compute_feed_time_series():
         assert f.shape[0] == 2 * 3
 
         # Empty check
-        f = gkm.compute_feed_time_series(
+        f = gkm.compute_network_time_series(
             feed, trip_stats, [], split_route_types=split_route_types
         )
         assert f.empty
@@ -310,7 +311,7 @@ def test_restrict_to_trips():
 
     feed2 = gkm.restrict_to_trips(feed1, ["fake"])
     # All non-agency tables should be empty
-    for table in gkc.GTFS_REF["table"].unique():
+    for table in gkc.DTYPES:
         if table != "agency" and getattr(feed1, table) is not None:
             assert getattr(feed2, table).empty
 

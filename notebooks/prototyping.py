@@ -36,6 +36,12 @@ def _():
 
 @app.cell
 def _(gk):
+    {table: dict(g[["column", "dtype"]].values) for table, g in gk.GTFS_REF.groupby("table")}
+    return
+
+
+@app.cell
+def _(gk):
     akl_url = "https://gtfs.at.govt.nz/gtfs.zip"
     feed = gk.read_feed(akl_url, dist_units="km")
 
@@ -57,7 +63,7 @@ def _(gk, pd, px):
         if route_ids:
             f = f.loc[lambda x: x["route_id"].isin(route_ids)]
         return f.copy()
-    
+
     def plot_route_speeds(feed: gk.Feed, trip_stats: pd.DataFrame, date: str, route_ids: list|None=None):
         f = slice_trip_stats(feed, trip_stats, date, route_ids)
         f['start_time'] = pd.to_datetime(f["start_time"].map(gk.timestr_mod24), format='%H:%M:%S')
