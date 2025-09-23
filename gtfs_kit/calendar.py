@@ -43,7 +43,7 @@ def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
 
     # Convert dates back to strings if required
     if not as_date_obj:
-        result = [hp.datestr_to_date(x, inverse=True) for x in result]
+        result = [hp.date_to_datestr(x) for x in result]
 
     return result
 
@@ -76,7 +76,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
 
     # Convert to date strings if requested
     if not as_date_obj:
-        result = [hp.datestr_to_date(x, inverse=True) for x in result]
+        result = [hp.date_to_datestr(x) for x in result]
 
     return result
 

@@ -18,55 +18,60 @@ import json2html as j2h
 from . import constants as cs
 
 
-def datestr_to_date(
-    x: dt.date | str, format_str: str = "%Y%m%d", *, inverse: bool = False
-) -> str | dt.date:
+def datestr_to_date(x: str | None, format_str: str = "%Y%m%d") -> dt.date | None:
     """
-    Given a string ``x`` representing a date in the given format,
-    convert it to a datetime.date object and return the result.
-    If ``inverse``, then assume that ``x`` is a date object and return
-    its corresponding string in the given format.
+    Convert a date string to a datetime.date.
+    Return ``None`` if ``x is None``.
     """
     if x is None:
         return None
-    if not inverse:
-        result = dt.datetime.strptime(x, format_str).date()
-    else:
-        result = x.strftime(format_str)
-    return result
+    return dt.datetime.strptime(x, format_str).date()
 
 
-def timestr_to_seconds(
-    x: dt.date | str, *, inverse: bool = False, mod24: bool = False
-) -> int:
+def date_to_datestr(x: dt.date | None, format_str: str = "%Y%m%d") -> str | None:
+    """
+    Convert a datetime.date to a formatted string.
+    Return ``None`` if ``x is None``.
+    """
+    if x is None:
+        return None
+    return x.strftime(format_str)
+
+
+def timestr_to_seconds(x: str, *, mod24: bool = False) -> int | None:
     """
     Given an HH:MM:SS time string ``x``, return the number of seconds
     past midnight that it represents.
     In keeping with GTFS standards, the hours entry may be greater than
     23.
     If ``mod24``, then return the number of seconds modulo ``24*3600``.
-    If ``inverse``, then do the inverse operation.
-    In this case, if ``mod24`` also, then first take the number of
-    seconds modulo ``24*3600``.
+    Return ``None`` in case of bad inputs.
     """
-    if not inverse:
-        try:
-            hours, mins, seconds = x.split(":")
-            result = int(hours) * 3600 + int(mins) * 60 + int(seconds)
-            if mod24:
-                result %= 24 * 3600
-        except Exception:
-            result = np.nan
-    else:
-        try:
-            seconds = int(x)
-            if mod24:
-                seconds %= 24 * 3600
-            hours, remainder = divmod(seconds, 3600)
-            mins, secs = divmod(remainder, 60)
-            result = f"{hours:02d}:{mins:02d}:{secs:02d}"
-        except Exception:
-            result = np.nan
+    try:
+        hours, mins, seconds = x.split(":")
+        result = int(hours) * 3600 + int(mins) * 60 + int(seconds)
+        if mod24:
+            result %= 24 * 3600
+    except Exception:
+        result = None
+    return result
+
+
+def seconds_to_timestr(x: int, *, mod24: bool = False) -> str | None:
+    """
+    The inverse of :func:`timestr_to_seconds`.
+    If ``mod24``, then first take the number of seconds modulo ``24*3600``.
+    Return ``None`` in case of bad inputs.
+    """
+    try:
+        seconds = int(x)
+        if mod24:
+            seconds %= 24 * 3600
+        hours, remainder = divmod(seconds, 3600)
+        mins, secs = divmod(remainder, 60)
+        result = f"{hours:02d}:{mins:02d}:{secs:02d}"
+    except Exception:
+        result = None
     return result
 
 

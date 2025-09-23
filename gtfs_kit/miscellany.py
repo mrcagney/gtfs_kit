@@ -320,7 +320,7 @@ def compute_network_stats_0(
 
     # Convert seconds back to timestrings
     times = ["peak_start_time", "peak_end_time"]
-    stats[times] = stats[times].map(lambda t: hp.timestr_to_seconds(t, inverse=True))
+    stats[times] = stats[times].map(lambda t: hp.seconds_to_timestr(t))
 
     return stats
 
@@ -1014,7 +1014,7 @@ def compute_screen_line_counts(
             )
             f["crossing_time"] = (
                 f["t1"] + f["subshape_dist_frac"] * (f["t2"] - f["t1"])
-            ).map(lambda x: hp.timestr_to_seconds(x, inverse=True))
+            ).map(lambda x: hp.seconds_to_timestr(x))
             # Get distance along trip shape of crossing point
             subframes.append(f)
 

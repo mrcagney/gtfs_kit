@@ -1,29 +1,48 @@
 import datetime as dt
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+import shapely.geometry as sg
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
-import shapely.geometry as sg
 
-from .context import gtfs_kit, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import helpers as gkh
+
+from .context import cairns, cairns_dates, cairns_trip_stats, gtfs_kit
 
 
 def test_timestr_to_seconds():
     timestr1 = "01:01:01"
     seconds1 = 3600 + 60 + 1
     timestr2 = "25:01:01"
-    seconds2 = 25 * 3600 + 60 + 1
     assert gkh.timestr_to_seconds(timestr1) == seconds1
-    assert gkh.timestr_to_seconds(seconds1, inverse=True) == timestr1
-    assert gkh.timestr_to_seconds(seconds2, inverse=True) == timestr2
     assert gkh.timestr_to_seconds(timestr2, mod24=True) == seconds1
-    assert gkh.timestr_to_seconds(seconds2, mod24=True, inverse=True) == timestr1
     # Test error handling
-    assert np.isnan(gkh.timestr_to_seconds(seconds1))
-    assert np.isnan(gkh.timestr_to_seconds(timestr1, inverse=True))
+    assert gkh.timestr_to_seconds(seconds1) is None
+
+
+def test_seconds_to_timestr():
+    timestr1 = "01:01:01"
+    seconds1 = 3600 + 60 + 1
+    timestr2 = "25:01:01"
+    seconds2 = 25 * 3600 + 60 + 1
+    assert gkh.seconds_to_timestr(seconds1) == timestr1
+    assert gkh.seconds_to_timestr(seconds2) == timestr2
+    assert gkh.seconds_to_timestr(seconds2, mod24=True) == timestr1
+    assert gkh.seconds_to_timestr(timestr1) is None
+
+
+def test_datestr_to_date():
+    datestr = "20140102"
+    date = dt.date(2014, 1, 2)
+    assert gkh.datestr_to_date(datestr) == date
+
+
+def test_date_to_datestr():
+    datestr = "20140102"
+    date = dt.date(2014, 1, 2)
+    assert gkh.date_to_datestr(date) == datestr
 
 
 def test_timestr_mod24():
@@ -31,13 +50,6 @@ def test_timestr_mod24():
     assert gkh.timestr_mod24(timestr1) == timestr1
     timestr2 = "25:01:01"
     assert gkh.timestr_mod24(timestr2) == timestr1
-
-
-def test_datestr_to_date():
-    datestr = "20140102"
-    date = dt.date(2014, 1, 2)
-    assert gkh.datestr_to_date(datestr) == date
-    assert gkh.datestr_to_date(date, inverse=True) == datestr
 
 
 def test_is_metric():

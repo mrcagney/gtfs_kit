@@ -3,15 +3,16 @@ Functions about stops.
 """
 
 from __future__ import annotations
-from collections import Counter
-from typing import Iterable, TYPE_CHECKING
-import json
 
-import geopandas as gpd
-import pandas as pd
-import numpy as np
+import json
+from collections import Counter
+from typing import TYPE_CHECKING, Iterable
+
 import folium as fl
 import folium.plugins as fp
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 
 from . import constants as cs
 from . import helpers as hp
@@ -151,7 +152,7 @@ def compute_stop_stats_0(
             direction_id=lambda x: x.direction_id.astype(int)
         )
         if f.empty:
-            raise ValueError("At least one trip direction ID value " "must be non-NaN.")
+            raise ValueError("At least one trip direction ID value must be non-NaN.")
         g = f.groupby(["stop_id", "direction_id"])
     else:
         g = f.groupby("stop_id")
@@ -160,7 +161,7 @@ def compute_stop_stats_0(
 
     # Convert start and end times to time strings
     result[["start_time", "end_time"]] = result[["start_time", "end_time"]].map(
-        lambda x: hp.timestr_to_seconds(x, inverse=True)
+        lambda x: hp.seconds_to_timestr(x)
     )
 
     return result
@@ -230,7 +231,7 @@ def compute_stop_time_series_0(
             direction_id=lambda x: x.direction_id.astype(int)
         )
         if f.empty:
-            raise ValueError("At least one trip direction ID value " "must be non-NaN.")
+            raise ValueError("At least one trip direction ID value must be non-NaN.")
 
         # Alter stop IDs to encode trip direction:
         # <stop ID>-0 and <stop ID>-1
