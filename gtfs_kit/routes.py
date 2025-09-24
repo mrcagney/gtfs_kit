@@ -340,7 +340,7 @@ def compute_route_stats_0(
       measured in kilometers if ``feed.dist_units`` is metric;
       otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
-    - ``'service_speed'``: service_distance/service_duration
+    - ``'service_speed'``: service_distance/service_duration when defined; 0 otherwise
     - ``'mean_trip_distance'``: service_distance/num_trips
     - ``'mean_trip_duration'``: service_duration/num_trips
 
@@ -508,8 +508,11 @@ def compute_route_stats_0(
         g = f.groupby("route_id").apply(agg, include_groups=False).reset_index()
 
     # Compute a few more stats
-    g["service_speed"] = (g["service_distance"] / g["service_duration"]).fillna(
+    g["service_speed"] = (
         g["service_distance"]
+        .div(g["service_duration"])
+        .replace([np.inf, -np.inf], np.nan)
+        .fillna(0.0)
     )
     g["mean_trip_distance"] = g["service_distance"] / g["num_trips"]
     g["mean_trip_duration"] = g["service_duration"] / g["num_trips"]
@@ -581,7 +584,7 @@ def compute_route_stats(
       measured in kilometers if ``feed.dist_units`` is metric;
       otherwise measured in miles;
       contains all ``np.nan`` entries if ``feed.shapes is None``
-    - ``'service_speed'``: service_distance/service_duration
+    - ``'service_speed'``: service_distance/service_duration when defined; 0 otherwise
     - ``'mean_trip_distance'``: service_distance/num_trips
     - ``'mean_trip_duration'``: service_duration/num_trips
 
@@ -629,7 +632,7 @@ def compute_route_stats(
     activity = feed.compute_trip_activity(dates)
     frames = []
     for date in dates:
-        ids = tuple(activity.loc[activity[date] > 0, "trip_id"])
+        ids = tuple(sorted(activity.loc[activity[date] > 0, "trip_id"].values))
         if ids in stats_by_ids:
             # Reuse stats with updated date
             stats = stats_by_ids[ids].assign(date=date)
@@ -911,7 +914,7 @@ def compute_route_time_series(
     activity = feed.compute_trip_activity(dates)
     frames = []
     for date in dates:
-        ids = tuple(activity.loc[activity[date] > 0, "trip_id"])
+        ids = tuple(sorted(activity.loc[activity[date] > 0, "trip_id"].values))
         if ids in stats_by_ids:
             # Reuse stats with updated date
             stats = stats_by_ids[ids].pipe(hp.replace_date, date=date)

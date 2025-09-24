@@ -76,14 +76,16 @@ def test_convert_dist():
 
 def test_compute_network_stats_0():
     feed = cairns.copy()
-    trip_stats = cairns_trip_stats
-    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
+    trip_stats = cairns_trip_stats.copy()
+    trip_stats.loc[0, "route_type"] = 2  # Add another route type besides 3
     for split_route_types in [True, False]:
         f = gkm.compute_network_stats_0(
-            feed, trip_stats, split_route_types=split_route_types
+            feed.stop_times, trip_stats, split_route_types=split_route_types
         )
-        # Should be a data frame
-        assert isinstance(f, pd.core.frame.DataFrame)
+
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert f.shape[0] == n
         # Should contain the correct columns
         expect_cols = {
             "num_trips",
@@ -106,18 +108,21 @@ def test_compute_network_stats_0():
 
 def test_compute_network_stats():
     feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]
-    trip_stats = cairns_trip_stats
-    feed.routes.loc[0, "route_type"] = 2  # Another route type besides 3
+    dates = cairns_dates
+    trip_stats = cairns_trip_stats.copy()
+    trip_stats.loc[0, "route_type"] = 2  # Add another route type besides 3
     for split_route_types in [True, False]:
         f = gkm.compute_network_stats(
-            feed, trip_stats, dates, split_route_types=split_route_types
+            feed, dates + ["19990101"], trip_stats, split_route_types=split_route_types
         )
-        # Should be a data frame
-        assert isinstance(f, pd.core.frame.DataFrame)
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert f.shape[0] == n * len(dates)
+
         # Should have the correct dates
-        assert f.date.tolist() == cairns_dates
-        # Should contain the correct columns
+        assert set(f["date"].values) == set(cairns_dates)
+
+        # Should have correct columns
         expect_cols = {
             "num_trips",
             "num_trip_starts",
@@ -137,32 +142,35 @@ def test_compute_network_stats():
 
         assert set(f.columns) == expect_cols
 
-        # Empty dates should yield empty DataFrame
+        # Non-feed dates should yield empty DataFrame
         f = gkm.compute_network_stats(
-            feed, trip_stats, [], split_route_types=split_route_types
+            feed, ["19990101"], trip_stats, split_route_types=split_route_types
         )
         assert f.empty
 
 
 def test_compute_network_time_series():
     feed = cairns.copy()
-    feed.routes.loc[0, "route_type"] = 2  # Add another route type
-    dates = cairns_dates + ["20010101"]
-    trip_stats = cairns_trip_stats
+    dates = cairns_dates
+    trip_stats = cairns_trip_stats.copy()
+    trip_stats.loc[:1, "route_type"] = 2  # Add another route type besides 3
 
     for split_route_types in [True, False]:
         f = gkm.compute_network_time_series(
-            feed, trip_stats, dates, freq="12h", split_route_types=split_route_types
+            feed,
+            dates + ["19990101"],
+            trip_stats,
+            freq="12h",
+            split_route_types=split_route_types,
         )
 
-        # Should have correct column level names
-        if split_route_types:
-            assert set(f.columns.names) == {"indicator", "route_type"}
-        else:
-            assert set(f.columns.names) == {"indicator"}
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert f.shape[0] == n * len(dates) * 2
 
-        # Should have the correct level 0 columns
+        # Should have correct columns
         expect_cols = {
+            "datetime",
             "num_trip_starts",
             "num_trip_ends",
             "num_trips",
@@ -171,20 +179,16 @@ def test_compute_network_time_series():
             "service_speed",
         }
         if split_route_types:
-            assert set(f.columns.levels[0]) == expect_cols
-        else:
-            assert set(f.columns) == expect_cols
+            expect_cols.add("route_type")
 
-        # Should have correct index names
-        assert f.index.name == "datetime"
+        assert set(f.columns) == expect_cols
 
-        # Should have the correct number of rows: 2 (for the 12H freq) times
-        # 3 (for the three-date span)
-        assert f.shape[0] == 2 * 3
+        # Should have correct dates
+        assert set(f["datetime"].dt.strftime("%Y%m%d")) == set(dates)
 
         # Empty check
         f = gkm.compute_network_time_series(
-            feed, trip_stats, [], split_route_types=split_route_types
+            feed, ["19990101"], trip_stats, split_route_types=split_route_types
         )
         assert f.empty
 

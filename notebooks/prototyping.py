@@ -56,9 +56,9 @@ def _(feed):
 
 
 @app.cell
-def _(feed, gk):
-    sts0 = gk.compute_stop_time_series_0(feed.stop_times, feed.trips)
-    sts0
+def _(dates, feed, gk):
+    nts = gk.compute_network_time_series(feed, dates, split_route_types=True)
+    nts
     return
 
 

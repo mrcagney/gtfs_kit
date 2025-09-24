@@ -319,7 +319,7 @@ def combine_time_series(
     - ``'route_id'`` or ``'stop_id'``: depending on ``kind``
     - ``'direction_id'``: present if and only if ``split_directions``
     - one column per indicator provided in `series_by_indicator`
-    - service_speed, if both ``service_distance`` and ``service_duration present``
+    - service_speed, if both ``service_distance`` and ``service_duration`` present
 
     If ``split_directions``, then assume the original time series contains data
     separated by trip direction; otherwise, assume not.

@@ -333,7 +333,7 @@ def compute_stop_stats(
 
     frames = []
     for date in dates:
-        ids = tuple(activity.loc[activity[date] > 0, "trip_id"])
+        ids = tuple(sorted(activity.loc[activity[date] > 0, "trip_id"].values))
         if ids in stats_by_ids:
             stats = (
                 stats_by_ids[ids]
@@ -535,7 +535,7 @@ def compute_stop_time_series(
     frames = []
     stats_by_ids = {}
     for date in dates:
-        ids = tuple(activity.loc[activity[date] > 0, "trip_id"])
+        ids = tuple(sorted(activity.loc[activity[date] > 0, "trip_id"].values))
         if ids in stats_by_ids:
             # Reuse stats with updated date
             stats = stats_by_ids[ids].pipe(hp.replace_date, date=date)

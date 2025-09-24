@@ -95,7 +95,8 @@ def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
 def subset_dates(feed: "Feed", dates: list[str]) -> list[str]:
     """
     Given a Feed and a list of YYYYMMDD date strings,
-    return the sublist of dates that lie in the Feed's dates
+    return the sorted sublist of dates that lie in the Feed's dates
     (the output :func:`feed.get_dates`).
+    Could be an empty list.
     """
     return sorted(set(dates) & set(feed.get_dates()))
