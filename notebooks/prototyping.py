@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.16.1"
+__generated_with = "0.16.2"
 app = marimo.App(width="medium")
 
 
@@ -15,6 +15,7 @@ def _():
     from typing import List
     import warnings
 
+    import marimo as mo
     import pandas as pd
     import numpy as np
     import geopandas as gpd
@@ -29,7 +30,7 @@ def _():
     warnings.filterwarnings("ignore")
 
     DATA = pl.Path("data")
-    return DATA, gk
+    return DATA, gk, mo
 
 
 @app.cell
@@ -43,7 +44,7 @@ def _(DATA, gk):
 @app.cell
 def _(feed):
     dates = feed.get_first_week()
-    dates = [dates[0], dates[2]]
+    dates = [dates[0], dates[6]]
     dates
     return (dates,)
 
@@ -57,8 +58,21 @@ def _(feed):
 
 @app.cell
 def _(dates, feed, gk):
-    nts = gk.compute_network_time_series(feed, dates, split_route_types=True)
-    nts
+    gk.compute_network_stats(feed, dates)
+    return
+
+
+@app.cell
+def _(dates, feed, gk, mo):
+    ts = gk.compute_route_time_series(feed, dates, freq="h")
+    mo.output.append(ts)
+    ts2 = gk.downsample(ts, freq="12h")
+    mo.output.append(ts2)
+    return
+
+
+@app.cell
+def _():
     return
 
 

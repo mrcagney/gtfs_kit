@@ -292,8 +292,6 @@ def compute_network_stats_0(
 
     Helper function for :func:`compute_network_stats`.
     """
-
-    # Handle defunct case
     final_cols = [
         "num_stops",
         "num_routes",
@@ -309,12 +307,14 @@ def compute_network_stats_0(
     ]
     if split_route_types:
         final_cols.insert(0, "route_type")
+
     null_stats = pd.DataFrame(columns=final_cols)
 
+    # Handle defunct case
     if stop_times_subset.empty or trip_stats_subset.empty:
         return null_stats
 
-    # Prepare datasets
+    # Handle generic case
     trip_ids = set(trip_stats_subset["trip_id"].values) & set(
         stop_times_subset["trip_id"].values
     )
@@ -326,62 +326,43 @@ def compute_network_stats_0(
         hp.timestr_to_seconds
     )
 
-    if split_route_types:
-        # Compute stats
-        stats_list = []
-        for route_type, g in ts.groupby("route_type"):
-            d = {}
-            d["route_type"] = route_type
-            d["num_stops"] = st.loc[
-                lambda x: x["trip_id"].isin(g.trip_id), "stop_id"
-            ].nunique()
-            d["num_routes"] = g.route_id.nunique()
-            d["num_trips"] = g.shape[0]
-            d["num_trip_starts"] = g.start_time.count()
-            d["num_trip_ends"] = g.loc[g.end_time < 24 * 3600, "end_time"].count()
-            d["service_distance"] = g.distance.sum()
-            d["service_duration"] = g.duration.sum()
-            if d["service_distance"]:
-                d["service_speed"] = d["service_distance"] / d["service_duration"]
-            else:
-                d["service_speed"] = 0
-
-            # Compute peak stats, which is the slowest part
-            active_trips = hp.get_active_trips_df(g[["start_time", "end_time"]])
-            times, counts = (active_trips.index.values, active_trips.values)
-            start, end = hp.get_peak_indices(times, counts)
-            d["peak_num_trips"] = counts[start]
-            d["peak_start_time"] = times[start]
-            d["peak_end_time"] = times[end]
-
-            stats_list.append(pd.Series(d))
-
-        stats = pd.DataFrame(stats_list)
-
-    else:
-        # Compute stats
+    def agg(g: pd.DataFrame, route_type: str | None = None) -> dict:
         d = {}
-        d["num_stops"] = st["stop_id"].nunique()
-        d["num_routes"] = ts.route_id.nunique()
-        d["num_trips"] = ts.shape[0]
-        d["num_trip_starts"] = ts.start_time.count()
-        d["num_trip_ends"] = ts.loc[ts.end_time < 24 * 3600, "end_time"].count()
-        d["service_distance"] = ts.distance.sum()
-        d["service_duration"] = ts.duration.sum()
+        if route_type is not None:
+            d["route_type"] = route_type
+        d["num_stops"] = st.loc[
+            lambda x: x["trip_id"].isin(g["trip_id"]), "stop_id"
+        ].nunique()
+        d["num_routes"] = g["route_id"].nunique()
+        d["num_trips"] = len(g)
+        d["num_trip_starts"] = g["start_time"].count()
+        d["num_trip_ends"] = g.loc[g["end_time"] < 24 * 3600, "end_time"].count()
+        d["service_distance"] = g["distance"].sum()
+        d["service_duration"] = g["duration"].sum()
         if d["service_distance"]:
             d["service_speed"] = d["service_distance"] / d["service_duration"]
         else:
             d["service_speed"] = 0
 
         # Compute peak stats, which is the slowest part
-        active_trips = hp.get_active_trips_df(ts[["start_time", "end_time"]])
-        times, counts = active_trips.index.values, active_trips.values
+        active_trips = hp.get_active_trips_df(g[["start_time", "end_time"]])
+        times, counts = (active_trips.index.values, active_trips.values)
         start, end = hp.get_peak_indices(times, counts)
         d["peak_num_trips"] = counts[start]
         d["peak_start_time"] = times[start]
         d["peak_end_time"] = times[end]
+        return d
 
-        stats = pd.DataFrame(d, index=[0])
+    # Compute stats
+    if split_route_types:
+        series = []
+        for route_type, g in ts.groupby("route_type"):
+            series.append(pd.Series(agg(g, route_type)))
+
+        stats = pd.DataFrame(series)
+
+    else:
+        stats = pd.DataFrame(agg(ts), index=[0])
 
     # Convert seconds back to timestrings
     times = ["peak_start_time", "peak_end_time"]
@@ -444,6 +425,8 @@ def compute_network_stats(
     if not dates:
         return null_stats
 
+    final_cols = ["date"] + null_stats.columns.to_list()
+
     # Collect stats for each date,
     # memoizing stats the sequence of trip IDs active on the date
     # to avoid unnecessary recomputations.
@@ -480,8 +463,8 @@ def compute_network_stats(
 
         frames.append(stats)
 
-    # Assemble stats into a single DataFrame
-    return pd.concat(frames)
+    # Collate stats and order columns
+    return pd.concat(frames, ignore_index=True).filter(final_cols)
 
 
 def compute_network_time_series(
@@ -543,6 +526,9 @@ def compute_network_time_series(
     # Handle defunct case
     if rts.empty:
         return null_stats
+
+    if trip_stats is None:
+        trip_stats = feed.compute_trip_stats()
 
     if split_route_types:
         group_keys = ["datetime", "route_type"]

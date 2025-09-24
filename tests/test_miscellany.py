@@ -152,14 +152,12 @@ def test_compute_network_stats():
 def test_compute_network_time_series():
     feed = cairns.copy()
     dates = cairns_dates
-    trip_stats = cairns_trip_stats.copy()
-    trip_stats.loc[:1, "route_type"] = 2  # Add another route type besides 3
+    feed.routes.loc[:1, "route_type"] = 2  # Add another route type besides 3
 
     for split_route_types in [True, False]:
         f = gkm.compute_network_time_series(
             feed,
             dates + ["19990101"],
-            trip_stats,
             freq="12h",
             split_route_types=split_route_types,
         )
@@ -188,7 +186,7 @@ def test_compute_network_time_series():
 
         # Empty check
         f = gkm.compute_network_time_series(
-            feed, ["19990101"], trip_stats, split_route_types=split_route_types
+            feed, ["19990101"], split_route_types=split_route_types
         )
         assert f.empty
 
