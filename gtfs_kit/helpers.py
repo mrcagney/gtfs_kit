@@ -111,6 +111,20 @@ def weekday_to_str(weekday: int | str, *, inverse: bool = False) -> int | str:
             return
 
 
+def replace_date(f: pd.DataFrame, date: str) -> pd.DataFrame:
+    """
+    Given a table with a datetime object column called 'datetime' and given a
+    YYYYMMDD date string, replace the datetime dates with the given date
+    and return the resulting table.
+    """
+    d = datestr_to_date(date)
+    return f.assign(
+        datetime=lambda x: x["datetime"].map(
+            lambda t: t.replace(year=d.year, month=d.month, day=d.day)
+        )
+    )
+
+
 def get_segment_length(
     linestring: sg.LineString, p: sg.Point, q: sg.Point | None = None
 ) -> float:
@@ -539,18 +553,18 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
                     s = g[col].resample(freq).agg(lambda x: x.sum(min_count=1))
                 series.append(s.rename(col))
 
-        agg = (
-            pd.concat(series, axis="columns")
-            # Compute service speed now
-            .assign(
-                service_speed=lambda x: x["service_distance"]
-                .div(x["service_duration"])
-                .replace([np.inf, -np.inf], np.nan)
-                .fillna(0.0)
+            agg = (
+                pd.concat(series, axis="columns")
+                # Compute service speed now
+                .assign(
+                    service_speed=lambda x: x["service_distance"]
+                    .div(x["service_duration"])
+                    .replace([np.inf, -np.inf], np.nan)
+                    .fillna(0.0)
+                )
+                # Bring back 'datetime' column
+                .reset_index()
             )
-            # Bring back 'datetime' column
-            .reset_index()
-        )
 
         # Reattach ID columns
         if isinstance(key, tuple):

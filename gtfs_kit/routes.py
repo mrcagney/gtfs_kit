@@ -612,6 +612,8 @@ def compute_route_stats(
     final_cols = ["date"] + list(null_stats.columns)
     null_stats = null_stats.assign(date=None).filter(final_cols)
     dates = feed.subset_dates(dates)
+
+    # Handle defunct case
     if not dates:
         return null_stats
 
@@ -671,7 +673,7 @@ def compute_route_time_series_0(
     If ``split_directions``, then separate each routes's stats by trip direction.
     Use the given YYYYMMDD date label as the date in the time series index.
 
-    Return a DataFrame time series version the following route stats for each route.
+    Return a long-format DataFrame with the columns
 
     - ``datetime``: datetime object
     - ``route_id``
@@ -715,8 +717,24 @@ def compute_route_time_series_0(
       direction ID values present
 
     """
+    final_cols = [
+        "datetime",
+        "route_id",
+        "num_trips",
+        "num_trip_starts",
+        "num_trip_ends",
+        "service_distance",
+        "service_duration",
+        "service_speed",
+    ]
+    if split_directions:
+        final_cols.insert(2, "direction_id")
+
+    null_stats = pd.DataFrame([], columns=final_cols)
+
+    # Handle defunct case
     if trip_stats.empty:
-        return pd.DataFrame()
+        return null_stats
 
     tss = trip_stats.copy()
     if split_directions:
@@ -870,8 +888,13 @@ def compute_route_time_series(
 
     """
     dates = feed.subset_dates(dates)
+    null_stats = compute_route_time_series_0(
+        pd.DataFrame(), split_directions=split_directions
+    )
+
+    # Handle defunct case
     if not dates:
-        return pd.DataFrame()
+        return null_stats
 
     activity = feed.compute_trip_activity(dates)
     if trip_stats is None:
@@ -882,16 +905,7 @@ def compute_route_time_series(
     # Collect stats for each date, memoizing stats by trip ID sequence
     # to avoid unnecessary re-computations.
     # Store in dictionary of the form
-    # trip ID sequence ->
-    # [stats DataFarme, date list that stats apply]
-    def replace_date(f, date):
-        d = hp.datestr_to_date(date)
-        return f.assign(
-            datetime=lambda x: x["datetime"].map(
-                lambda t: t.replace(year=d.year, month=d.month, day=d.day)
-            )
-        )
-
+    # trip ID sequence -> stats table
     null_stats = pd.DataFrame()
     stats_by_ids = {}
     activity = feed.compute_trip_activity(dates)
@@ -900,13 +914,13 @@ def compute_route_time_series(
         ids = tuple(activity.loc[activity[date] > 0, "trip_id"])
         if ids in stats_by_ids:
             # Reuse stats with updated date
-            stats = stats_by_ids[ids].pipe(replace_date, date=date)
+            stats = stats_by_ids[ids].pipe(hp.replace_date, date=date)
         elif ids:
             # Compute stats afresh
             t = trip_stats.loc[lambda x: x.trip_id.isin(ids)].copy()
             stats = compute_route_time_series_0(
                 t, split_directions=split_directions, freq=freq, date_label=date
-            ).pipe(replace_date, date=date)
+            ).pipe(hp.replace_date, date=date)
             # Remember stats
             stats_by_ids[ids] = stats
         else:

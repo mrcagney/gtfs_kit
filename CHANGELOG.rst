@@ -7,6 +7,7 @@ Changelog
 - Breaking change: renamed ``compute_feed_stats`` and ``compute_feed_time_series`` to ``compute_network_stats`` and ``compute_network_time_series``, respectively.
 - Breaking change: created separate inverse functions for time helpers, e.g. ``seconds_to_timestr`` for ``timestr_to_seconds``.
 - Breaking change: updated signature of ``compute_route_stats`` to make trip stats optional.
+- Breaking change: simplified stop/route/network time series to a long table with no hierarchical columns.
 
 10.3.1, 2025-06-04
 ------------------

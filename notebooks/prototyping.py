@@ -50,15 +50,15 @@ def _(feed):
 
 @app.cell
 def _(feed):
-    trip_stats = feed.compute_trip_stats().iloc[:250]
+    trip_stats = feed.compute_trip_stats().iloc[:10]
     trip_stats
     return (trip_stats,)
 
 
 @app.cell
-def _(gk, trip_stats):
-    rts0 = gk.compute_route_time_series_0(trip_stats)
-    rts0
+def _(feed, gk):
+    sts0 = gk.compute_stop_time_series_0(feed.stop_times, feed.trips)
+    sts0
     return
 
 
