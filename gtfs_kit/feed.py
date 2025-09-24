@@ -113,7 +113,7 @@ class Feed(object):
     )
     from .routes import (
         build_route_timetable,
-        build_zero_route_time_series,
+        # build_zero_route_time_series,
         compute_route_stats,
         compute_route_time_series,
         get_routes,

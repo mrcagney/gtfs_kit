@@ -3,17 +3,19 @@ Functions useful across modules.
 """
 
 from __future__ import annotations
-import datetime as dt
-from typing import Callable
+
 import copy
+import datetime as dt
+import functools as ft
+import math
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
-import math
+from typing import Callable, Literal
 
-import pandas as pd
-import numpy as np
-import shapely.geometry as sg
 import json2html as j2h
+import numpy as np
+import pandas as pd
+import shapely.geometry as sg
 
 from . import constants as cs
 
@@ -45,7 +47,7 @@ def timestr_to_seconds(x: str, *, mod24: bool = False) -> int | None:
     In keeping with GTFS standards, the hours entry may be greater than
     23.
     If ``mod24``, then return the number of seconds modulo ``24*3600``.
-    Return ``None`` in case of bad inputs.
+    Return ``np.nan`` in case of bad inputs.
     """
     try:
         hours, mins, seconds = x.split(":")
@@ -53,7 +55,7 @@ def timestr_to_seconds(x: str, *, mod24: bool = False) -> int | None:
         if mod24:
             result %= 24 * 3600
     except Exception:
-        result = None
+        result = np.nan
     return result
 
 
@@ -61,7 +63,7 @@ def seconds_to_timestr(x: int, *, mod24: bool = False) -> str | None:
     """
     The inverse of :func:`timestr_to_seconds`.
     If ``mod24``, then first take the number of seconds modulo ``24*3600``.
-    Return ``None`` in case of bad inputs.
+    Return ``np.nan`` in case of bad inputs.
     """
     try:
         seconds = int(x)
@@ -71,7 +73,7 @@ def seconds_to_timestr(x: int, *, mod24: bool = False) -> str | None:
         mins, secs = divmod(remainder, 60)
         result = f"{hours:02d}:{mins:02d}:{secs:02d}"
     except Exception:
-        result = None
+        result = np.nan
     return result
 
 
@@ -85,7 +87,7 @@ def timestr_mod24(timestr: str) -> int:
         hours %= 24
         result = f"{hours:02d}:{mins:02d}:{secs:02d}"
     except Exception:
-        result = None
+        result = np.nan
     return result
 
 
@@ -290,6 +292,113 @@ def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:
 
 
 def combine_time_series(
+    series_by_indicator: dict[str, pd.DataFrame],
+    *,
+    kind: Literal["route", "stop"],
+    split_directions: bool = False,
+) -> pd.DataFrame:
+    """
+    Combine a dict of wide time series (one DataFrame per indicator, columns are entities)
+    into a single long-form time series with columns
+
+    - ``'datetime'``
+    - ``'route_id'`` or ``'stop_id'``: depending on ``kind``
+    - ``'direction_id'``: present if and only if ``split_directions``
+    - one column per indicator provided in `series_by_indicator`
+    - service_speed, if both ``service_distance`` and ``service_duration present``
+
+    If ``split_directions``, then assume the original time series contains data
+    separated by trip direction; otherwise, assume not.
+    The separation is indicated by a suffix ``'-0'`` (direction 0) or ``'-1'``
+    (direction 1) in the route ID or stop ID column values.
+    """
+    if not series_by_indicator:
+        return pd.DataFrame()
+
+    # Validate indices and types
+    indicators = list(series_by_indicator.keys())
+    base_index: pd.DatetimeIndex | None = None
+    for ind, df in series_by_indicator.items():
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(f"Indicator '{ind}' is not a DataFrame.")
+        if not isinstance(df.index, pd.DatetimeIndex):
+            raise ValueError(f"Indicator '{ind}' must have a DatetimeIndex.")
+        if base_index is None:
+            base_index = df.index
+        elif not base_index.equals(df.index):
+            raise ValueError(
+                "All indicator DataFrames must share the same DatetimeIndex."
+            )
+
+    entity_col = "route_id" if kind == "route" else "stop_id"
+
+    # Wide to long for each indicator
+    long_frames: list[pd.DataFrame] = []
+    for ind, wf in series_by_indicator.items():
+        s = wf.stack(dropna=False).rename(ind)  # (datetime, entity) -> value
+        lf = s.reset_index()
+        lf.columns = ["datetime", entity_col, ind]
+        long_frames.append(lf)
+
+    # Merge all indicators on (datetime, entity)
+    f = ft.reduce(
+        lambda a, b: pd.merge(a, b, on=["datetime", entity_col], how="outer"),
+        long_frames,
+    )
+
+    # Optionally split direction from encoded IDs "<id>-<dir>"
+    if split_directions:
+
+        def _split(ent):
+            if pd.isna(ent):
+                return pd.NA, pd.NA
+            parts = str(ent).rsplit("-", 1)
+            if len(parts) != 2:
+                return ent, pd.NA
+            eid, did = parts
+            try:
+                return eid, int(did)
+            except Exception:
+                return eid, pd.NA
+
+        split = f[entity_col].map(_split)
+        f[entity_col] = split.map(lambda t: t[0])
+        f["direction_id"] = split.map(lambda t: t[1])
+
+    # Coerce numeric indicators and fill NaNs with 0 (speed handled later)
+    numeric_cols = []
+    for ind in indicators:
+        if ind in f.columns:
+            f[ind] = pd.to_numeric(f[ind], errors="coerce")
+            numeric_cols.append(ind)
+    if numeric_cols:
+        f[numeric_cols] = f[numeric_cols].fillna(0)
+
+    # Compute service_speed if possible
+    if "service_distance" in f.columns and "service_duration" in f.columns:
+        f["service_speed"] = (
+            f["service_distance"]
+            .div(f["service_duration"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
+    # Arrange columns
+    cols0 = ["datetime", entity_col]
+    if split_directions:
+        cols0.append("direction_id")
+    cols = cols0 + [
+        "num_trip_starts",
+        "num_trip_ends",
+        "num_trips",
+        "service_duration",
+        "service_distance",
+        "service_speed",
+    ]
+    return f.filter(cols).sort_values(cols0, ignore_index=True)
+
+
+def combine_time_series_bak(
     time_series_dict: dict[str, pd.DataFrame],
     kind: str,
     *,
@@ -361,6 +470,105 @@ def combine_time_series(
 
 def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     """
+    Downsample the given route, stop, or network time series,
+    (outputs of :func:`.routes.compute_route_time_series`,
+    :func:`.stops.compute_stop_time_series`, or
+    :func:`.miscellany.compute_network_time_series`,
+    respectively) to the given Pandas frequency string (e.g. '15Min').
+    Return the given time series unchanged if the given frequency is
+    shorter than the original frequency.
+    """
+    if time_series.empty:
+        return time_series
+
+    if "datetime" not in time_series.columns:
+        raise ValueError("Time series must have a 'datetime' column")
+
+    # Ensure datetime dtype
+    f = time_series.assign(datetime=lambda x: pd.to_datetime(x["datetime"]))
+
+    # If target frequency is shorter than the inferred base frequency, return unchanged
+    # If the base frequency is not inferable, proceed with downsampling.
+    inferred = pd.infer_freq(f.sort_values("datetime")["datetime"])
+    try:
+        if inferred is not None and pd.tseries.frequencies.to_offset(
+            freq
+        ) <= pd.tseries.frequencies.to_offset(inferred):
+            return f
+    except Exception:
+        # If offsets are incomparable (e.g., None or anchored), just continue with resampling.
+        pass
+
+    id_cols = list({"route_id", "stop_id", "direction_id"} & set(f.columns))
+
+    if "stop_id" in time_series.columns:
+        is_stop_series = True
+        indicators = ["num_trips"]
+    else:
+        # It's a route or network time series.
+        is_stop_series = False
+        indicators = [
+            "num_trips",
+            "num_trip_starts",
+            "num_trip_ends",
+            "service_distance",
+            "service_duration",
+            "service_speed",
+        ]
+
+    def agg_num_trips(g):
+        """
+        Num trips uses custom rule:
+        last(num_trips in bin) + sum(num_trip_ends in all but the last row in the bin)
+        """
+        return g["num_trips"].iloc[-1] + g["num_trip_ends"].iloc[:-1].sum(min_count=1)
+
+    frames = []
+    for key, group in f.groupby(id_cols, dropna=False):
+        g = group.sort_values("datetime").set_index("datetime")
+
+        if is_stop_series:
+            # Sum all numeric columns, preserving all-NaN groups (min_count=1)
+            agg = g.resample(freq).sum(min_count=1).reset_index()
+        else:
+            series = []
+            for col in indicators:
+                if col == "num_trips":
+                    s = g.groupby(pd.Grouper(freq=freq)).apply(agg_num_trips)
+                elif col != "service_speed":
+                    s = g[col].resample(freq).agg(lambda x: x.sum(min_count=1))
+                series.append(s.rename(col))
+
+        agg = (
+            pd.concat(series, axis="columns")
+            # Compute service speed now
+            .assign(
+                service_speed=lambda x: x["service_distance"]
+                .div(x["service_duration"])
+                .replace([np.inf, -np.inf], np.nan)
+                .fillna(0.0)
+            )
+            # Bring back 'datetime' column
+            .reset_index()
+        )
+
+        # Reattach ID columns
+        if isinstance(key, tuple):
+            for col, val in zip(id_cols, key):
+                agg[col] = val
+        else:
+            agg[id_cols[0]] = key
+
+        frames.append(agg)
+
+    # Collate results
+    cols0 = ["datetime"] + id_cols
+    cols = cols0 + indicators
+    return pd.concat(frames).filter(cols).sort_values(cols0, ignore_index=True)
+
+
+def downsample_bak(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
+    """
     Downsample the given route, stop, or feed time series,
     (outputs of :func:`.routes.compute_route_time_series`,
     :func:`.stops.compute_stop_time_series`, or
@@ -383,7 +591,7 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
         # It's a stops time series
         result = f.resample(freq).sum(min_count=1)
     else:
-        # It's a route or feed time series.
+        # It's a route or network time series.
         inds = [
             "num_trips",
             "num_trip_starts",

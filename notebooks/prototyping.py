@@ -29,7 +29,6 @@ def _():
     warnings.filterwarnings("ignore")
 
     DATA = pl.Path("data")
-
     return DATA, gk
 
 
@@ -51,21 +50,22 @@ def _(feed):
 
 @app.cell
 def _(feed):
-    trip_stats = feed.compute_trip_stats()
+    trip_stats = feed.compute_trip_stats().iloc[:250]
     trip_stats
     return (trip_stats,)
 
 
 @app.cell
-def _(dates, feed):
-    rts = feed.compute_route_time_series(dates=dates, freq="12h")
-    rts
-    return (rts,)
+def _(gk, trip_stats):
+    rts0 = gk.compute_route_time_series_0(trip_stats)
+    rts0
+    return
 
 
 @app.cell
-def _(dates, rts):
-    rts["num_trips"].loc[lambda x: x.index.strftime("%Y%m%d").isin(dates)]#.resample("D").sum()
+def _(dates, feed, trip_stats):
+    rts = feed.compute_route_time_series(dates, trip_stats)
+    rts
     return
 
 

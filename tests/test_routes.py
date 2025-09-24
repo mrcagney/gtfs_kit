@@ -142,6 +142,58 @@ def test_get_routes():
     )
 
 
+def test_build_route_timetable():
+    feed = sample.copy()
+    route_id = feed.routes["route_id"].values[0]
+    dates = feed.get_first_week()[:2]
+    f = gkr.build_route_timetable(feed, route_id, dates)
+
+    # Should have the correct columns
+    expect_cols = set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
+    assert set(f.columns) == expect_cols
+
+    # Should only have feed dates
+    assert f.date.unique().tolist() == dates
+
+    # Empty check
+    f = gkr.build_route_timetable(feed, route_id, dates[2:])
+    assert f.empty
+
+
+def test_routes_to_geojson():
+    feed = cairns.copy()
+    route_ids = feed.routes.route_id.loc[:1]
+    n = len(route_ids)
+
+    gj = gkr.routes_to_geojson(feed, route_ids)
+    assert len(gj["features"]) == n
+
+    gj = gkr.routes_to_geojson(feed, route_ids, include_stops=True)
+    k = (
+        feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
+        .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
+        .nunique()
+    )
+    assert len(gj["features"]) == n + k
+
+    with pytest.raises(ValueError):
+        gkr.routes_to_geojson(cairns_shapeless)
+
+    with pytest.raises(ValueError):
+        gkr.routes_to_geojson(cairns, route_ids=["bingo"])
+
+
+def test_map_routes():
+    feed = cairns.copy()
+    rids = feed.routes["route_id"].iloc[:1]
+    rsns = feed.routes["route_short_name"].iloc[-2:]
+    m = gkr.map_routes(feed, route_ids=rids, route_short_names=rsns, show_stops=True)
+    assert isinstance(m, fl.Map)
+
+    with pytest.raises(ValueError):
+        gkr.map_routes(feed)
+
+
 @pytest.mark.slow
 def test_compute_route_stats_0():
     feed = cairns.copy()
@@ -269,7 +321,8 @@ def test_compute_route_stats():
 def test_compute_route_time_series_0():
     ts1 = cairns_trip_stats.copy()
     ts2 = cairns_trip_stats.copy()
-    ts2.direction_id = np.nan
+    ts2.direction_id = pd.NA
+    nroutes = ts1["route_id"].nunique()
     for ts, split_directions in itertools.product([ts1, ts2], [True, False]):
         if split_directions and ts.direction_id.isnull().all():
             # Should raise an error
@@ -282,24 +335,35 @@ def test_compute_route_time_series_0():
             ts, split_directions=split_directions, freq="h"
         )
 
-        # Should be a data frame of the correct shape
-        assert rts.shape[0] == 24
-        assert rts.shape[1] == 6 * rs.shape[0]
-
-        # Should have correct column names
+        # Should have correct num rows
         if split_directions:
-            expect = ["indicator", "route_id", "direction_id"]
+            assert rts.shape[0] >= nroutes * 24
         else:
-            expect = ["indicator", "route_id"]
-        assert rts.columns.names == expect
+            assert rts.shape[0] == nroutes * 24
 
-        # Each route have a correct service distance total
+        # Should have correct columns
+        expect_cols = {
+            "datetime",
+            "route_id",
+            "num_trips",
+            "num_trip_starts",
+            "num_trip_ends",
+            "service_distance",
+            "service_duration",
+            "service_speed",
+        }
+        if split_directions:
+            expect_cols |= {"direction_id"}
+        assert set(rts.columns) == expect_cols
+
+        # Each route should have a correct service distance
         if not split_directions:
-            g = ts.groupby("route_id")
-            for route in ts["route_id"].values:
-                get = rts["service_distance"][route].sum()
-                expect = g.get_group(route)["distance"].sum()
-                assert abs((get - expect) / expect) < 0.001
+            for route_id, rsr in rs.groupby("route_id"):
+                get = rts.loc[
+                    lambda x: x["route_id"] == route_id, "service_distance"
+                ].sum()
+                expect = rsr["service_distance"].sum()
+                assert get == pytest.approx(expect)
 
     # Empty check
     rts = gkr.compute_route_time_series_0(
@@ -308,31 +372,11 @@ def test_compute_route_time_series_0():
     assert rts.empty
 
 
-def test_build_zero_route_time_series():
-    feed = cairns.copy()
-    for split_directions in [True, False]:
-        if split_directions:
-            expect_names = ["indicator", "route_id", "direction_id"]
-            expect_shape = (2, 6 * feed.routes.shape[0] * 2)
-        else:
-            expect_names = ["indicator", "route_id"]
-            expect_shape = (2, 6 * feed.routes.shape[0])
-
-        f = gkr.build_zero_route_time_series(
-            feed, split_directions=split_directions, freq="12h"
-        )
-
-        assert isinstance(f, pd.core.frame.DataFrame)
-        assert f.shape == expect_shape
-        assert f.columns.names == expect_names
-        assert not f.values.any()
-
-
 def test_compute_route_time_series():
     feed = cairns.copy()
     dates = cairns_dates  # Spans three consecutive dates
     n = 3
-    rids = feed.routes.route_id.loc[:n]
+    rids = feed.routes.loc[:n, "route_id"]
     trip_stats = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
 
     for split_directions in [True, False]:
@@ -341,90 +385,45 @@ def test_compute_route_time_series():
         )
         rts = gkr.compute_route_time_series(
             feed,
-            dates + ["19990101"],
+            dates + ["19990101"],  # Invalid last date
             trip_stats,
             split_directions=split_directions,
             freq="12h",
         )
 
-        # Should be a data frame of the correct shape
-        assert isinstance(rts, pd.core.frame.DataFrame)
-        print(rts)
-        assert rts.shape[0] == 3 * 2  # Date span * freq chunks
-        assert rts.shape[1] == 6 * rs.shape[0] / 2
-
-        # Should have correct column names
+        # Should have correct num rows
         if split_directions:
-            expect_names = {"indicator", "route_id", "direction_id"}
+            assert rts.shape[0] >= len(dates) * n * 2
         else:
-            expect_names = {"indicator", "route_id"}
-        assert set(rts.columns.names) == expect_names
+            # date span * num routes * num time chunks
+            assert rts.shape[0] == len(dates) * n * 2
 
-        # Should have correct index name
-        assert rts.index.name == "datetime"
+        # Should have correct columns
+        expect_cols = {
+            "datetime",
+            "route_id",
+            "num_trips",
+            "num_trip_starts",
+            "num_trip_ends",
+            "service_distance",
+            "service_duration",
+            "service_speed",
+        }
+        if split_directions:
+            expect_cols |= {"direction_id"}
+        assert set(rts.columns) == expect_cols
 
         # Each route have a correct num_trip_starts
         if not split_directions:
-            rsg = rs.groupby("route_id")
-            for route in rs.route_id.values:
-                get = rts["num_trip_starts"][route].sum()
-                expect = rsg.get_group(route)["num_trips"].sum()
-                assert get == expect
+            for route_id, rsr in rs.groupby("route_id"):
+                get = rts.loc[
+                    lambda x: x["route_id"] == route_id, "num_trip_starts"
+                ].sum()
+                expect = rsr["num_trip_starts"].sum()
+                assert get == pytest.approx(expect)
 
         # Empty dates should yield empty DataFrame
         rts = gkr.compute_route_time_series(
             feed, ["19990101"], trip_stats, split_directions=split_directions
         )
         assert rts.empty
-
-
-def test_build_route_timetable():
-    feed = sample.copy()
-    route_id = feed.routes["route_id"].values[0]
-    dates = feed.get_first_week()[:2]
-    f = gkr.build_route_timetable(feed, route_id, dates)
-
-    # Should have the correct columns
-    expect_cols = set(feed.trips.columns) | set(feed.stop_times.columns) | set(["date"])
-    assert set(f.columns) == expect_cols
-
-    # Should only have feed dates
-    assert f.date.unique().tolist() == dates
-
-    # Empty check
-    f = gkr.build_route_timetable(feed, route_id, dates[2:])
-    assert f.empty
-
-
-def test_routes_to_geojson():
-    feed = cairns.copy()
-    route_ids = feed.routes.route_id.loc[:1]
-    n = len(route_ids)
-
-    gj = gkr.routes_to_geojson(feed, route_ids)
-    assert len(gj["features"]) == n
-
-    gj = gkr.routes_to_geojson(feed, route_ids, include_stops=True)
-    k = (
-        feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
-        .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
-        .nunique()
-    )
-    assert len(gj["features"]) == n + k
-
-    with pytest.raises(ValueError):
-        gkr.routes_to_geojson(cairns_shapeless)
-
-    with pytest.raises(ValueError):
-        gkr.routes_to_geojson(cairns, route_ids=["bingo"])
-
-
-def test_map_routes():
-    feed = cairns.copy()
-    rids = feed.routes["route_id"].iloc[:1]
-    rsns = feed.routes["route_short_name"].iloc[-2:]
-    m = gkr.map_routes(feed, route_ids=rids, route_short_names=rsns, show_stops=True)
-    assert isinstance(m, fl.Map)
-
-    with pytest.raises(ValueError):
-        gkr.map_routes(feed)
