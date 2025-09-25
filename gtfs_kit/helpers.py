@@ -330,7 +330,7 @@ def combine_time_series(
     # Wide to long for each indicator
     long_frames: list[pd.DataFrame] = []
     for ind, wf in series_by_indicator.items():
-        s = wf.stack(dropna=False).rename(ind)  # (datetime, entity) -> value
+        s = wf.stack(future_stack=True).rename(ind)  # (datetime, entity) -> value
         lf = s.reset_index()
         lf.columns = ["datetime", entity_col, ind]
         long_frames.append(lf)
