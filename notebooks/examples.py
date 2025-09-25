@@ -87,6 +87,21 @@ def _(gk, nts):
 
 
 @app.cell
+def _(dates, feed, feed_1):
+    # Stop time series
+    stop_ids = feed.stops.loc[:1, "stop_id"]
+    sts = feed_1.compute_stop_time_series(dates, stop_ids=stop_ids, freq="12h")
+    sts
+    return (sts,)
+
+
+@app.cell
+def _(gk, sts):
+    gk.downsample(sts, freq="d")
+    return
+
+
+@app.cell
 def _(dates, feed_1, trip_stats):
     # Route time series
 

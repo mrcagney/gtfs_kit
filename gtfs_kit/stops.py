@@ -479,33 +479,37 @@ def compute_stop_time_series(
     split_directions: bool = False,
 ) -> pd.DataFrame:
     """
-    Compute time series for the stops on the given dates (YYYYMMDD date strings) at the
-    given frequency (Pandas frequency string, e.g. ``'5Min'``; max frequency is one
-    minute) and return the result...
+    Compute time series for the given stops (defaults to all stops in Feed)
+    on the given dates (YYYYMMDD date strings) at the
+    given frequency (Pandas frequency string, e.g. ``'5Min'``).
+    Return a long-format DataFrame with columns
 
-
-
-     as a DataFrame of the same
-    form as output by the function :func:`.stop_times.compute_stop_time_series_0`.
-    Optionally restrict to stops in the given list of stop IDs.
-
-    If ``split_directions``, then separate the stop stats by direction (0 or 1)
-    of the trips visiting the stops.
-
-    Return a time series DataFrame with a timestamp index across the given dates
-    sampled at the given frequency.
-
-    The columns are the same as in the output of the function
-    :func:`compute_stop_time_series_0`.
+    - ``datetime``: datetime object for the given date and frequency chunks
+    - ``stop_id``
+    - ``direction_id``: direction of route; presest if and only if ``split_directions``
+    - ``num_trips``: the number of trips that visit the stop in the time bin and
+      have a nonnull departure time from the stop
 
     Exclude dates that lie outside of the Feed's date range.
     If all dates lie outside the Feed's date range, then return an
     empty DataFrame
 
+    If ``split_directions``, then separate the stop stats by direction (0 or 1)
+    of the trips visiting the stops.
+
     Notes
     -----
-    - See the notes for the function :func:`compute_stop_time_series_0`
-    - Raise a ValueError if ``split_directions`` and no non-NaN
+    - The time series is computed at a one-minute frequency, then
+      resampled at the end to the given frequency
+    - Stop times with null departure times are ignored, so the aggregate
+      of ``num_trips`` across the day could be less than the
+      ``num_trips`` column in :func:`compute_stop_stats_0`
+    - All trip departure times are taken modulo 24 hours,
+      so routes with trips that end past 23:59:59 will have all
+      their stats wrap around to the early morning of the time series.
+    - 'num_trips' should be resampled with ``how=np.sum``
+    - If ``trips_subset`` is empty, then return an empty DataFrame
+    - Raise a ValueError if ``split_directions`` and no non-null
       direction ID values present
 
     """
@@ -513,7 +517,6 @@ def compute_stop_time_series(
     null_stats = compute_stop_time_series_0(
         pd.DataFrame(), pd.DataFrame(), split_directions=split_directions
     )
-
     # Handle defunct case
     if not dates:
         return null_stats
@@ -557,7 +560,7 @@ def compute_stop_time_series(
         frames.append(stats)
 
     # Collate stats
-    return pd.concat(frames)
+    return pd.concat(frames, ignore_index=True)
 
 
 def build_stop_timetable(feed: "Feed", stop_id: str, dates: list[str]) -> pd.DataFrame:

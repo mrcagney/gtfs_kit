@@ -395,15 +395,14 @@ def combine_time_series(
 
 def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     """
-    Downsample the given route, stop, or network time series,
-    (outputs of :func:`.routes.compute_route_time_series`,
-    :func:`.stops.compute_stop_time_series`, or
+    Downsample the given stop, route,  or network time series,
+    (outputs of :func:`.stops.compute_stop_time_series`,
+    :func:`.routes.compute_route_time_series`, or
     :func:`.miscellany.compute_network_time_series`,
-    respectively) to the given Pandas frequency string (e.g. '15Min').
+    respectively) to the given frequency (Pandas frequency string, e.g. '15Min').
 
     Return the given time series unchanged if the given frequency is
-    shorter than the original frequency or the given frequncy is longer than a day.
-    Raise a ValueError the original frequency of the time series can't be inferred.
+    finer than the original frequency or the given frequncy is courser than a day.
     """
     import pandas.tseries.frequencies as pdf
 
@@ -411,13 +410,12 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     if time_series.empty:
         return time_series
 
-    if "datetime" not in time_series.columns:
-        raise ValueError("Time series must have a 'datetime' column")
-
     f = time_series.assign(datetime=lambda x: pd.to_datetime(x["datetime"]))
     ifreq = pd.infer_freq(f["datetime"].unique()[:3])
     if ifreq is None:
-        raise ValueError("Can't infer frequency of time series")
+        # Carry on, assuming everything will work
+        pass
+        # raise ValueError("Can't infer frequency of time series")
     elif pdf.to_offset(freq) <= pdf.to_offset(ifreq) or pdf.to_offset(
         freq
     ) > pdf.to_offset("24h"):
@@ -465,7 +463,13 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
 
         if is_stop_series:
             # Sum all numeric columns, preserving all-NaN groups (min_count=1)
-            agg = gb.sum(min_count=1).reset_index()
+            agg = (
+                gb.sum(min_count=1)
+                # Remove any extra dates inserted in between,
+                # which will have all NAN values
+                .dropna()
+                .reset_index()
+            )
         else:
             series = []
             for col in indicators:
