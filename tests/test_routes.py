@@ -1,126 +1,24 @@
 import itertools
 
-import pytest
+import folium as fl
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import geopandas as gpd
-import folium as fl
+import pytest
 
-from .context import (
-    DATA_DIR,
-    gtfs_kit,
-    cairns,
-    cairns_shapeless,
-    cairns_dates,
-    cairns_trip_stats,
-)
 from gtfs_kit import constants as cs
 from gtfs_kit import routes as gkr
 
+from .context import (
+    DATA_DIR,
+    cairns,
+    cairns_dates,
+    cairns_shapeless,
+    cairns_trip_stats,
+    gtfs_kit,
+)
 
 sample = gtfs_kit.read_feed(DATA_DIR / "sample_gtfs_2.zip", dist_units="km")
-
-
-@pytest.mark.slow
-def test_compute_route_stats_0():
-    feed = cairns.copy()
-    ts1 = cairns_trip_stats.copy()
-    ts2 = cairns_trip_stats.copy()
-    ts2.direction_id = np.nan
-
-    for ts, split_directions in itertools.product([ts1, ts2], [True, False]):
-        if split_directions and ts.direction_id.isnull().all():
-            # Should raise an error
-            with pytest.raises(ValueError):
-                gkr.compute_route_stats_0(ts, split_directions=split_directions)
-            continue
-
-        rs = gkr.compute_route_stats_0(ts, split_directions=split_directions)
-
-        # Should be a data frame of the correct shape
-        if split_directions:
-            max_num_routes = 2 * feed.routes.shape[0]
-        else:
-            max_num_routes = feed.routes.shape[0]
-        assert rs.shape[0] <= max_num_routes
-
-        # Should contain the correct columns
-        expect_cols = set(
-            [
-                "route_id",
-                "route_short_name",
-                "route_type",
-                "num_trips",
-                "num_trip_ends",
-                "num_trip_starts",
-                "num_stop_patterns",
-                "is_bidirectional",
-                "is_loop",
-                "start_time",
-                "end_time",
-                "max_headway",
-                "min_headway",
-                "mean_headway",
-                "peak_num_trips",
-                "peak_start_time",
-                "peak_end_time",
-                "service_duration",
-                "service_distance",
-                "service_speed",
-                "mean_trip_distance",
-                "mean_trip_duration",
-            ]
-        )
-        if split_directions:
-            expect_cols.add("direction_id")
-        assert set(rs.columns) == expect_cols
-
-    # Empty check
-    rs = gkr.compute_route_stats_0(pd.DataFrame(), split_directions=split_directions)
-    assert rs.empty
-
-
-@pytest.mark.slow
-def test_compute_route_time_series_0():
-    ts1 = cairns_trip_stats.copy()
-    ts2 = cairns_trip_stats.copy()
-    ts2.direction_id = np.nan
-    for ts, split_directions in itertools.product([ts1, ts2], [True, False]):
-        if split_directions and ts.direction_id.isnull().all():
-            # Should raise an error
-            with pytest.raises(ValueError):
-                gkr.compute_route_stats_0(ts, split_directions=split_directions)
-            continue
-
-        rs = gkr.compute_route_stats_0(ts, split_directions=split_directions)
-        rts = gkr.compute_route_time_series_0(
-            ts, split_directions=split_directions, freq="h"
-        )
-
-        # Should be a data frame of the correct shape
-        assert rts.shape[0] == 24
-        assert rts.shape[1] == 6 * rs.shape[0]
-
-        # Should have correct column names
-        if split_directions:
-            expect = ["indicator", "route_id", "direction_id"]
-        else:
-            expect = ["indicator", "route_id"]
-        assert rts.columns.names == expect
-
-        # Each route have a correct service distance total
-        if not split_directions:
-            g = ts.groupby("route_id")
-            for route in ts["route_id"].values:
-                get = rts["service_distance"][route].sum()
-                expect = g.get_group(route)["distance"].sum()
-                assert abs((get - expect) / expect) < 0.001
-
-    # Empty check
-    rts = gkr.compute_route_time_series_0(
-        pd.DataFrame(), split_directions=split_directions, freq="1h"
-    )
-    assert rts.empty
 
 
 def test_get_routes():
@@ -225,8 +123,6 @@ def test_get_routes():
     )
 
     g = gkr.get_routes(feed, as_gdf=True)
-    print(g)
-    print(feed.get_trips(as_gdf=True))
     assert g.crs == cs.WGS84
 
     # Turning a route's shapes into point geometries,
@@ -244,137 +140,6 @@ def test_get_routes():
         .iat[0]
         is None
     )
-
-
-def test_compute_route_stats():
-    feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]
-    n = 3
-    rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
-
-    for split_directions in [True, False]:
-        rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, dates, split_directions=split_directions
-        )
-
-        # Should be a data frame of the correct shape
-        assert isinstance(rs, pd.core.frame.DataFrame)
-        if split_directions:
-            max_num_routes = 2 * n
-        else:
-            max_num_routes = n
-
-        assert rs.shape[0] <= 2 * max_num_routes
-
-        # Should contain the correct columns
-        expect_cols = {
-            "date",
-            "route_id",
-            "route_short_name",
-            "route_type",
-            "num_trips",
-            "num_trip_ends",
-            "num_trip_starts",
-            "num_stop_patterns",
-            "is_bidirectional",
-            "is_loop",
-            "start_time",
-            "end_time",
-            "max_headway",
-            "min_headway",
-            "mean_headway",
-            "peak_num_trips",
-            "peak_start_time",
-            "peak_end_time",
-            "service_duration",
-            "service_distance",
-            "service_speed",
-            "mean_trip_distance",
-            "mean_trip_duration",
-        }
-        if split_directions:
-            expect_cols.add("direction_id")
-
-        assert set(rs.columns) == expect_cols
-
-        # Should only contains valid dates
-        rs.date.unique().tolist() == cairns_dates
-
-        # Empty dates should yield empty DataFrame
-        rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, [], split_directions=split_directions
-        )
-        assert rs.empty
-
-
-def test_build_zero_route_time_series():
-    feed = cairns.copy()
-    for split_directions in [True, False]:
-        if split_directions:
-            expect_names = ["indicator", "route_id", "direction_id"]
-            expect_shape = (2, 6 * feed.routes.shape[0] * 2)
-        else:
-            expect_names = ["indicator", "route_id"]
-            expect_shape = (2, 6 * feed.routes.shape[0])
-
-        f = gkr.build_zero_route_time_series(
-            feed, split_directions=split_directions, freq="12h"
-        )
-
-        assert isinstance(f, pd.core.frame.DataFrame)
-        assert f.shape == expect_shape
-        assert f.columns.names == expect_names
-        assert not f.values.any()
-
-
-def test_compute_route_time_series():
-    feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]  # Spans 3 valid dates
-    n = 3
-    rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
-
-    for split_directions in [True, False]:
-        rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, dates, split_directions=split_directions
-        )
-        rts = gkr.compute_route_time_series(
-            feed,
-            trip_stats_subset,
-            dates,
-            split_directions=split_directions,
-            freq="12h",
-        )
-
-        # Should be a data frame of the correct shape
-        assert isinstance(rts, pd.core.frame.DataFrame)
-        assert rts.shape[0] == 3 * 2  # 3-date span at 12H freq
-        assert rts.shape[1] == 6 * rs.shape[0] / 2
-
-        # Should have correct column names
-        if split_directions:
-            expect_names = ["indicator", "route_id", "direction_id"]
-        else:
-            expect_names = ["indicator", "route_id"]
-        assert rts.columns.names, expect_names
-
-        # Should have correct index name
-        assert rts.index.name == "datetime"
-
-        # Each route have a correct num_trip_starts
-        if not split_directions:
-            rsg = rs.groupby("route_id")
-            for route in rs.route_id.values:
-                get = rts["num_trip_starts"][route].sum()
-                expect = rsg.get_group(route)["num_trips"].sum()
-                assert get == expect
-
-        # Empty dates should yield empty DataFrame
-        rts = gkr.compute_route_time_series(
-            feed, trip_stats_subset, [], split_directions=split_directions
-        )
-        assert rts.empty
 
 
 def test_build_route_timetable():
@@ -427,3 +192,238 @@ def test_map_routes():
 
     with pytest.raises(ValueError):
         gkr.map_routes(feed)
+
+
+@pytest.mark.slow
+def test_compute_route_stats_0():
+    feed = cairns.copy()
+    ts1 = cairns_trip_stats.copy()
+    ts2 = cairns_trip_stats.copy()
+    ts2.direction_id = np.nan
+
+    for ts, split_directions in itertools.product([ts1, ts2], [True, False]):
+        if split_directions and ts.direction_id.isnull().all():
+            # Should raise an error
+            with pytest.raises(ValueError):
+                gkr.compute_route_stats_0(ts, split_directions=split_directions)
+            continue
+
+        rs = gkr.compute_route_stats_0(ts, split_directions=split_directions)
+
+        # Should be a data frame of the correct shape
+        if split_directions:
+            max_num_routes = 2 * feed.routes.shape[0]
+        else:
+            max_num_routes = feed.routes.shape[0]
+        assert rs.shape[0] <= max_num_routes
+
+        # Should contain the correct columns
+        expect_cols = set(
+            [
+                "route_id",
+                "route_short_name",
+                "route_type",
+                "num_trips",
+                "num_trip_ends",
+                "num_trip_starts",
+                "num_stop_patterns",
+                "is_loop",
+                "start_time",
+                "end_time",
+                "max_headway",
+                "min_headway",
+                "mean_headway",
+                "peak_num_trips",
+                "peak_start_time",
+                "peak_end_time",
+                "service_duration",
+                "service_distance",
+                "service_speed",
+                "mean_trip_distance",
+                "mean_trip_duration",
+            ]
+        )
+        if split_directions:
+            expect_cols.add("direction_id")
+        else:
+            expect_cols.add("is_bidirectional")
+        assert set(rs.columns) == expect_cols
+
+    # Empty check
+    rs = gkr.compute_route_stats_0(pd.DataFrame(), split_directions=split_directions)
+    assert rs.empty
+
+
+def test_compute_route_stats():
+    feed = cairns.copy()
+    dates = cairns_dates + ["20010101"]
+    n = 3
+    rids = feed.routes.route_id.loc[:n]
+    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
+
+    for split_directions in [True, False]:
+        rs = gkr.compute_route_stats(
+            feed, trip_stats_subset, dates, split_directions=split_directions
+        )
+
+        # Should be a data frame of the correct shape
+        assert isinstance(rs, pd.core.frame.DataFrame)
+        if split_directions:
+            max_num_routes = 2 * n
+        else:
+            max_num_routes = n
+
+        assert rs.shape[0] <= 2 * max_num_routes
+
+        # Should contain the correct columns
+        expect_cols = {
+            "date",
+            "route_id",
+            "route_short_name",
+            "route_type",
+            "num_trips",
+            "num_trip_ends",
+            "num_trip_starts",
+            "num_stop_patterns",
+            "is_loop",
+            "start_time",
+            "end_time",
+            "max_headway",
+            "min_headway",
+            "mean_headway",
+            "peak_num_trips",
+            "peak_start_time",
+            "peak_end_time",
+            "service_duration",
+            "service_distance",
+            "service_speed",
+            "mean_trip_distance",
+            "mean_trip_duration",
+        }
+        if split_directions:
+            expect_cols.add("direction_id")
+        else:
+            expect_cols.add("is_bidirectional")
+
+        assert set(rs.columns) == expect_cols
+
+        # Should only contains valid dates
+        rs.date.unique().tolist() == cairns_dates
+
+        # Empty dates should yield empty DataFrame
+        rs = gkr.compute_route_stats(
+            feed, trip_stats_subset, [], split_directions=split_directions
+        )
+        assert rs.empty
+
+
+@pytest.mark.slow
+def test_compute_route_time_series_0():
+    ts1 = cairns_trip_stats.copy()
+    ts2 = cairns_trip_stats.copy()
+    ts2.direction_id = pd.NA
+    nroutes = ts1["route_id"].nunique()
+    for ts, split_directions in itertools.product([ts1, ts2], [True, False]):
+        if split_directions and ts.direction_id.isnull().all():
+            # Should raise an error
+            with pytest.raises(ValueError):
+                gkr.compute_route_stats_0(ts, split_directions=split_directions)
+            continue
+
+        rs = gkr.compute_route_stats_0(ts, split_directions=split_directions)
+        rts = gkr.compute_route_time_series_0(
+            ts, split_directions=split_directions, freq="h"
+        )
+
+        # Should have correct num rows
+        if split_directions:
+            assert rts.shape[0] >= nroutes * 24
+        else:
+            assert rts.shape[0] == nroutes * 24
+
+        # Should have correct columns
+        expect_cols = {
+            "datetime",
+            "route_id",
+            "num_trips",
+            "num_trip_starts",
+            "num_trip_ends",
+            "service_distance",
+            "service_duration",
+            "service_speed",
+        }
+        if split_directions:
+            expect_cols |= {"direction_id"}
+        assert set(rts.columns) == expect_cols
+
+        # Each route should have a correct service distance
+        if not split_directions:
+            for route_id, rsr in rs.groupby("route_id"):
+                get = rts.loc[
+                    lambda x: x["route_id"] == route_id, "service_distance"
+                ].sum()
+                expect = rsr["service_distance"].sum()
+                assert get == pytest.approx(expect)
+
+    # Empty check
+    rts = gkr.compute_route_time_series_0(
+        pd.DataFrame(), split_directions=split_directions, freq="1h"
+    )
+    assert rts.empty
+
+
+def test_compute_route_time_series():
+    feed = cairns.copy()
+    dates = cairns_dates  # Spans three consecutive dates
+    n = 3
+    rids = feed.routes.loc[:n, "route_id"]
+    trip_stats = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
+
+    for split_directions in [True, False]:
+        rs = gkr.compute_route_stats(
+            feed, dates, trip_stats, split_directions=split_directions
+        )
+        rts = gkr.compute_route_time_series(
+            feed,
+            dates + ["19990101"],  # Invalid last date
+            trip_stats,
+            split_directions=split_directions,
+            freq="12h",
+        )
+
+        # Should have correct num rows
+        if split_directions:
+            assert rts.shape[0] >= len(dates) * n * 2
+        else:
+            # date span * num routes * num time chunks
+            assert rts.shape[0] == len(dates) * n * 2
+
+        # Should have correct columns
+        expect_cols = {
+            "datetime",
+            "route_id",
+            "num_trips",
+            "num_trip_starts",
+            "num_trip_ends",
+            "service_distance",
+            "service_duration",
+            "service_speed",
+        }
+        if split_directions:
+            expect_cols |= {"direction_id"}
+        assert set(rts.columns) == expect_cols
+
+        # Each route have a correct num_trip_starts
+        if not split_directions:
+            for route_id, rsr in rs.groupby("route_id"):
+                get = rts.loc[
+                    lambda x: x["route_id"] == route_id, "num_trip_starts"
+                ].sum()
+                expect = rsr["num_trip_starts"].sum()
+                assert get == pytest.approx(expect)
+
+        # Empty dates should yield empty DataFrame
+        rts = gkr.compute_route_time_series(
+            feed, ["19990101"], trip_stats, split_directions=split_directions
+        )
+        assert rts.empty

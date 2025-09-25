@@ -1,9 +1,12 @@
 """
 Functions about calendar and calendar_dates.
 """
+
 from __future__ import annotations
-import dateutil.relativedelta as rd
+
 from typing import TYPE_CHECKING
+
+import dateutil.relativedelta as rd
 
 from . import helpers as hp
 
@@ -40,7 +43,7 @@ def get_dates(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
 
     # Convert dates back to strings if required
     if not as_date_obj:
-        result = [hp.datestr_to_date(x, inverse=True) for x in result]
+        result = [hp.date_to_datestr(x) for x in result]
 
     return result
 
@@ -60,7 +63,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
 
     # Get first Monday
     monday_index = None
-    for (i, date) in enumerate(dates):
+    for i, date in enumerate(dates):
         if date.weekday() == 0:
             monday_index = i
             break
@@ -73,7 +76,7 @@ def get_week(feed: "Feed", k: int, *, as_date_obj: bool = False) -> list[str]:
 
     # Convert to date strings if requested
     if not as_date_obj:
-        result = [hp.datestr_to_date(x, inverse=True) for x in result]
+        result = [hp.date_to_datestr(x) for x in result]
 
     return result
 
@@ -92,7 +95,8 @@ def get_first_week(feed: "Feed", *, as_date_obj: bool = False) -> list[str]:
 def subset_dates(feed: "Feed", dates: list[str]) -> list[str]:
     """
     Given a Feed and a list of YYYYMMDD date strings,
-    return the sublist of dates that lie in the Feed's dates
+    return the sorted sublist of dates that lie in the Feed's dates
     (the output :func:`feed.get_dates`).
+    Could be an empty list.
     """
-    return [d for d in dates if d in feed.get_dates()]
+    return sorted(set(dates) & set(feed.get_dates()))

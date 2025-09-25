@@ -3,105 +3,107 @@ Functions useful across modules.
 """
 
 from __future__ import annotations
-import datetime as dt
-from typing import Callable
+
 import copy
+import datetime as dt
+import functools as ft
+import math
 from bisect import bisect_left, bisect_right
 from functools import cmp_to_key
-import math
+from typing import Callable, Literal
 
-import pandas as pd
-import numpy as np
-import shapely.geometry as sg
 import json2html as j2h
+import numpy as np
+import pandas as pd
+import shapely.geometry as sg
 
 from . import constants as cs
 
 
-def datestr_to_date(
-    x: dt.date | str, format_str: str = "%Y%m%d", *, inverse: bool = False
-) -> str | dt.date:
+def datestr_to_date(x: str | None, format_str: str = "%Y%m%d") -> dt.date | None:
     """
-    Given a string ``x`` representing a date in the given format,
-    convert it to a datetime.date object and return the result.
-    If ``inverse``, then assume that ``x`` is a date object and return
-    its corresponding string in the given format.
+    Convert a date string to a datetime.date.
+    Return ``None`` if ``x is None``.
     """
     if x is None:
         return None
-    if not inverse:
-        result = dt.datetime.strptime(x, format_str).date()
-    else:
-        result = x.strftime(format_str)
-    return result
+    return dt.datetime.strptime(x, format_str).date()
 
 
-def timestr_to_seconds(
-    x: dt.date | str, *, inverse: bool = False, mod24: bool = False
-) -> int:
+def date_to_datestr(x: dt.date | None, format_str: str = "%Y%m%d") -> str | None:
+    """
+    Convert a datetime.date to a formatted string.
+    Return ``None`` if ``x is None``.
+    """
+    if x is None:
+        return None
+    return x.strftime(format_str)
+
+
+def timestr_to_seconds(x: str, *, mod24: bool = False) -> int | np.nan:
     """
     Given an HH:MM:SS time string ``x``, return the number of seconds
     past midnight that it represents.
     In keeping with GTFS standards, the hours entry may be greater than
     23.
     If ``mod24``, then return the number of seconds modulo ``24*3600``.
-    If ``inverse``, then do the inverse operation.
-    In this case, if ``mod24`` also, then first take the number of
-    seconds modulo ``24*3600``.
+    Return ``np.nan`` in case of bad inputs.
     """
-    if not inverse:
-        try:
-            hours, mins, seconds = x.split(":")
-            result = int(hours) * 3600 + int(mins) * 60 + int(seconds)
-            if mod24:
-                result %= 24 * 3600
-        except Exception:
-            result = np.nan
-    else:
-        try:
-            seconds = int(x)
-            if mod24:
-                seconds %= 24 * 3600
-            hours, remainder = divmod(seconds, 3600)
-            mins, secs = divmod(remainder, 60)
-            result = f"{hours:02d}:{mins:02d}:{secs:02d}"
-        except Exception:
-            result = np.nan
+    try:
+        hours, mins, seconds = x.split(":")
+        result = int(hours) * 3600 + int(mins) * 60 + int(seconds)
+        if mod24:
+            result %= 24 * 3600
+    except Exception:
+        result = np.nan
     return result
 
 
-def timestr_mod24(timestr: str) -> int:
+def seconds_to_timestr(x: int, *, mod24: bool = False) -> str | np.nan:
+    """
+    The inverse of :func:`timestr_to_seconds`.
+    If ``mod24``, then first take the number of seconds modulo ``24*3600``.
+    Return NAN in case of bad inputs.
+    """
+    try:
+        seconds = int(x)
+        if mod24:
+            seconds %= 24 * 3600
+        hours, remainder = divmod(seconds, 3600)
+        mins, secs = divmod(remainder, 60)
+        result = f"{hours:02d}:{mins:02d}:{secs:02d}"
+    except Exception:
+        result = np.nan
+    return result
+
+
+def timestr_mod24(timestr: str) -> int | np.nan:
     """
     Given a GTFS HH:MM:SS time string, return a timestring in the same
     format but with the hours taken modulo 24.
+    Return NAN in case of bad inputes
     """
     try:
         hours, mins, secs = [int(x) for x in timestr.split(":")]
         hours %= 24
         result = f"{hours:02d}:{mins:02d}:{secs:02d}"
     except Exception:
-        result = None
+        result = np.nan
     return result
 
 
-def weekday_to_str(weekday: int | str, *, inverse: bool = False) -> int | str:
+def replace_date(f: pd.DataFrame, date: str) -> pd.DataFrame:
     """
-    Given a weekday number (integer in the range 0, 1, ..., 6),
-    return its corresponding weekday name as a lowercase string.
-    Here 0 -> 'monday', 1 -> 'tuesday', and so on.
-    If ``inverse``, then perform the inverse operation.
+    Given a table with a datetime object column called 'datetime' and given a
+    YYYYMMDD date string, replace the datetime dates with the given date
+    and return the resulting table.
     """
-    s = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-    if not inverse:
-        try:
-            return s[weekday]
-        except Exception:
-            return
-    else:
-        try:
-            return s.index(weekday)
-        except Exception:
-            return
+    d = datestr_to_date(date)
+    return f.assign(
+        datetime=lambda x: x["datetime"].map(
+            lambda t: t.replace(year=d.year, month=d.month, day=d.day)
+        )
+    )
 
 
 def get_segment_length(
@@ -285,201 +287,227 @@ def get_active_trips_df(trip_times: pd.DataFrame) -> pd.Series:
 
 
 def combine_time_series(
-    time_series_dict: dict[str, pd.DataFrame],
-    kind: str,
+    series_by_indicator: dict[str, pd.DataFrame],
     *,
+    kind: Literal["route", "stop"],
     split_directions: bool = False,
 ) -> pd.DataFrame:
     """
-    Combine the time series DataFrames in the given dictionary
-    into one time series DataFrame with hierarchical columns.
+    Combine a dict of wide time series (one DataFrame per indicator, columns are entities)
+    into a single long-form time series with columns
 
-    Parameters
-    ----------
-    time_series_dict : dictionary
-        Has the form string -> time series
-    kind : string
-        ``'route'`` or ``'stop'``
-    split_directions : boolean
-        If ``True``, then assume the original time series contains data
-        separated by trip direction; otherwise, assume not.
-        The separation is indicated by a suffix ``'-0'`` (direction 0)
-        or ``'-1'`` (direction 1) in the route ID or stop ID column
-        values.
+    - ``'datetime'``
+    - ``'route_id'`` or ``'stop_id'``: depending on ``kind``
+    - ``'direction_id'``: present if and only if ``split_directions``
+    - one column per indicator provided in `series_by_indicator`
+    - ``'service_speed'``: if both ``service_distance`` and ``service_duration`` present
 
-    Returns
-    -------
-    DataFrame
-        Columns are hierarchical (multi-index).
-        The top level columns are the keys of the dictionary and
-        the second level columns are ``'route_id'`` and
-        ``'direction_id'``, if ``kind == 'route'``, or 'stop_id' and
-        ``'direction_id'``, if ``kind == 'stop'``.
-        If ``split_directions``, then third column is
-        ``'direction_id'``; otherwise, there is no ``'direction_id'``
-        column.
-
+    If ``split_directions``, then assume the original time series contains data
+    separated by trip direction; otherwise, assume not.
+    The separation is indicated by a suffix ``'-0'`` (direction 0) or ``'-1'``
+    (direction 1) in the route ID or stop ID column values.
     """
-    if kind not in ["stop", "route"]:
-        raise ValueError("kind must be 'stop' or 'route'")
+    if not series_by_indicator:
+        return pd.DataFrame()
 
-    names = ["indicator"]
-    if kind == "stop":
-        names.append("stop_id")
-    else:
-        names.append("route_id")
-
-    if split_directions:
-        names.append("direction_id")
-
-    def process_index(k):
-        a, b = k.rsplit("-", 1)
-        return a, int(b)
-
-    frames = list(time_series_dict.values())
-    new_frames = []
-    if split_directions:
-        for f in frames:
-            ft = f.T
-            ft.index = pd.MultiIndex.from_tuples(
-                [process_index(k) for (k, __) in ft.iterrows()]
+    # Validate indices and types
+    indicators = list(series_by_indicator.keys())
+    base_index: pd.DatetimeIndex | None = None
+    for ind, df in series_by_indicator.items():
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError(f"Indicator '{ind}' is not a DataFrame.")
+        if not isinstance(df.index, pd.DatetimeIndex):
+            raise ValueError(f"Indicator '{ind}' must have a DatetimeIndex.")
+        if base_index is None:
+            base_index = df.index
+        elif not base_index.equals(df.index):
+            raise ValueError(
+                "All indicator DataFrames must share the same DatetimeIndex."
             )
-            new_frames.append(ft.T)
-    else:
-        new_frames = frames
-    result = pd.concat(
-        new_frames, axis=1, keys=list(time_series_dict.keys()), names=names
+
+    entity_col = "route_id" if kind == "route" else "stop_id"
+
+    # Wide to long for each indicator
+    long_frames: list[pd.DataFrame] = []
+    for ind, wf in series_by_indicator.items():
+        s = wf.stack(future_stack=True).rename(ind)  # (datetime, entity) -> value
+        lf = s.reset_index()
+        lf.columns = ["datetime", entity_col, ind]
+        long_frames.append(lf)
+
+    # Merge all indicators on (datetime, entity)
+    f = ft.reduce(
+        lambda a, b: pd.merge(a, b, on=["datetime", entity_col], how="outer"),
+        long_frames,
     )
 
-    return result.rename_axis("datetime", axis="index")
+    # Optionally split direction from encoded IDs "<id>-<dir>"
+    if split_directions:
+
+        def _split(ent):
+            if pd.isna(ent):
+                return np.nan, np.nan
+            parts = str(ent).rsplit("-", 1)
+            if len(parts) != 2:
+                return ent, np.nan
+            eid, did = parts
+            try:
+                return eid, int(did)
+            except Exception:
+                return eid, np.nan
+
+        split = f[entity_col].map(_split)
+        f[entity_col] = split.map(lambda t: t[0])
+        f["direction_id"] = split.map(lambda t: t[1])
+
+    # Coerce numeric indicators and fill NaNs with 0 (speed handled later)
+    numeric_cols = []
+    for ind in indicators:
+        if ind in f.columns:
+            f[ind] = pd.to_numeric(f[ind], errors="coerce")
+            numeric_cols.append(ind)
+    if numeric_cols:
+        f[numeric_cols] = f[numeric_cols].fillna(0)
+
+    # Compute service_speed if possible
+    if "service_distance" in f.columns and "service_duration" in f.columns:
+        f["service_speed"] = (
+            f["service_distance"]
+            .div(f["service_duration"])
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(0.0)
+        )
+
+    # Arrange columns
+    cols0 = ["datetime", entity_col]
+    if split_directions:
+        cols0.append("direction_id")
+    cols = cols0 + [
+        "num_trip_starts",
+        "num_trip_ends",
+        "num_trips",
+        "service_duration",
+        "service_distance",
+        "service_speed",
+    ]
+    return f.filter(cols).sort_values(cols0, ignore_index=True)
 
 
 def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     """
-    Downsample the given route, stop, or feed time series,
-    (outputs of :func:`.routes.compute_route_time_series`,
-    :func:`.stops.compute_stop_time_series`, or
-    :func:`.miscellany.compute_feed_time_series`,
-    respectively) to the given Pandas frequency string (e.g. '15Min').
+    Downsample the given stop, route,  or network time series,
+    (outputs of :func:`.stops.compute_stop_time_series`,
+    :func:`.routes.compute_route_time_series`, or
+    :func:`.miscellany.compute_network_time_series`,
+    respectively) to the given frequency (Pandas frequency string, e.g. '15Min').
+
     Return the given time series unchanged if the given frequency is
-    shorter than the original frequency.
+    finer than the original frequency or the given frequncy is courser than a day.
     """
+    import pandas.tseries.frequencies as pdf
 
-    f = time_series.copy()
+    # Handle defunct cases
+    if time_series.empty:
+        return time_series
 
-    # Can't downsample to a shorter frequency
-    if f.empty or pd.tseries.frequencies.to_offset(
+    f = time_series.assign(datetime=lambda x: pd.to_datetime(x["datetime"]))
+    ifreq = pd.infer_freq(f["datetime"].unique()[:3])
+    if ifreq is None:
+        # Carry on, assuming everything will work
+        pass
+        # raise ValueError("Can't infer frequency of time series")
+    elif pdf.to_offset(freq) <= pdf.to_offset(ifreq) or pdf.to_offset(
         freq
-    ) <= pd.tseries.frequencies.to_offset(pd.infer_freq(f.index)):
+    ) > pdf.to_offset("24h"):
         return f
 
-    result = None
-    if "stop_id" in time_series.columns.names:
-        # It's a stops time series
-        result = f.resample(freq).sum(min_count=1)
+    # Handle generic case
+    id_cols = list(
+        {"route_id", "stop_id", "direction_id", "route_type"} & set(f.columns)
+    )
+
+    if not id_cols:
+        # Network time series without route type
+        f["tmp"] = "tmp"
+        id_cols = ["tmp"]
+
+    if "stop_id" in time_series.columns:
+        is_stop_series = True
+        indicators = ["num_trips"]
     else:
-        # It's a route or feed time series.
-        inds = [
+        # It's a route or network time series.
+        is_stop_series = False
+        indicators = [
             "num_trips",
             "num_trip_starts",
             "num_trip_ends",
             "service_distance",
             "service_duration",
+            "service_speed",
         ]
-        frames = []
 
-        # Resample num_trips in a custom way that depends on
-        # num_trips and num_trip_ends
-        def agg_num_trips(group):
-            return group["num_trips"].iloc[-1] + group["num_trip_ends"].iloc[:-1].sum(
-                min_count=1
+    def agg_num_trips(g):
+        """
+        Num trips uses custom rule:
+        last(num_trips in bin) + sum(num_trip_ends in all but the last row in the bin)
+        """
+        if g.empty:
+            return np.nan
+        return g["num_trips"].iloc[-1] + g["num_trip_ends"].iloc[:-1].sum(min_count=1)
+
+    frames = []
+    for key, group in f.groupby(id_cols, dropna=False):
+        g = group.sort_values("datetime").set_index("datetime")
+        # groupby + Grouper will not create empty bins
+        gb = g.groupby(pd.Grouper(freq=freq))
+
+        if is_stop_series:
+            # Sum all numeric columns, preserving all-NaN groups (min_count=1)
+            agg = (
+                gb.sum(min_count=1)
+                # Remove any extra dates inserted in between,
+                # which will have all NAN values
+                .dropna()
+                .reset_index()
+            )
+        else:
+            series = []
+            for col in indicators:
+                if col == "num_trips":
+                    s = gb.apply(agg_num_trips)
+                elif col != "service_speed":
+                    s = gb[col].agg(lambda x: x.sum(min_count=1))
+                series.append(s.rename(col))
+
+            agg = (
+                pd.concat(series, axis="columns")
+                # Remove any extra dates inserted in between,
+                # which will have all NAN values
+                .dropna()
+                # Compute service speed now
+                .assign(
+                    service_speed=lambda x: x["service_distance"]
+                    .div(x["service_duration"])
+                    .replace([np.inf, -np.inf], np.nan)
+                    .fillna(0.0)
+                )
+                # Bring back 'datetime' column
+                .reset_index()
             )
 
-        num_trips = f.groupby(pd.Grouper(freq=freq)).apply(agg_num_trips)
-        frames.append(num_trips)
-
-        # Resample the rest of the indicators via summing, preserving all-NaNs
-        frames.extend(
-            [
-                f[ind].resample(freq).agg(lambda x: x.sum(min_count=1))
-                for ind in inds[1:]
-            ]
-        )
-
-        g = pd.concat(frames, axis=1, keys=inds)
-
-        # Calculate speed and add it to f. Can't resample it.
-        speed = (g.service_distance / g.service_duration).fillna(g.service_distance)
-        speed = pd.concat({"service_speed": speed}, axis=1)
-        result = pd.concat([g, speed], axis=1)
-
-    # Reset column names and sort the hierarchical columns to allow slicing;
-    # see http://pandas.pydata.org/pandas-docs/stable/advanced.html#sorting-a-multiindex
-    result.columns.names = f.columns.names
-    result = result.sort_index(axis=1, sort_remaining=True)
-
-    # Set frequency, which is not automatically set
-    result.index.freq = freq
-
-    return result
-
-
-def unstack_time_series(time_series: pd.DataFrame) -> pd.DataFrame:
-    """
-    Given a route, stop, or feed time series of the form output by the functions,
-    :func:`compute_stop_time_series`, :func:`compute_route_time_series`, or
-    :func:`compute_feed_time_series`, respectively, unstack it to return a DataFrame
-    of with the columns:
-
-    - ``"datetime"``
-    - the columns ``time_series.columns.names``
-    - ``"value"``: value at the datetime and other columns
-
-    """
-    col_names = time_series.columns.names
-    return (
-        time_series.unstack()
-        .pipe(pd.DataFrame)
-        .reset_index()
-        .rename(columns={0: "value", "level_2": "datetime"})
-        # Reorder columns
-        .filter(["datetime"] + col_names + ["value"])
-        .sort_values(["datetime"] + col_names)
-    )
-
-
-def restack_time_series(unstacked_time_series: pd.DataFrame) -> pd.DataFrame:
-    """
-    Given an unstacked stop, route, or feed time series in the form
-    output by the function :func:`unstack_time_series`, restack it into
-    its original time series form.
-    """
-    f = unstacked_time_series
-    columns = [c for c in f.columns if c not in ["datetime", "value"]]
-    g = f.pivot_table(index="datetime", columns=columns).value.sort_index(
-        axis="columns"
-    )
-
-    # Get time series frequency
-    if g.index.size > 1:
-        hours = (g.index[1] - g.index[0]).components.hours
-        if hours != 0:
-            freq = f"{hours}h"
+        # Reattach ID columns
+        if isinstance(key, tuple):
+            for col, val in zip(id_cols, key):
+                agg[col] = val
         else:
-            freq = "D"
-    else:
-        freq = "D"
+            agg[id_cols[0]] = key
 
-    # If necessary, insert missing dates and NaNs to complete series index
-    num_dates = len(set(g.index.date))
-    if num_dates > 1:
-        end_datetime = pd.to_datetime(f"{g.index.date[-1]:%Y-%m-%d}" + " 23:59:59")
-        new_index = pd.date_range(g.index[0], end_datetime, freq=freq, name="datetime")
-        g = g.reindex(new_index)
+        frames.append(agg)
 
-    g.index.freq = freq
-
-    return g
+    # Collate results
+    cols0 = ["datetime"] + [x for x in id_cols if x != "tmp"]
+    cols = cols0 + indicators
+    return pd.concat(frames).filter(cols).sort_values(cols0, ignore_index=True)
 
 
 def make_html(d: dict) -> str:

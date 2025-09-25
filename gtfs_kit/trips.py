@@ -3,17 +3,18 @@ Functions about trips.
 """
 
 from __future__ import annotations
-import json
-from typing import Iterable, TYPE_CHECKING
+
 import datetime as dt
 import functools as ft
+import json
+from typing import TYPE_CHECKING, Iterable
 
-import pandas as pd
-import numpy as np
-import shapely.geometry as sg
-import shapely.ops as so
 import folium as fl
 import folium.plugins as fp
+import numpy as np
+import pandas as pd
+import shapely.geometry as sg
+import shapely.ops as so
 
 from . import constants as cs
 from . import helpers as hp
@@ -404,10 +405,10 @@ def compute_trip_stats(
     h = h.reset_index()
     h["speed"] = h["distance"] / h["duration"]
     h[["start_time", "end_time"]] = h[["start_time", "end_time"]].map(
-        lambda x: hp.timestr_to_seconds(x, inverse=True)
+        lambda x: hp.seconds_to_timestr(x)
     )
 
-    return h.sort_values(["route_id", "direction_id", "start_time"])
+    return h.sort_values(["route_id", "direction_id", "start_time"], ignore_index=True)
 
 
 def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
@@ -467,7 +468,7 @@ def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:
     del g["level_1"]
 
     # Convert times back to time strings
-    g["time"] = g["time"].map(lambda x: hp.timestr_to_seconds(x, inverse=True))
+    g["time"] = g["time"].map(lambda x: hp.seconds_to_timestr(x))
 
     # Merge in more trip info and
     # compute longitude and latitude of trip from relative distance

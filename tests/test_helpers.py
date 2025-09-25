@@ -1,29 +1,48 @@
 import datetime as dt
 
-import pytest
-import pandas as pd
 import numpy as np
+import pandas as pd
+import pytest
+import shapely.geometry as sg
 from numpy.testing import assert_array_equal
 from pandas.testing import assert_series_equal
-import shapely.geometry as sg
 
-from .context import gtfs_kit, cairns, cairns_dates, cairns_trip_stats
 from gtfs_kit import helpers as gkh
+
+from .context import cairns, cairns_dates, cairns_trip_stats, gtfs_kit
 
 
 def test_timestr_to_seconds():
     timestr1 = "01:01:01"
     seconds1 = 3600 + 60 + 1
     timestr2 = "25:01:01"
-    seconds2 = 25 * 3600 + 60 + 1
     assert gkh.timestr_to_seconds(timestr1) == seconds1
-    assert gkh.timestr_to_seconds(seconds1, inverse=True) == timestr1
-    assert gkh.timestr_to_seconds(seconds2, inverse=True) == timestr2
     assert gkh.timestr_to_seconds(timestr2, mod24=True) == seconds1
-    assert gkh.timestr_to_seconds(seconds2, mod24=True, inverse=True) == timestr1
     # Test error handling
-    assert np.isnan(gkh.timestr_to_seconds(seconds1))
-    assert np.isnan(gkh.timestr_to_seconds(timestr1, inverse=True))
+    assert pd.isna(gkh.timestr_to_seconds(seconds1))
+
+
+def test_seconds_to_timestr():
+    timestr1 = "01:01:01"
+    seconds1 = 3600 + 60 + 1
+    timestr2 = "25:01:01"
+    seconds2 = 25 * 3600 + 60 + 1
+    assert gkh.seconds_to_timestr(seconds1) == timestr1
+    assert gkh.seconds_to_timestr(seconds2) == timestr2
+    assert gkh.seconds_to_timestr(seconds2, mod24=True) == timestr1
+    assert pd.isna(gkh.seconds_to_timestr(timestr1))
+
+
+def test_datestr_to_date():
+    datestr = "20140102"
+    date = dt.date(2014, 1, 2)
+    assert gkh.datestr_to_date(datestr) == date
+
+
+def test_date_to_datestr():
+    datestr = "20140102"
+    date = dt.date(2014, 1, 2)
+    assert gkh.date_to_datestr(date) == datestr
 
 
 def test_timestr_mod24():
@@ -31,13 +50,6 @@ def test_timestr_mod24():
     assert gkh.timestr_mod24(timestr1) == timestr1
     timestr2 = "25:01:01"
     assert gkh.timestr_mod24(timestr2) == timestr1
-
-
-def test_datestr_to_date():
-    datestr = "20140102"
-    date = dt.date(2014, 1, 2)
-    assert gkh.datestr_to_date(datestr) == date
-    assert gkh.datestr_to_date(date, inverse=True) == datestr
 
 
 def test_is_metric():
@@ -132,42 +144,6 @@ def test_get_active_trips_df():
     assert_series_equal(get, expect)
 
 
-def test_downsample():
-    ts = cairns.compute_route_time_series(cairns_trip_stats, cairns_dates, freq="6h")
-    f = gkh.downsample(ts, "6h")
-    assert ts.equals(f)
-
-    f = gkh.downsample(ts, "12h")
-    assert f.shape[0] == ts.shape[0] / 2
-    assert pd.tseries.frequencies.to_offset(f.index.freq) == "12h"
-
-
-def test_unstack_time_series():
-    dates = cairns_dates
-    for split_directions in [True, False]:
-        f = cairns.compute_stop_time_series(
-            dates, freq="12h", split_directions=split_directions
-        )
-        g = gkh.unstack_time_series(f)
-        expect_cols = {"datetime", "indicator", "value", "stop_id"}
-        if split_directions:
-            expect_cols.add("direction_id")
-
-        assert set(g.columns) == expect_cols
-        assert g.shape[0] == f.shape[0] * f.shape[1]
-
-
-def test_restack_time_series():
-    dates = cairns_dates
-    for split_directions in [True, False]:
-        f = cairns.compute_stop_time_series(
-            dates, freq="12h", split_directions=split_directions
-        )
-        g = gkh.restack_time_series(gkh.unstack_time_series(f))
-        assert set(g.columns) == set(f.columns)
-        assert f.shape[0] == g.shape[0]
-
-
 def test_longest_subsequence():
     dates = [
         ("2015-02-03", "name1"),
@@ -246,3 +222,91 @@ def test_make_ids():
         "s09",
         "s10",
     ]
+
+
+def test_combine_time_series():
+    # Minute-level index (two bins)
+    idx = pd.date_range("2025-01-01 00:00:00", periods=2, freq="Min")
+
+    # Two entities encoded with direction: R1-0 and R1-1
+    cols = ["R1-0", "R1-1"]
+
+    # Indicators (wide frames: index=datetime, columns=entities)
+    num_trips = pd.DataFrame([[1, 0], [2, 1]], index=idx, columns=cols)
+    num_trip_starts = pd.DataFrame(
+        [[1, np.nan], [0, 1]], index=idx, columns=cols
+    )  # will coerce NaN->0
+    num_trip_ends = pd.DataFrame([[0, 0], [1, 0]], index=idx, columns=cols)
+
+    # Distance/duration chosen so speed = 2.0 where duration>0
+    service_distance = pd.DataFrame([[0.5, 0.0], [0.5, 1.0]], index=idx, columns=cols)
+    service_duration = pd.DataFrame([[0.25, 0.0], [0.25, 0.5]], index=idx, columns=cols)
+
+    series_by_indicator = {
+        "num_trips": num_trips,
+        "num_trip_starts": num_trip_starts,
+        "num_trip_ends": num_trip_ends,
+        "service_distance": service_distance,
+        "service_duration": service_duration,
+    }
+
+    out = gkh.combine_time_series(
+        series_by_indicator,
+        kind="route",
+        split_directions=True,
+    )
+
+    # Expected rows: 2 timestamps * 2 directions = 4
+    assert len(out) == 4
+
+    # Required columns & ordering
+    expected_front = ["datetime", "route_id", "direction_id"]
+    expected_inds = [
+        "num_trip_starts",
+        "num_trip_ends",
+        "num_trips",
+        "service_duration",
+        "service_distance",
+        "service_speed",
+    ]
+    for c in expected_front + expected_inds:
+        assert c in out.columns
+
+    # Sorted by datetime then route_id then direction_id
+    out_sorted = out.sort_values(["datetime", "route_id", "direction_id"]).reset_index(
+        drop=True
+    )
+    pd.testing.assert_frame_equal(out, out_sorted)
+
+    # Direction split & ID decoding
+    assert set(out["route_id"].unique()) == {"R1"}
+    assert set(out["direction_id"].unique()) == {0, 1}
+
+    # NaNs coerced to zero in numeric indicators (e.g., num_trip_starts had a NaN)
+    assert (out["num_trip_starts"] >= 0).all()
+    # Specifically check the NaN location: at t0, direction 1 had NaN -> 0
+    row_t0_dir1 = out[(out["datetime"] == idx[0]) & (out["direction_id"] == 1)].iloc[0]
+    assert row_t0_dir1["num_trip_starts"] == 0
+
+    # service_speed = distance / duration; when duration==0 => 0.0
+    # Check a bin with duration>0 (should be 2.0): t1, dir 0 -> 0.5 / 0.25 = 2.0
+    row_t1_dir0 = out[(out["datetime"] == idx[1]) & (out["direction_id"] == 0)].iloc[0]
+    assert pytest.approx(row_t1_dir0["service_speed"]) == 2.0
+
+    # Check a bin with duration==0 (should be 0.0): t0, dir 1 -> 0.0 / 0.0 -> 0.0 after fill
+    assert row_t0_dir1["service_speed"] == 0.0
+
+
+def test_downsample():
+    ts = cairns.compute_network_time_series(
+        cairns_dates, trip_stats=cairns_trip_stats, freq="1h"
+    )
+    f = gkh.downsample(ts, "1h")
+    assert ts.equals(f)
+
+    f = gkh.downsample(ts, "3h")
+
+    # Should have correct num rows
+    assert len(f) == len(ts) / 3
+    # Should have correct frequency
+    assert pd.infer_freq(f["datetime"].unique()[:3]) == "3h"

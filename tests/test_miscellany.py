@@ -1,22 +1,23 @@
-import pytest
-import pandas as pd
-from pandas.testing import assert_series_equal
-import numpy as np
-import shapely.geometry as sg
 import geopandas as gp
+import numpy as np
+import pandas as pd
+import pytest
+import shapely.geometry as sg
+from pandas.testing import assert_series_equal
 
-from .context import (
-    gtfs_kit,
-    DATA_DIR,
-    sample,
-    nyc_subway,
-    cairns,
-    cairns_dates,
-    cairns_trip_stats,
-)
 from gtfs_kit import constants as gkc
 from gtfs_kit import miscellany as gkm
 from gtfs_kit import shapes as gks
+
+from .context import (
+    DATA_DIR,
+    cairns,
+    cairns_dates,
+    cairns_trip_stats,
+    gtfs_kit,
+    nyc_subway,
+    sample,
+)
 
 
 def test_list_fields():
@@ -73,16 +74,18 @@ def test_convert_dist():
     )
 
 
-def test_compute_feed_stats_0():
+def test_compute_network_stats_0():
     feed = cairns.copy()
-    trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    trip_stats = cairns_trip_stats.copy()
+    trip_stats.loc[0, "route_type"] = 2  # Add another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats_0(
-            feed, trip_stats, split_route_types=split_route_types
+        f = gkm.compute_network_stats_0(
+            feed.stop_times, trip_stats, split_route_types=split_route_types
         )
-        # Should be a data frame
-        assert isinstance(f, pd.core.frame.DataFrame)
+
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert f.shape[0] == n
         # Should contain the correct columns
         expect_cols = {
             "num_trips",
@@ -103,20 +106,24 @@ def test_compute_feed_stats_0():
         assert set(f.columns) == expect_cols
 
 
-def test_compute_feed_stats():
+def test_compute_network_stats():
     feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]
-    trip_stats = cairns_trip_stats
-    feed.routes.route_type.iat[0] = 2  # Another route type besides 3
+    dates = cairns_dates
+    trip_stats = cairns_trip_stats.copy()
+    n = trip_stats.shape[0]
+    trip_stats.loc[: n // 2, "route_type"] = 2  # Add another route type besides 3
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_stats(
-            feed, trip_stats, dates, split_route_types=split_route_types
+        f = gkm.compute_network_stats(
+            feed, dates + ["19990101"], trip_stats, split_route_types=split_route_types
         )
-        # Should be a data frame
-        assert isinstance(f, pd.core.frame.DataFrame)
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert f.shape[0] == n * len(dates)
+
         # Should have the correct dates
-        assert f.date.tolist() == cairns_dates
-        # Should contain the correct columns
+        assert set(f["date"].values) == set(cairns_dates)
+
+        # Should have correct columns
         expect_cols = {
             "num_trips",
             "num_trip_starts",
@@ -136,32 +143,34 @@ def test_compute_feed_stats():
 
         assert set(f.columns) == expect_cols
 
-        # Empty dates should yield empty DataFrame
-        f = gkm.compute_feed_stats(
-            feed, trip_stats, [], split_route_types=split_route_types
+        # Non-feed dates should yield empty DataFrame
+        f = gkm.compute_network_stats(
+            feed, ["19990101"], trip_stats, split_route_types=split_route_types
         )
         assert f.empty
 
 
-def test_compute_feed_time_series():
+def test_compute_network_time_series():
     feed = cairns.copy()
-    feed.routes.route_type.iat[0] = 2  # Add another route type
-    dates = cairns_dates + ["20010101"]
-    trip_stats = cairns_trip_stats
+    dates = cairns_dates
+    n = feed.routes.shape[0]
+    feed.routes.loc[: n // 2, "route_type"] = 2  # Add another route type besides 3
 
     for split_route_types in [True, False]:
-        f = gkm.compute_feed_time_series(
-            feed, trip_stats, dates, freq="12h", split_route_types=split_route_types
+        f = gkm.compute_network_time_series(
+            feed,
+            dates + ["19990101"],
+            freq="12h",
+            split_route_types=split_route_types,
         )
 
-        # Should have correct column level names
-        if split_route_types:
-            assert set(f.columns.names) == {"indicator", "route_type"}
-        else:
-            assert set(f.columns.names) == {"indicator"}
+        # Should have correct num rows
+        n = 2 if split_route_types else 1
+        assert len(f) == n * len(dates) * 2
 
-        # Should have the correct level 0 columns
+        # Should have correct columns
         expect_cols = {
+            "datetime",
             "num_trip_starts",
             "num_trip_ends",
             "num_trips",
@@ -170,20 +179,16 @@ def test_compute_feed_time_series():
             "service_speed",
         }
         if split_route_types:
-            assert set(f.columns.levels[0]) == expect_cols
-        else:
-            assert set(f.columns) == expect_cols
+            expect_cols.add("route_type")
 
-        # Should have correct index names
-        assert f.index.name == "datetime"
+        assert set(f.columns) == expect_cols
 
-        # Should have the correct number of rows: 2 (for the 12H freq) times
-        # 3 (for the three-date span)
-        assert f.shape[0] == 2 * 3
+        # Should have correct dates
+        assert set(f["datetime"].dt.strftime("%Y%m%d")) == set(dates)
 
         # Empty check
-        f = gkm.compute_feed_time_series(
-            feed, trip_stats, [], split_route_types=split_route_types
+        f = gkm.compute_network_time_series(
+            feed, ["19990101"], split_route_types=split_route_types
         )
         assert f.empty
 
@@ -310,7 +315,7 @@ def test_restrict_to_trips():
 
     feed2 = gkm.restrict_to_trips(feed1, ["fake"])
     # All non-agency tables should be empty
-    for table in gkc.GTFS_REF["table"].unique():
+    for table in gkc.DTYPES:
         if table != "agency" and getattr(feed1, table) is not None:
             assert getattr(feed2, table).empty
 
