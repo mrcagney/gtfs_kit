@@ -415,6 +415,12 @@ def compute_network_stats(
     The route and trip stats for date d contain stats for trips that
     start on date d only and ignore trips that start on date d-1 and
     end on date d.
+
+    Notes
+    -----
+    - If you've already computed trip stats in your workflow, then you should pass
+      that table into this function to speed things up significantly.
+
     """
     dates = feed.subset_dates(dates)
 
@@ -507,6 +513,12 @@ def compute_network_time_series(
     Exclude dates that lie outside of the Feed's date range.
     If all the dates given lie outside of the Feed's date range,
     then return an empty DataFrame with the specified columns.
+
+    Notes
+    -----
+    - If you've already computed trip stats in your workflow, then you should pass
+      that table into this function to speed things up significantly.
+
     """
     final_cols = [
         "datetime",

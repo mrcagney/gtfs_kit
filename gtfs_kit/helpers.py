@@ -424,7 +424,14 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
         return f
 
     # Handle generic case
-    id_cols = list({"route_id", "stop_id", "direction_id"} & set(f.columns))
+    id_cols = list(
+        {"route_id", "stop_id", "direction_id", "route_type"} & set(f.columns)
+    )
+
+    if not id_cols:
+        # Network time series without route type
+        f["tmp"] = "tmp"
+        id_cols = ["tmp"]
 
     if "stop_id" in time_series.columns:
         is_stop_series = True
@@ -453,21 +460,26 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
     frames = []
     for key, group in f.groupby(id_cols, dropna=False):
         g = group.sort_values("datetime").set_index("datetime")
+        # groupby + Grouper will not create empty bins
+        gb = g.groupby(pd.Grouper(freq=freq))
 
         if is_stop_series:
             # Sum all numeric columns, preserving all-NaN groups (min_count=1)
-            agg = g.resample(freq).sum(min_count=1).reset_index()
+            agg = gb.sum(min_count=1).reset_index()
         else:
             series = []
             for col in indicators:
                 if col == "num_trips":
-                    s = g.groupby(pd.Grouper(freq=freq)).apply(agg_num_trips)
+                    s = gb.apply(agg_num_trips)
                 elif col != "service_speed":
-                    s = g[col].resample(freq).agg(lambda x: x.sum(min_count=1))
+                    s = gb[col].agg(lambda x: x.sum(min_count=1))
                 series.append(s.rename(col))
 
             agg = (
                 pd.concat(series, axis="columns")
+                # Remove any extra dates inserted in between,
+                # which will have all NAN values
+                .dropna()
                 # Compute service speed now
                 .assign(
                     service_speed=lambda x: x["service_distance"]
@@ -489,7 +501,7 @@ def downsample(time_series: pd.DataFrame, freq: str) -> pd.DataFrame:
         frames.append(agg)
 
     # Collate results
-    cols0 = ["datetime"] + id_cols
+    cols0 = ["datetime"] + [x for x in id_cols if x != "tmp"]
     cols = cols0 + indicators
     return pd.concat(frames).filter(cols).sort_values(cols0, ignore_index=True)
 

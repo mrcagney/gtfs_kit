@@ -110,7 +110,8 @@ def test_compute_network_stats():
     feed = cairns.copy()
     dates = cairns_dates
     trip_stats = cairns_trip_stats.copy()
-    trip_stats.loc[0, "route_type"] = 2  # Add another route type besides 3
+    n = trip_stats.shape[0]
+    trip_stats.loc[: n // 2, "route_type"] = 2  # Add another route type besides 3
     for split_route_types in [True, False]:
         f = gkm.compute_network_stats(
             feed, dates + ["19990101"], trip_stats, split_route_types=split_route_types
@@ -152,7 +153,8 @@ def test_compute_network_stats():
 def test_compute_network_time_series():
     feed = cairns.copy()
     dates = cairns_dates
-    feed.routes.loc[:1, "route_type"] = 2  # Add another route type besides 3
+    n = feed.routes.shape[0]
+    feed.routes.loc[: n // 2, "route_type"] = 2  # Add another route type besides 3
 
     for split_route_types in [True, False]:
         f = gkm.compute_network_time_series(
@@ -164,7 +166,7 @@ def test_compute_network_time_series():
 
         # Should have correct num rows
         n = 2 if split_route_types else 1
-        assert f.shape[0] == n * len(dates) * 2
+        assert len(f) == n * len(dates) * 2
 
         # Should have correct columns
         expect_cols = {

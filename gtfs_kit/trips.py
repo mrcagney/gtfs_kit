@@ -408,7 +408,7 @@ def compute_trip_stats(
         lambda x: hp.seconds_to_timestr(x)
     )
 
-    return h.sort_values(["route_id", "direction_id", "start_time"])
+    return h.sort_values(["route_id", "direction_id", "start_time"], ignore_index=True)
 
 
 def locate_trips(feed: "Feed", date: str, times: list[str]) -> pd.DataFrame:

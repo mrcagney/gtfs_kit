@@ -298,12 +298,15 @@ def test_combine_time_series():
 
 
 def test_downsample():
-    ts = cairns.compute_route_time_series(
+    ts = cairns.compute_network_time_series(
         cairns_dates, trip_stats=cairns_trip_stats, freq="1h"
     )
     f = gkh.downsample(ts, "1h")
     assert ts.equals(f)
 
     f = gkh.downsample(ts, "3h")
-    assert f.shape[0] == ts.shape[0] / 2
+
+    # Should have correct num rows
+    assert len(f) == len(ts) / 3
+    # Should have correct frequency
     assert pd.infer_freq(f["datetime"].unique()[:3]) == "3h"

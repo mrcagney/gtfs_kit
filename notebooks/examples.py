@@ -1,8 +1,6 @@
-
-
 import marimo
 
-__generated_with = "0.13.2"
+__generated_with = "0.16.2"
 app = marimo.App(width="medium")
 
 
@@ -11,6 +9,7 @@ def _():
     import pathlib as pl
     import json
 
+    import marimo as mo
     import pandas as pd
     import numpy as np
     import geopandas as gp
@@ -20,93 +19,95 @@ def _():
     import gtfs_kit as gk
 
     DATA = pl.Path("data")
-    return DATA, fl, gk, gp, pd
+    return DATA, fl, gk, gp, mo, pd
 
 
 @app.cell
 def _(DATA, gk):
     # List feed
 
-    path = DATA / "cairns_gtfs.zip"
-    gk.list_feed(path)
-    return (path,)
+    gk.list_feed(DATA / "cairns_gtfs.zip")
+    return
 
 
 @app.cell
-def _(gk, path):
+def _(DATA, gk):
     # Read feed and describe
 
-    feed = gk.read_feed(path, dist_units="m")
+    feed = gk.read_feed(DATA / "cairns_gtfs.zip", dist_units="m")
     feed.describe()
     return (feed,)
 
 
 @app.cell
-def _(feed):
-    print(feed.stop_times)
+def _(feed, mo):
+    mo.output.append(feed.stop_times)
     feed_1 = feed.append_dist_to_stop_times()
-    print(feed_1.stop_times)
+    mo.output.append(feed_1.stop_times)
     return (feed_1,)
 
 
 @app.cell
 def _(feed_1):
     week = feed_1.get_first_week()
-    dates = [week[4], week[6]]
+    dates = [week[0], week[6]]
     dates
-    return dates, week
+    return (dates,)
 
 
 @app.cell
-def _(dates, feed_1):
+def _(feed_1):
+    # Trip stats; reuse these for later speed ups
+
     trip_stats = feed_1.compute_trip_stats()
-    trip_stats.head().T
-    fts = feed_1.compute_network_time_series(trip_stats, dates, freq="6h")
-    fts
-    return fts, trip_stats
+    trip_stats
+    return (trip_stats,)
 
 
 @app.cell
-def _(fts, gk):
-    gk.downsample(fts, freq="12h")
-    return
+def _(dates, feed_1, trip_stats):
+    # Pass in trip stats to avoid recomputing them
 
-
-@app.cell
-def _(feed_1, trip_stats, week):
-    network_stats = feed_1.compute_network_stats(trip_stats, week)
+    network_stats = feed_1.compute_network_stats(dates, trip_stats=trip_stats)
     network_stats
     return
 
 
 @app.cell
 def _(dates, feed_1, trip_stats):
-    rts = feed_1.compute_route_time_series(trip_stats, dates, freq="12h")
+    nts = feed_1.compute_network_time_series(dates, trip_stats=trip_stats, freq="6h")
+    nts
+    return (nts,)
+
+
+@app.cell
+def _(gk, nts):
+    gk.downsample(nts, freq="12h")
+    return
+
+
+@app.cell
+def _(dates, feed_1, trip_stats):
+    # Route time series
+
+    rts = feed_1.compute_route_time_series(dates, trip_stats=trip_stats, freq="12h")
     rts
-    return (rts,)
+    return
 
 
 @app.cell
-def _(rts):
-    # Slice time series
+def _(dates, feed_1):
+    # Route timetable
 
-    inds = ["service_distance", "service_duration", "service_speed"]
-    rids = ["110-423", "111-423"]
-
-    rts.loc[:, (inds, rids)]
-    return (rids,)
-
-
-@app.cell
-def _(rids, rts):
-    # Slice again by cross-section
-
-    rts.xs(rids[0], axis="columns", level=1)
+    route_id = feed_1.routes["route_id"].iat[0]
+    feed_1.build_route_timetable(route_id, dates)
     return
 
 
 @app.cell
 def _(dates, feed_1, pd):
+    # Locate trips
+
     rng = pd.date_range("1/1/2000", periods=24, freq="h")
     times = [t.strftime("%H:%M:%S") for t in rng]
     loc = feed_1.locate_trips(dates[0], times)
@@ -115,14 +116,33 @@ def _(dates, feed_1, pd):
 
 
 @app.cell
-def _(dates, feed_1):
-    route_id = feed_1.routes["route_id"].iat[0]
-    feed_1.build_route_timetable(route_id, dates).T
+def _(feed_1):
+    # Map routes
+
+    rsns = feed_1.routes["route_short_name"].iloc[2:4]
+    feed_1.map_routes(route_short_names=rsns, show_stops=True)
+    return
+
+
+@app.cell
+def _(feed):
+    # Alternatively map routes without stops using GeoPandas's explore
+
+    (
+        feed.get_routes(as_gdf=True).explore(
+            column="route_short_name",
+            style_kwds=dict(weight=3),
+            highlight_kwds=dict(weight=8),
+            tiles="CartoDB positron",
+        )
+    )
     return
 
 
 @app.cell
 def _(DATA, feed_1, fl, gp):
+    # Show screen line
+
     trip_id = "CNS2014-CNS_MUL-Weekday-00-4166247"
     m = feed_1.map_trips([trip_id], show_stops=True, show_direction=True)
     screen_line = gp.read_file(DATA / "cairns_screen_line.geojson")
@@ -146,35 +166,10 @@ def _(DATA, feed_1, fl, gp):
 
 @app.cell
 def _(dates, feed_1, screen_line, trip_id):
+    # Screen line counts 
+
     slc = feed_1.compute_screen_line_counts(screen_line, dates=dates)
     slc.loc[lambda x: x["trip_id"] == trip_id]
-    return
-
-
-@app.cell
-def _(feed_1):
-    rsns = feed_1.routes["route_short_name"].iloc[2:4]
-    feed_1.map_routes(route_short_names=rsns, show_stops=True)
-    return
-
-
-@app.cell
-def _(feed):
-    # Alternatively plot routes using GeoPandas's explore
-
-    (
-        feed.get_routes(as_gdf=True).explore(
-            column="route_short_name",
-            style_kwds=dict(weight=3),
-            highlight_kwds=dict(weight=8),
-            tiles="CartoDB positron",
-        )
-    )
-    return
-
-
-@app.cell
-def _():
     return
 
 

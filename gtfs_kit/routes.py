@@ -40,8 +40,11 @@ def build_route_timetable(
     an empty DataFrame.
     """
     dates = feed.subset_dates(dates)
+    final_cols = (
+        ["date"] + feed.trips.columns.tolist() + feed.stop_times.columns.tolist()
+    )
     if not dates:
-        return pd.DataFrame()
+        return pd.DataFrame(columns=final_cols)
 
     t = pd.merge(feed.trips, feed.stop_times)
     t = t[t["route_id"] == route_id].copy()
@@ -63,7 +66,7 @@ def build_route_timetable(
     return (
         pd.concat(frames)
         .sort_values(["date", "min_dt", "stop_sequence"], ignore_index=True)
-        .drop(["min_dt", "dt"], axis=1)
+        .filter(final_cols)
     )
 
 
@@ -600,8 +603,8 @@ def compute_route_stats(
 
     Notes
     -----
-    - If you have already computed trip stats in your workflow, then you should pass
-      them into this function to speed things up.
+    - If you've already computed trip stats in your workflow, then you should pass
+      that table into this function to speed things up significantly.
     - The route stats for date d contain stats for trips that start on
       date d only and ignore trips that start on date d-1 and end on
       date d.
@@ -885,6 +888,8 @@ def compute_route_time_series(
 
     Notes
     -----
+    - If you've already computed trip stats in your workflow, then you should pass
+      that table into this function to speed things up significantly.
     - See the notes for :func:`compute_route_time_series_0`
     - Raise a ValueError if ``split_directions`` and no non-null
       direction ID values present
@@ -932,4 +937,4 @@ def compute_route_time_series(
         frames.append(stats)
 
     # Collate stats
-    return pd.concat(frames)
+    return pd.concat(frames, ignore_index=True)
