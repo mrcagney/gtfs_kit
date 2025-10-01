@@ -256,26 +256,21 @@ def test_compute_route_stats_0():
 
 def test_compute_route_stats():
     feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]
+    dates = cairns_dates + ["19990101"]
     n = 3
-    rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
+    rids = cairns_trip_stats.loc[:n, "route_id"]
+    trip_stats = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
 
     for split_directions in [True, False]:
         rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, dates, split_directions=split_directions
+            feed, dates, trip_stats, split_directions=split_directions
         )
 
-        # Should be a data frame of the correct shape
-        assert isinstance(rs, pd.core.frame.DataFrame)
-        if split_directions:
-            max_num_routes = 2 * n
-        else:
-            max_num_routes = n
+        # Should have correct num rows
+        N = 2 * n * len(dates) if split_directions else n * len(dates)
+        assert rs.shape[0] <= N
 
-        assert rs.shape[0] <= 2 * max_num_routes
-
-        # Should contain the correct columns
+        # Should have correct columns
         expect_cols = {
             "date",
             "route_id",
@@ -308,11 +303,11 @@ def test_compute_route_stats():
         assert set(rs.columns) == expect_cols
 
         # Should only contains valid dates
-        rs.date.unique().tolist() == cairns_dates
+        set(rs["date"].tolist()) == set(cairns_dates)
 
         # Empty dates should yield empty DataFrame
         rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, [], split_directions=split_directions
+            feed, ["19990101"], trip_stats, split_directions=split_directions
         )
         assert rs.empty
 
