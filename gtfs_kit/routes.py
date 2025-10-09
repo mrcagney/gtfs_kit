@@ -22,9 +22,7 @@ if TYPE_CHECKING:
     from .feed import Feed
 
 
-def build_route_timetable(
-    feed: "Feed", route_id: str, dates: list[str]
-) -> pd.DataFrame:
+def build_route_timetable(feed: "Feed", route_id: str, dates: list[str]) -> pd.DataFrame:
     """
     Return a timetable for the given route and dates (YYYYMMDD date strings).
 
@@ -40,9 +38,7 @@ def build_route_timetable(
     an empty DataFrame.
     """
     dates = feed.subset_dates(dates)
-    final_cols = (
-        ["date"] + feed.trips.columns.tolist() + feed.stop_times.columns.tolist()
-    )
+    final_cols = ["date"] + feed.trips.columns.tolist() + feed.stop_times.columns.tolist()
     if not dates:
         return pd.DataFrame(columns=final_cols)
 
@@ -117,16 +113,11 @@ def get_routes(
             groupby_cols = ["route_id"]
             final_cols = f.columns.tolist() + ["geometry"]
 
-        # def merge_lines(group):
-        #     d = {}
-        #     d["geometry"] = so.linemerge(group["geometry"].tolist())
-        #     return pd.Series(d)
-
         def merge_lines(group):
             lines = [
                 g
                 for g in group["geometry"]
-                if g.geom_type in ["LineString", "MultiLineString"]
+                if g and g.geom_type in ["LineString", "MultiLineString"]
             ]
             if not lines:
                 return pd.Series({"geometry": None})
@@ -412,9 +403,7 @@ def compute_route_stats_0(
         d["route_type"] = group["route_type"].iat[0]
         d["num_trips"] = group.shape[0]
         d["num_trip_starts"] = group["start_time"].count()
-        d["num_trip_ends"] = group.loc[
-            group["end_time"] < 24 * 3600, "end_time"
-        ].count()
+        d["num_trip_ends"] = group.loc[group["end_time"] < 24 * 3600, "end_time"].count()
         d["num_stop_patterns"] = group["stop_pattern_name"].nunique()
         d["is_loop"] = int(group["is_loop"].any())
         d["start_time"] = group["start_time"].min()
@@ -454,9 +443,7 @@ def compute_route_stats_0(
         d["route_type"] = group["route_type"].iat[0]
         d["num_trips"] = group.shape[0]
         d["num_trip_starts"] = group["start_time"].count()
-        d["num_trip_ends"] = group.loc[
-            group["end_time"] < 24 * 3600, "end_time"
-        ].count()
+        d["num_trip_ends"] = group.loc[group["end_time"] < 24 * 3600, "end_time"].count()
         d["num_stop_patterns"] = group["stop_pattern_name"].nunique()
         d["is_loop"] = int(group["is_loop"].any())
         d["is_bidirectional"] = int(group["direction_id"].unique().size > 1)
@@ -657,9 +644,7 @@ def compute_route_stats(
 
     # Collate stats
     sort_by = (
-        ["date", "route_id", "direction_id"]
-        if split_directions
-        else ["date", "route_id"]
+        ["date", "route_id", "direction_id"] if split_directions else ["date", "route_id"]
     )
     return pd.concat(frames).filter(final_cols).sort_values(sort_by)
 

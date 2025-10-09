@@ -38,7 +38,7 @@ def test_get_routes():
     # Should have correct columns
     assert set(g.columns) == set(feed.routes.columns)
 
-    # Test GDF options
+    # Test geo options
     feed = cairns.copy()
     g = gkr.get_routes(feed, as_gdf=True, use_utm=True)
     assert isinstance(g, gpd.GeoDataFrame)
@@ -47,8 +47,7 @@ def test_get_routes():
     g = gkr.get_routes(feed, as_gdf=True, split_directions=True)
     assert g.crs == cs.WGS84
     assert (
-        g.shape[0]
-        == feed.trips[["route_id", "direction_id"]].drop_duplicates().shape[0]
+        g.shape[0] == feed.trips[["route_id", "direction_id"]].drop_duplicates().shape[0]
     )
 
     with pytest.raises(ValueError):
@@ -125,15 +124,27 @@ def test_get_routes():
     g = gkr.get_routes(feed, as_gdf=True)
     assert g.crs == cs.WGS84
 
-    # Turning a route's shapes into point geometries,
+    # Turning a route's shapes into point geometries
     # should yield an empty route geometry and should not throw an error
-    rid = feed.routes["route_id"].iat[0]
+    feed = cairns.copy()
+    rid = feed.routes.loc[0, "route_id"]
     shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
-    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates(
-        "shape_id"
-    )
+    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates("shape_id")
     f1 = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
     feed.shapes = pd.concat([f0, f1])
+    assert (
+        feed.get_routes(as_gdf=True)
+        .loc[lambda x: x["route_id"] == rid, "geometry"]
+        .iat[0]
+        is None
+    )
+
+    # Turning a route's shapes into None geometries
+    # should yield an empty route geometry and should not throw an error
+    feed = cairns.copy()
+    rid = feed.routes.loc[0, "route_id"]
+    shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
+    feed.shapes = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
     assert (
         feed.get_routes(as_gdf=True)
         .loc[lambda x: x["route_id"] == rid, "geometry"]
