@@ -126,7 +126,7 @@ def get_routes(
             lines = [
                 g
                 for g in group["geometry"]
-                if g.geom_type in ["LineString", "MultiLineString"]
+                if g and g.geom_type in ["LineString", "MultiLineString"]
             ]
             if not lines:
                 return pd.Series({"geometry": None})
