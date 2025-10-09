@@ -1,6 +1,10 @@
 Changelog
 =========
 
+11.0.1, 2025-10-10
+------------------
+- Updated ``routes.get_routes(as_gdf=True)`` to ignore ``None`` geometries, fixing a bug spotted by Github user khamaileon.
+
 11.0.0, 2025-09-26
 ------------------
 - Breaking change: simplified ``constants.py`` and changed all ``Int8`` entries to ``Int32`` to handle some extended route types etc.

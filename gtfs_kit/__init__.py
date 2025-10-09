@@ -1,14 +1,13 @@
-from .constants import *
-from .helpers import *
 from .calendar import *
+from .cleaners import *
+from .constants import *
+from .feed import *
+from .helpers import *
+from .miscellany import *
 from .routes import *
 from .shapes import *
-from .stops import *
 from .stop_times import *
+from .stops import *
 from .trips import *
-from .miscellany import *
-from .cleaners import *
-from .feed import *
 
-
-__version__ = "11.0.0"
+__version__ = "11.0.1"

@@ -1,6 +1,6 @@
 [project]
 name = "gtfs-kit"
-version = "11.0.0"
+version = "11.0.1"
 description = "A Python library for analyzing GTFS feeds."
 readme = "README.rst"
 requires-python = ">=3.10"
@@ -18,19 +18,8 @@ dependencies = [
     "pandas>=2.2.2",
 ]
 
-[project.urls]
-Repository = "https://github.com/mrcagney/gtfs_kit"
-Documentation = "https://mrcagney.github.io/gtfs_kit_docs"
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
-[tool.setuptools]
-packages = ["gtfs_kit"]
-
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=6",
     "sphinx>=3",
     "pre-commit-uv>=0",
@@ -43,14 +32,25 @@ dev-dependencies = [
     "plotly>=6.1.2",
 ]
 
+[project.urls]
+Repository = "https://github.com/mrcagney/gtfs_kit"
+Documentation = "https://mrcagney.github.io/gtfs_kit_docs"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.setuptools]
+packages = ["gtfs_kit"]
+
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "serial",
 ]
 
-
 [tool.ruff]
+line-length = 90
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 lint.select = ["E", "F"]
 lint.ignore = ["E501", "E731", "F401", "F403"]

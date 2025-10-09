@@ -38,7 +38,7 @@ def test_get_routes():
     # Should have correct columns
     assert set(g.columns) == set(feed.routes.columns)
 
-    # Test GDF options
+    # Test geo options
     feed = cairns.copy()
     g = gkr.get_routes(feed, as_gdf=True, use_utm=True)
     assert isinstance(g, gpd.GeoDataFrame)
@@ -47,8 +47,7 @@ def test_get_routes():
     g = gkr.get_routes(feed, as_gdf=True, split_directions=True)
     assert g.crs == cs.WGS84
     assert (
-        g.shape[0]
-        == feed.trips[["route_id", "direction_id"]].drop_duplicates().shape[0]
+        g.shape[0] == feed.trips[["route_id", "direction_id"]].drop_duplicates().shape[0]
     )
 
     with pytest.raises(ValueError):
@@ -125,15 +124,27 @@ def test_get_routes():
     g = gkr.get_routes(feed, as_gdf=True)
     assert g.crs == cs.WGS84
 
-    # Turning a route's shapes into point geometries,
+    # Turning a route's shapes into point geometries
     # should yield an empty route geometry and should not throw an error
-    rid = feed.routes["route_id"].iat[0]
+    feed = cairns.copy()
+    rid = feed.routes.loc[0, "route_id"]
     shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
-    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates(
-        "shape_id"
-    )
+    f0 = feed.shapes.loc[lambda x: x["shape_id"].isin(shids)].drop_duplicates("shape_id")
     f1 = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
     feed.shapes = pd.concat([f0, f1])
+    assert (
+        feed.get_routes(as_gdf=True)
+        .loc[lambda x: x["route_id"] == rid, "geometry"]
+        .iat[0]
+        is None
+    )
+
+    # Turning a route's shapes into None geometries
+    # should yield an empty route geometry and should not throw an error
+    feed = cairns.copy()
+    rid = feed.routes.loc[0, "route_id"]
+    shids = feed.trips.loc[lambda x: x["route_id"] == rid, "shape_id"]
+    feed.shapes = feed.shapes.loc[lambda x: ~x["shape_id"].isin(shids)]
     assert (
         feed.get_routes(as_gdf=True)
         .loc[lambda x: x["route_id"] == rid, "geometry"]
@@ -256,26 +267,21 @@ def test_compute_route_stats_0():
 
 def test_compute_route_stats():
     feed = cairns.copy()
-    dates = cairns_dates + ["20010101"]
+    dates = cairns_dates + ["19990101"]
     n = 3
-    rids = feed.routes.route_id.loc[:n]
-    trip_stats_subset = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
+    rids = cairns_trip_stats.loc[:n, "route_id"]
+    trip_stats = cairns_trip_stats.loc[lambda x: x["route_id"].isin(rids)]
 
     for split_directions in [True, False]:
         rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, dates, split_directions=split_directions
+            feed, dates, trip_stats, split_directions=split_directions
         )
 
-        # Should be a data frame of the correct shape
-        assert isinstance(rs, pd.core.frame.DataFrame)
-        if split_directions:
-            max_num_routes = 2 * n
-        else:
-            max_num_routes = n
+        # Should have correct num rows
+        N = 2 * n * len(dates) if split_directions else n * len(dates)
+        assert rs.shape[0] <= N
 
-        assert rs.shape[0] <= 2 * max_num_routes
-
-        # Should contain the correct columns
+        # Should have correct columns
         expect_cols = {
             "date",
             "route_id",
@@ -308,11 +314,11 @@ def test_compute_route_stats():
         assert set(rs.columns) == expect_cols
 
         # Should only contains valid dates
-        rs.date.unique().tolist() == cairns_dates
+        set(rs["date"].tolist()) == set(cairns_dates)
 
         # Empty dates should yield empty DataFrame
         rs = gkr.compute_route_stats(
-            feed, trip_stats_subset, [], split_directions=split_directions
+            feed, ["19990101"], trip_stats, split_directions=split_directions
         )
         assert rs.empty
 
