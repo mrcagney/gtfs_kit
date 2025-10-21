@@ -1,6 +1,12 @@
 Changelog
 =========
 
+12.0.0, 2025-10-22
+------------------
+- Breaking change: Refactored and sped up functions ``shapes.split_simple`` and ``miscellany.compute_screen_line_counts`` to no longer segmentize linestrings, then removed the `segmentize` keyword argument from both functions.
+- Added ``route_short_names`` keyword argument to ``routes.routes_to_geojson``.
+- Silently dropped invalid stops, trips, and routes from ``stops.stops_to_geojson``, ``trips.trips_to_geojson``, and ``routes.routes_to_geojson`` instead of raising ``ValueError``s.
+
 11.0.1, 2025-10-10
 ------------------
 - Updated ``routes.get_routes(as_gdf=True)`` to ignore ``None`` geometries, fixing a bug spotted by Github user khamaileon.

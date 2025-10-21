@@ -707,9 +707,7 @@ def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
     # Subset stops, collecting parent stations too
     stop_ids_0 = set(feed.stop_times["stop_id"])
     stop_ids_1 = set(
-        feed.stops.loc[
-            lambda x: x["stop_id"].isin(stop_ids_0), "parent_station"
-        ].dropna()
+        feed.stops.loc[lambda x: x["stop_id"].isin(stop_ids_0), "parent_station"].dropna()
     )
     stop_ids = stop_ids_0 | stop_ids_1
     feed.stops = feed.stops.loc[lambda x: x["stop_id"].isin(stop_ids)].copy()
@@ -717,9 +715,7 @@ def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
     # Subset calendar
     service_ids = feed.trips["service_id"].unique()
     if feed.calendar is not None:
-        feed.calendar = feed.calendar.loc[
-            lambda x: x.service_id.isin(service_ids)
-        ].copy()
+        feed.calendar = feed.calendar.loc[lambda x: x.service_id.isin(service_ids)].copy()
 
     # Subset agency
     if has_agency_ids:
@@ -735,9 +731,7 @@ def restrict_to_trips(feed: "Feed", trip_ids: list[str]) -> "Feed":
 
     # Subset frequencies
     if feed.frequencies is not None:
-        feed.frequencies = feed.frequencies.loc[
-            lambda x: x.trip_id.isin(trip_ids)
-        ].copy()
+        feed.frequencies = feed.frequencies.loc[lambda x: x.trip_id.isin(trip_ids)].copy()
 
     # Subset shapes
     if feed.shapes is not None:
@@ -874,7 +868,6 @@ def compute_screen_line_counts(
     feed: "Feed",
     screen_lines: gpd.GeoDataFrame,
     dates: list[str],
-    segmentize_m: float = 5,
     *,
     include_testing_cols: bool = False,
 ) -> pd.DataFrame:
@@ -883,7 +876,6 @@ def compute_screen_line_counts(
     the given segment-associated screen lines of the form output by
     :func:`build_screen_lines`.
     Behind the scenes, use simple sub-LineStrings of the feed
-    (with points separated by at ``segmentize_m`` meters)
     to compute screen line intersections.
     Using them instead of the Feed shapes avoids miscounting intersections in the
     case of non-simple (self-intersecting) shapes.
@@ -966,7 +958,7 @@ def compute_screen_line_counts(
         feed.get_shapes(as_gdf=True, use_utm=True)
         .sjoin(screen_lines)
         .drop_duplicates("shape_id")
-        .pipe(split_simple, segmentize_m=segmentize_m)
+        .pipe(split_simple)
     )
 
     # Get intersection points of subshapes and screen lines
