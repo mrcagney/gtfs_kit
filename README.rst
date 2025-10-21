@@ -44,4 +44,4 @@ Notes
   I don't think this issue causes any bugs in GTFS Kit, but you and i have been warned.
   Thanks to user Github user ``derhuerst`` for bringing this to my attention in `closed Issue 8 <https://github.com/mrcagney/gtfs_kit/issues/8#issue-1063633457>`_.
 - With release 10.0.0, i removed the validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).
-- I'll probably move to Polars + Polars ST for release 12.0.0 so the library can handle big feeds faster.
+- I'll probably move to Polars + Polars ST for the next big release so the library can handle big feeds faster.
