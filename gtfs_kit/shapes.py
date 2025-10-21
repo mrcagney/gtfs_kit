@@ -293,24 +293,36 @@ def split_simple(shapes_g: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
       where the lengths are expressed in meters.
 
     """
+    orig_crs = shapes_g.crs
+    utm_crs = shapes_g.estimate_utm_crs()
+    g = shapes_g.to_crs(utm_crs).assign(is_simple=lambda x: x.is_simple)
+    final_cols = [
+        "subshape_id",
+        "subshape_sequence",
+        "shape_id",
+        "subshape_length_m",
+        "cum_length_m",
+        "geometry",
+    ]
 
+    # Simple shapes don't need splitting
+    g0 = (
+        g.loc[lambda x: x["is_simple"]]
+        .assign(
+            subshape_id=lambda x: x["shape_id"].astype(str) + "-0",
+            subshape_sequence=0,
+            subshape_length_m=lambda x: x.length,
+            cum_length_m=lambda x: x["subshape_length_m"],
+        )
+        .filter(final_cols)
+    )
+
+    # Split the non-simple shapes
     def my_split(group):
         geom = group["geometry"].iat[0]
         parts = split_simple_0(geom)
         return pd.DataFrame({"geometry": parts})
 
-    orig_crs = shapes_g.crs
-    utm_crs = shapes_g.estimate_utm_crs()
-    g = shapes_g.to_crs(utm_crs).assign(is_simple=lambda x: x.is_simple)
-
-    # Simple shapes don't need splitting
-    g0 = g.loc[lambda x: x["is_simple"]].assign(
-        subshape_id=lambda x: x["shape_id"].astype(str) + "-0",
-        subshape_sequence=0,
-        subshape_length_m=lambda x: x.length,
-        cum_length_m=lambda x: x["subshape_length_m"],
-    )
-    # Split the non-simple shapes
     g1 = (
         g.loc[lambda x: ~x["is_simple"]]
         .groupby("shape_id", sort=False)
@@ -328,19 +340,10 @@ def split_simple(shapes_g: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
             subshape_length_m=lambda x: x.length,
             cum_length_m=lambda x: x.groupby("shape_id")["subshape_length_m"].cumsum(),
         )
+        .filter(final_cols)
     )
     return (
         pd.concat([g0, g1])
-        .filter(
-            [
-                "subshape_id",
-                "subshape_sequence",
-                "shape_id",
-                "subshape_length_m",
-                "cum_length_m",
-                "geometry",
-            ]
-        )
         .sort_values(["shape_id", "subshape_sequence"], ignore_index=True)
         .to_crs(orig_crs)
     )

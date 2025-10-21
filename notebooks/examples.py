@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.16.2"
+__generated_with = "0.17.0"
 app = marimo.App(width="medium")
 
 
@@ -61,21 +61,21 @@ def _(feed_1):
 
     trip_stats = feed_1.compute_trip_stats()
     trip_stats
-    return (trip_stats,)
+    return
 
 
 @app.cell
-def _(dates, feed_1, trip_stats):
+def _(dates, feed_1):
     # Pass in trip stats to avoid recomputing them
 
-    network_stats = feed_1.compute_network_stats(dates, trip_stats=trip_stats)
+    network_stats = feed_1.compute_network_stats(dates)
     network_stats
     return
 
 
 @app.cell
-def _(dates, feed_1, trip_stats):
-    nts = feed_1.compute_network_time_series(dates, trip_stats=trip_stats, freq="6h")
+def _(dates, feed_1):
+    nts = feed_1.compute_network_time_series(dates, freq="6h")
     nts
     return (nts,)
 
@@ -102,10 +102,10 @@ def _(gk, sts):
 
 
 @app.cell
-def _(dates, feed_1, trip_stats):
+def _(dates, feed_1):
     # Route time series
 
-    rts = feed_1.compute_route_time_series(dates, trip_stats=trip_stats, freq="12h")
+    rts = feed_1.compute_route_time_series(dates, freq="12h")
     rts
     return
 
@@ -185,6 +185,11 @@ def _(dates, feed_1, screen_line, trip_id):
 
     slc = feed_1.compute_screen_line_counts(screen_line, dates=dates)
     slc.loc[lambda x: x["trip_id"] == trip_id]
+    return
+
+
+@app.cell
+def _():
     return
 
 

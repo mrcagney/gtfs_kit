@@ -339,7 +339,8 @@ def compute_trip_stats(
         else:
             convert_dist = hp.get_convert_dist(feed.dist_units, "mi")
         h["distance"] = g.apply(
-            lambda group: convert_dist(group.shape_dist_traveled.max())
+            lambda group: convert_dist(group["shape_dist_traveled"].max()),
+            include_groups=False,
         )
     elif feed.shapes is not None:
         # Compute distances using the shapes and Shapely
