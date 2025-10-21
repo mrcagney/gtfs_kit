@@ -457,9 +457,7 @@ def compute_stop_time_series_0(
     rng = pd.date_range(
         pd.to_datetime(f"{date_label} 00:00:00"), periods=24 * 60, freq="Min"
     )
-    series_by_indicator = {
-        "num_trips": pd.DataFrame(series_by_stop, index=rng).fillna(0)
-    }
+    series_by_indicator = {"num_trips": pd.DataFrame(series_by_stop, index=rng).fillna(0)}
 
     # Combine into a single long-form time series per route (and direction if requested);
     # hp.combine_time_series is expected to compute derived fields like service_speed
@@ -619,16 +617,11 @@ def stops_to_geojson(feed: "Feed", stop_ids: Iterable[str | None] = None) -> dic
     If an iterable of stop IDs is given, then subset to those stops.
     If some of the given stop IDs are not found in the feed, then raise a ValueError.
     """
-    if stop_ids is None or not list(stop_ids):
-        stop_ids = feed.stops.stop_id
+    g = get_stops(feed, as_gdf=True)
+    if stop_ids is not None:
+        g = g.loc[lambda x: x["stop_id"].isin(stop_ids)]
 
-    D = set(stop_ids) - set(feed.stops.stop_id)
-    if D:
-        raise ValueError(f"Stops {D} are not found in feed.")
-
-    g = get_stops(feed, as_gdf=True).loc[lambda x: x["stop_id"].isin(stop_ids)]
-
-    return hp.drop_feature_ids(json.loads(g.to_json()))
+    return json.loads(g.to_json(drop_id=True))
 
 
 def get_stops_in_area(

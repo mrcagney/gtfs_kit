@@ -143,46 +143,53 @@ def get_routes(
 def routes_to_geojson(
     feed: "Feed",
     route_ids: Iterable[str | None] = None,
+    route_short_names: Iterable[str] | None = None,
     *,
     split_directions: bool = False,
     include_stops: bool = False,
 ) -> dict:
     """
-    Return a GeoJSON FeatureCollection of MultiLineString features representing this Feed's routes.
-    The coordinates reference system is the default one for GeoJSON,
-    namely WGS84.
+    Return a GeoJSON FeatureCollection (in WGS84 coordinates) of MultiLineString
+    features representing this Feed's routes.
 
-    If ``include_stops``, then include the route stops as Point features .
-    If an iterable of route IDs is given, then subset to those routes.
-    If the subset is empty, then return a FeatureCollection with an empty list of
-    features.
+    If an iterable of route IDs or route short names is given, then subset to the
+    union of those routes, which could yield an empty FeatureCollection in case of
+    all invalid route IDs / route short names.
+    If ``include_stops``, then include the route stops as Point features.
     If the Feed has no shapes, then raise a ValueError.
-    If any of the given route IDs are not found in the feed, then raise a ValueError.
     """
-    if route_ids is None or not list(route_ids):
-        route_ids = feed.routes.route_id
+    g = get_routes(feed, as_gdf=True, split_directions=split_directions)
 
-    D = set(route_ids) - set(feed.routes.route_id)
-    if D:
-        raise ValueError(f"Route IDs {D} not found in feed.")
-
-    # Get routes
-    g = get_routes(feed, as_gdf=True, split_directions=split_directions).loc[
-        lambda x: x["route_id"].isin(route_ids)
-    ]
-    collection = json.loads(g.to_json())
-
-    # Get stops if desired
-    if len(route_ids) and include_stops:
-        stop_ids = (
-            feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
-            .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
-            .unique()
+    # Restrict routes if given
+    R = set()
+    if route_ids is not None:
+        R |= set(route_ids)
+    if route_short_names is not None:
+        R |= set(
+            feed.routes.loc[
+                lambda x: x["route_short_name"].isin(route_short_names), "route_id"
+            ]
         )
-        stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
-        collection["features"].extend(stops_gj["features"])
+    if R:
+        g = g.loc[lambda x: x["route_id"].isin(R)]
 
-    return hp.drop_feature_ids(collection)
+    if g is None or g.empty:
+        gj = {
+            "type": "FeatureCollection",
+            "features": [],
+        }
+    else:
+        gj = json.loads(g.to_json(drop_id=True))
+        if include_stops:
+            stop_ids = (
+                feed.stop_times.merge(feed.trips.filter(["trip_id", "route_id"]))
+                .loc[lambda x: x.route_id.isin(route_ids), "stop_id"]
+                .unique()
+            )
+            stops_gj = feed.stops_to_geojson(stop_ids=stop_ids)
+            gj["features"].extend(stops_gj["features"])
+
+    return gj
 
 
 def map_routes(
