@@ -1,5 +1,6 @@
 data/other_feeds
 monkeytype.sqlite
+notebooks/examples.ipynb
 notebooks/prototyping.py
 notebooks/__marimo__/
 
