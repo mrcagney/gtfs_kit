@@ -16,7 +16,7 @@ Install it from PyPI with UV, say, via ``uv add gtfs_kit``.
 
 Examples
 ========
-See the `Marimo notebook output on Github <https://github.com/mrcagney/gtfs_kit/blob/master/notebooks/examples.html>`_.
+See the `Jupyter notebook output on Github <https://github.com/mrcagney/gtfs_kit/blob/master/notebooks/examples.ipynb>`_.
 
 Conventions
 ============
