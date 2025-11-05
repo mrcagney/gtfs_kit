@@ -1,6 +1,11 @@
 Changelog
 =========
 
+12.0.1, 2025-11-06
+------------------
+- Fixed and improved the docs.
+- Added Github Action for exporting example notebook output referred to in docs.
+
 12.0.0, 2025-10-22
 ------------------
 - Breaking change: Refactored and sped up functions ``shapes.split_simple`` and ``miscellany.compute_screen_line_counts`` to no longer segmentize linestrings, then removed the `segmentize` keyword argument from both functions.

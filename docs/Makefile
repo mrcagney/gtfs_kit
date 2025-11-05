@@ -47,7 +47,8 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 
 clean:
-	rm -rf $(BUILDDIR)/*
+	-rm -rf $(BUILDDIR)/*
+	-rm -f $(EXAMPLES_HTML)
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
@@ -61,6 +62,9 @@ dirhtml:
 
 singlehtml:
 	$(SPHINXBUILD) -b singlehtml $(ALLSPHINXOPTS) $(BUILDDIR)/singlehtml
+	@out="$(BUILDDIR)/singlehtml/index.html"; \
+	if command -v gsed >/dev/null 2>&1; then SED=gsed; else SED=sed; fi; \
+	$$SED -i.bak -E 's/#document-[^"#]+#/#/g' "$$out" && rm -f "$$out.bak"
 	@echo
 	@echo "Build finished. The HTML page is in $(BUILDDIR)/singlehtml."
 

@@ -1,0 +1,44 @@
+name: Export example notebook
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.13"
+
+      - name: Install UV
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Sync project environment with UV
+        run: |
+          uv sync
+
+      - name: Export Marimo notebook to ipynb (with outputs)
+        run: |
+          uv run marimo export ipynb notebooks/examples.py \
+            -o notebooks/examples.ipynb \
+            --include-outputs -f
+
+      - name: Commit updated notebook
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(ci): export notebooks/examples.ipynb with outputs"
+          file_pattern: notebooks/examples.ipynb

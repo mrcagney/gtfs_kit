@@ -5,7 +5,7 @@ app = marimo.App(width="medium")
 
 
 @app.cell
-def _():
+def _(Path):
     import pathlib as pl
     import json
 
@@ -18,7 +18,10 @@ def _():
 
     import gtfs_kit as gk
 
-    DATA = pl.Path("data")
+
+    HERE = pl.Path(__file__).resolve().parent if "__file__" in globals() else Path.cwd()
+    PROJECT_ROOT = HERE.parent  # notebooks/ -> project/
+    DATA = (PROJECT_ROOT / "data").resolve()
     return DATA, fl, gk, gp, mo, pd
 
 
@@ -181,7 +184,7 @@ def _(DATA, feed_1, fl, gp):
 
 @app.cell
 def _(dates, feed_1, screen_line, trip_id):
-    # Screen line counts 
+    # Screen line counts
 
     slc = feed_1.compute_screen_line_counts(screen_line, dates=dates)
     slc.loc[lambda x: x["trip_id"] == trip_id]
