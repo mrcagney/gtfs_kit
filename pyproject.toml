@@ -31,6 +31,7 @@ dev = [
     "mapclassify>=2.8.1",
     "plotly>=6.1.2",
     "sphinx-rtd-theme>=3.0.2",
+    "nbformat>=5.10.4",
 ]
 
 [project.urls]
@@ -55,4 +56,4 @@ line-length = 90
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 lint.select = ["E", "F"]
 lint.ignore = ["E501", "E731", "F401", "F403"]
-exclude = ["notebooks/*.py"]
+exclude = ["notebooks/*.py", "notebooks/*.ipynb"]
