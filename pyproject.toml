@@ -30,6 +30,7 @@ dev = [
     "marimo>=0.13.2",
     "mapclassify>=2.8.1",
     "plotly>=6.1.2",
+    "sphinx-rtd-theme>=3.0.2",
 ]
 
 [project.urls]
