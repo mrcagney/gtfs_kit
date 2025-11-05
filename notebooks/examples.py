@@ -5,15 +5,6 @@ app = marimo.App(width="medium")
 
 
 @app.cell
-def _():
-    # /// script
-    # [tool.marimo.display]
-    # theme = "light"
-    # ///
-    return
-
-
-@app.cell
 def _(Path):
     import pathlib as pl
     import json
