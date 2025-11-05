@@ -1,4 +1,4 @@
-name: Export example notebook
+name: Export examples notebook
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  export:
+  export-examples-notebook:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,9 +37,8 @@ jobs:
             -o notebooks/examples.ipynb \
             --include-outputs -f
 
-      - name: Upload notebook artifact
-        uses: actions/upload-artifact@v4
+      - name: Commit updated notebook
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          name: examples-notebook
-          path: notebooks/examples.ipynb
-          if-no-files-found: error
+          commit_message: "chore(ci): export notebooks/examples.ipynb with outputs"
+          file_pattern: notebooks/examples.ipynb
