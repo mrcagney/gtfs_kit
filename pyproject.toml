@@ -26,7 +26,6 @@ dev = [
     "matplotlib>=1",
     "pytest-socket>=0",
     "ruff>=0.0.257",
-    "publish_sphinx_docs>=1.0",
     "marimo>=0.13.2",
     "mapclassify>=2.8.1",
     "plotly>=6.1.2",
