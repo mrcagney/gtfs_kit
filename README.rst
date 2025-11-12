@@ -29,7 +29,7 @@ The documentation is built via Sphinx from the source code in the ``docs`` direc
 Maintainer Notes
 ================
 - Before pushing to ``master``, export example notebook via ``uv run marimo export ipynb notebooks/examples.py -o notebooks/examples.ipynb --include-outputs -f``, which docs refer to.
-- After pushing to ``master``, update the published docs via ``uv run publish-sphinx-docs``, then enter the docs remote ``git@github.com:mrcagney/gtfs_kit_docs``.
+- After pushing to ``master``, update the published docs via ``uv run make -C docs publish-docs-github``.
 
 
 Notes
