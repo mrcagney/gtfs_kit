@@ -4,6 +4,10 @@ GTFS Kit is an open-source Python library for analyzing `General Transit Feed Sp
 It uses Pandas and GeoPandas to do the heavy lifting.
 You can find and contribute to GTFS Kit's source code in its project repository `on Github <https://github.com/mrcagney/gtfs_kit>`_.
 
+The functions/methods of GTFS Kit assume a valid GTFS feed but offer no inbuilt validation, because GTFS validation is complex and already solved by dedicated libraries.
+So unless you know what you're doing, use the `Canonical GTFS Validator <https://gtfs-validator.mobilitydata.org/>`_ before you analyze a feed with GTFS Kit.
+
+
 Authors
 =========
 - Alex Raichev, 2019-09
