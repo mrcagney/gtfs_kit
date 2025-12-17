@@ -26,7 +26,7 @@ Authors
 
 Documentation
 =============
-The documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `mrcagney.github.io/gtfs_kit_docs <https://mrcagney.github.io/gtfs_kit_docs>`_.
+The documentation is built via Sphinx from the source code in the ``docs`` directory then published to Github Pages at `araichev.github.io/gtfs_kit_docs <https://araichev.github.io/gtfs_kit_docs>`_.
 
 
 Notes
@@ -43,7 +43,7 @@ Notes
   Please issue pull requests from a feature branch into the ``develop`` branch and include tests.
 - GTFS time is measured relative to noon minus 12 hours, which can mess things up when crossing into daylight savings time.
   I don't think this issue causes any bugs in GTFS Kit, but you and i have been warned.
-  Thanks to user Github user ``derhuerst`` for bringing this to my attention in `closed Issue 8 <https://github.com/mrcagney/gtfs_kit/issues/8#issue-1063633457>`_.
+  Thanks to user Github user ``derhuerst`` for bringing this to my attention in `closed Issue 8 <https://github.com/araichev/gtfs_kit/issues/8#issue-1063633457>`_.
 - With release 10.0.0, i removed the validation module ``validators.py`` to avoid duplicating the work of what is now `the canonical feed validator <https://github.com/MobilityData/gtfs-validator>`_ (written in Java).
 - I'll probably move to Polars + Polars ST for the next big release so the library can handle big feeds faster.
 
