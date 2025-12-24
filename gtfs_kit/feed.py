@@ -387,7 +387,8 @@ def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
             csv_options = {
                 "na_values": ["", " ", "nan", "NaN", "null"],  # Add space to na_values
                 "keep_default_na": True,
-                "dtype_backend": "numpy_nullable",  # Use nullable dtypes
+                "engine": "pyarrow",
+                "dtype_backend": "pyarrow",
             }
             df = pd.read_csv(
                 p, dtype=cs.DTYPES[table], encoding="utf-8-sig", **csv_options
