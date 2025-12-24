@@ -15,7 +15,7 @@ dependencies = [
     "rtree>=0",
     "folium>=0",
     "requests>=2",
-    "pandas[pyarrow]>=2.2.2",
+    "pandas>=2.2.2",
 ]
 
 [dependency-groups]

@@ -366,8 +366,7 @@ def _read_feed_from_path(path: pl.Path, dist_units: str) -> "Feed":
     csv_options = {
         "na_values": ["", " ", "nan", "NaN", "null"],  # Add space to na_values
         "keep_default_na": True,
-        "engine": "pyarrow",
-        "dtype_backend": "pyarrow",
+        "dtype_backend": "numpy_nullable",
         # utf-8-sig gets rid of the byte order mark (BOM);
         # see http://stackoverflow.com/questions/17912307/u-ufeff-in-python-string
         "encoding": "utf-8-sig",
